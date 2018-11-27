@@ -1,0 +1,8 @@
+# HapuaModel configuration file
+
+ModelName = 'Hurunui hapua'
+
+[Boundary conditions]
+RiverFlow = LagoonInflow.csv
+WaveConditions = OffshoreWaves.csv
+SeaLevel = SeaLevel.csv
