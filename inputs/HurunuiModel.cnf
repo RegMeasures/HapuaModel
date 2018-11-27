@@ -6,3 +6,13 @@ ModelName = 'Hurunui hapua'
 RiverFlow = LagoonInflow.csv
 WaveConditions = OffshoreWaves.csv
 SeaLevel = SeaLevel.csv
+
+[Spatial inputs]
+# polyline shapefile of shoreline initial position
+Shoreline = HurunuiShoreline.shp
+# point shapefile of location river flows into lagoon
+RiverLocation = RiverInflow.shp
+
+[Model settings]
+# Alongshore discretisation resolution (m)
+AlongShoreDx = 20
