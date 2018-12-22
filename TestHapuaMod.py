@@ -1,3 +1,4 @@
 import hapuamod as hm
 
-(FlowTs, WaveTs, SeaLevelTs) = hm.loadModel('inputs\HurunuiModel.cnf')
+ModelConfigFile = 'inputs\HurunuiModel.cnf'
+(FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormalDir, ShoreX, ShoreY) = hm.loadModel(ModelConfigFile)
