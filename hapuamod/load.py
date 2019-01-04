@@ -1,33 +1,50 @@
+# -*- coding: utf-8 -*-
+
+# import standard packages
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import math
-#import calendar
 from configobj import ConfigObj
 import os
 import shapefile
 
-def loadModel(ModelConfigFile):
-    
+# import local packages
+import hapuamod.geom as geom
+
+def readConfig(ModelConfigFile):
     # Read the main config file
-    ConfigFilePath = os.path.split(ModelConfigFile)[0]
     Config = ConfigObj(ModelConfigFile)
     
+    # Extract file path and add to other relative file paths as required
+    ConfigFilePath = os.path.split(ModelConfigFile)[0]
+    Config['BoundaryConditions']['RiverFlow'] = \
+        os.path.join(ConfigFilePath, Config['BoundaryConditions']['RiverFlow'])
+    Config['BoundaryConditions']['WaveConditions'] = \
+        os.path.join(ConfigFilePath, Config['BoundaryConditions']['WaveConditions'])
+    Config['BoundaryConditions']['SeaLevel'] = \
+        os.path.join(ConfigFilePath, Config['BoundaryConditions']['SeaLevel'])
+    Config['SpatialInputs']['Shoreline'] = \
+        os.path.join(ConfigFilePath, Config['SpatialInputs']['Shoreline'])
+    Config['SpatialInputs']['RiverLocation'] = \
+        os.path.join(ConfigFilePath, Config['SpatialInputs']['RiverLocation'])
+    
+    # Add some validation here???
+    
+    return Config
+
+def loadModel(Config):
+    
     # Read the boundary condition timeseries
-    FlowFile = os.path.join(ConfigFilePath, 
-                            Config['BoundaryConditions']['RiverFlow'])
-    FlowTs = pd.read_csv(FlowFile, index_col=0)
-    WaveFile = os.path.join(ConfigFilePath, 
-                            Config['BoundaryConditions']['WaveConditions'])
-    WaveTs = pd.read_csv(WaveFile, index_col=0)
-    SeaLevelFile = os.path.join(ConfigFilePath, 
-                                Config['BoundaryConditions']['SeaLevel'])
-    SeaLevelTs = pd.read_csv(SeaLevelFile, index_col=0)
+    FlowTs = pd.read_csv(Config['BoundaryConditions']['RiverFlow'], 
+                         index_col=0)
+    WaveTs = pd.read_csv(Config['BoundaryConditions']['WaveConditions'], 
+                         index_col=0)
+    SeaLevelTs = pd.read_csv(Config['BoundaryConditions']['SeaLevel'], 
+                             index_col=0)
     
     # Read the initial shoreline position
-    ShoreShpFile = os.path.join(ConfigFilePath, 
-                                Config['SpatialInputs']['Shoreline'])
-    ShoreShp = shapefile.Reader(ShoreShpFile)
+    ShoreShp = shapefile.Reader(Config['SpatialInputs']['Shoreline'])
     # check it is a polyline and there is only one line
     assert ShoreShp.shapeType==3, 'Shoreline shapefile must be a polyline.'
     assert len(ShoreShp.shapes())==1, 'multiple polylines in Shoreline shapefile. There should only be 1.'
@@ -35,9 +52,7 @@ def loadModel(ModelConfigFile):
     IniShoreCoords = np.asarray(ShoreShp.shape(0).points[:])
     
     # Read the river inflow location
-    RiverShpFile = os.path.join(ConfigFilePath, 
-                                Config['SpatialInputs']['RiverLocation'])
-    RiverShp = shapefile.Reader(RiverShpFile)
+    RiverShp = shapefile.Reader(Config['SpatialInputs']['RiverLocation'])
     # check it is a single point
     assert RiverShp.shapeType==1, 'Shoreline shapefile must be a point.'
     assert len(RiverShp.shapes())==1, 'multiple points in RiverLocation shapefile. There should only be 1.'
@@ -61,7 +76,7 @@ def loadModel(ModelConfigFile):
         
     # Convert shoreline coords into model coordinate system
     IniShoreCoords2 = np.empty([np.size(IniShoreCoords, axis=0), 2])
-    (IniShoreCoords2[:,0], IniShoreCoords2[:,1]) = real2mod(IniShoreCoords[:,0], IniShoreCoords[:,1], Origin, ShoreNormalDir)
+    (IniShoreCoords2[:,0], IniShoreCoords2[:,1]) = geom.real2mod(IniShoreCoords[:,0], IniShoreCoords[:,1], Origin, ShoreNormalDir)
     if IniShoreCoords2[0,0] > IniShoreCoords2[-1,0]:
         IniShoreCoords2 = IniShoreCoords2 = np.flipud(IniShoreCoords2)
     assert np.all(np.diff(IniShoreCoords2[:,0]) > 0), 'Shoreline includes recurvature???'
@@ -73,7 +88,7 @@ def loadModel(ModelConfigFile):
     ShoreY = np.interp(ShoreX, IniShoreCoords2[:,0], IniShoreCoords2[:,1])
     
     # Produce a map showing the spatial inputs
-    (ShoreXreal, ShoreYreal) = mod2real(ShoreX, ShoreY, Origin, ShoreNormalDir)
+    (ShoreXreal, ShoreYreal) = geom.mod2real(ShoreX, ShoreY, Origin, ShoreNormalDir)
     plt.plot(IniShoreCoords[:,0], IniShoreCoords[:,1], 'bx')
     plt.plot(IniShoreCoords[:,0], IniShoreCoords[:,0] * Baseline[0] + Baseline[1], 'k:')
     plt.plot(ShoreXreal, ShoreYreal, 'g.')
@@ -82,22 +97,3 @@ def loadModel(ModelConfigFile):
     plt.axis('equal')
     
     return (FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormalDir, ShoreX, ShoreY)
-
-# functions for converting between model and real world coordinate systems
-def mod2real(Xmod, Ymod, Origin, ShoreNormalDir):
-    Xreal = (Origin[0] + 
-             Xmod * np.sin(ShoreNormalDir+np.pi/2) - 
-             Ymod * np.cos(ShoreNormalDir+np.pi/2))
-    Yreal = (Origin[1] + 
-             Xmod * np.cos(ShoreNormalDir+np.pi/2) + 
-             Ymod * np.sin(ShoreNormalDir+np.pi/2))
-    return (Xreal, Yreal)
-
-def real2mod(Xreal, Yreal, Origin, ShoreNormalDir):
-    Xrelative = Xreal - Origin[0]
-    Yrelative = Yreal - Origin[1]
-    Dist = np.sqrt(Xrelative**2 + Yrelative**2)
-    Dir = np.arctan2(Xrelative, Yrelative)
-    Xmod = Dist * np.cos(ShoreNormalDir - Dir + np.pi/2)
-    Ymod = Dist * np.sin(ShoreNormalDir - Dir + np.pi/2)
-    return (Xmod, Ymod)
