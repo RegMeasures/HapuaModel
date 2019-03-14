@@ -88,12 +88,12 @@ def loadModel(Config):
     ShoreY = np.interp(ShoreX, IniShoreCoords2[:,0], IniShoreCoords2[:,1])
     
     # Produce a map showing the spatial inputs
-    (ShoreXreal, ShoreYreal) = geom.mod2real(ShoreX, ShoreY, Origin, ShoreNormalDir)
-    plt.plot(IniShoreCoords[:,0], IniShoreCoords[:,1], 'bx')
-    plt.plot(IniShoreCoords[:,0], IniShoreCoords[:,0] * Baseline[0] + Baseline[1], 'k:')
-    plt.plot(ShoreXreal, ShoreYreal, 'g.')
-    plt.plot(InflowCoord[0], InflowCoord[1],'ro')
-    plt.plot(Origin[0], Origin[1], 'go')
-    plt.axis('equal')
+#    (ShoreXreal, ShoreYreal) = geom.mod2real(ShoreX, ShoreY, Origin, ShoreNormalDir)
+#    plt.plot(IniShoreCoords[:,0], IniShoreCoords[:,1], 'bx')
+#    plt.plot(IniShoreCoords[:,0], IniShoreCoords[:,0] * Baseline[0] + Baseline[1], 'k:')
+#    plt.plot(ShoreXreal, ShoreYreal, 'g.')
+#    plt.plot(InflowCoord[0], InflowCoord[1],'ro')
+#    plt.plot(Origin[0], Origin[1], 'go')
+#    plt.axis('equal')
     
     return (FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormalDir, ShoreX, ShoreY)
