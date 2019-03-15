@@ -4,7 +4,7 @@ ModelName = 'Hurunui hapua'
 
 [BoundaryConditions]
 RiverFlow = LagoonInflow.csv
-WaveConditions = OffshoreWaves.csv
+WaveConditions = WaveData.csv
 SeaLevel = SeaLevel.csv
 
 [SpatialInputs]
@@ -12,7 +12,31 @@ SeaLevel = SeaLevel.csv
 Shoreline = HurunuiShoreline.shp
 # point shapefile of location river flows into lagoon
 RiverLocation = RiverInflow.shp
-
-[ModelSettings]
 # Alongshore discretisation resolution (m)
 AlongShoreDx = 20
+
+[Time]
+# Simulation start date
+StartTime = '1 Jul 2015'
+# Simulation end date
+EndTime = '30 Jun 2016'
+# Timestep (s)
+Timestep = 3600
+
+[PhysicalParameters]
+# K coefficient for longshore transport calculation (non-dimensional)
+Kcoef = 0.017
+# Sediment density (kg/m^3)
+RhoSed = 2650
+# Seawater density (kg/m^3)
+RhoSea = 1025
+# River water density (kg/m^3)
+RhoRiv = 1000
+# Sediment void ratio
+VoidRatio = 0.4
+# Gravity (m/s^2)
+Gravity = 9.81
+# Ratio of water depth at breakpoint to breaking wave height (WaveHeightAtBreaking = GammaRatio x WaterDepthAtBreakPoint)
+GammaRatio = 0.5
+# Depth of output point for wave model data given in WaveConditions file (m)
+WaveDataDepth = 10.0
