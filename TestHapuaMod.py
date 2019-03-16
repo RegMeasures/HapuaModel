@@ -1,5 +1,6 @@
 import logging
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
 import hapuamod as hm
@@ -18,8 +19,8 @@ except NameError:
 # Test model load (particularly geometry processing)
 ModelConfigFile = 'inputs\HurunuiModel.cnf'
 Config = hm.load.readConfig(ModelConfigFile)
-(FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, ShoreX, ShoreY, Dx,
- PhysicalPars) = hm.load.loadModel(Config)
+(FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, ShoreX, ShoreY, Dx, Dt,
+ SimTime, PhysicalPars) = hm.load.loadModel(Config)
 
 hm.visualise.mapView(ShoreX, ShoreY, Origin, BaseShoreNormDir)
 
@@ -28,5 +29,8 @@ EAngle_h = WaveTs.EAngle_h[0]
 WavePower = WaveTs.WavePower[0]
 WavePeriod = WaveTs.WavePeriod[0]
 Wlen_h = WaveTs.Wlen_h[0]
-hm.sim.longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, Wlen_h, 
-                          EAngle_h, PhysicalPars)
+
+LST = hm.sim.longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, Wlen_h, 
+                                EAngle_h, PhysicalPars)
+
+Dy = hm.sim.shoreChange(LST, Dx, Dt, PhysicalPars)

@@ -8,7 +8,8 @@ import numpy as np
 import hapuamod.geom as geom
 
 def mapView(ShoreX, ShoreY, Origin, ShoreNormalDir):
-    # Produce a map showing the spatial inputs
+    """ Map the current model state in real world coordinates
+    """
     
     # Plot the shoreline
     (ShoreXreal, ShoreYreal) = geom.mod2real(ShoreX, ShoreY, Origin, ShoreNormalDir)
@@ -20,4 +21,13 @@ def mapView(ShoreX, ShoreY, Origin, ShoreNormalDir):
     plt.plot(BaseXreal, BaseYreal, 'k--')
     
     # tidy up the plot
+    plt.axis('equal')
+
+def modelView(ShoreX, ShoreY):
+    """ Map the current model state in model coordinates
+    """
+    
+    plt.figure(figsize=(12,5))
+    plt.plot(ShoreX, ShoreY, 'k-')
+    
     plt.axis('equal')

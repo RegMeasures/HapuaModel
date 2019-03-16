@@ -40,3 +40,5 @@ Gravity = 9.81
 GammaRatio = 0.5
 # Depth of output point for wave model data given in WaveConditions file (m)
 WaveDataDepth = 10.0
+# Closure depth for single line shoreline model [m]
+ClosureDepth = 5.0

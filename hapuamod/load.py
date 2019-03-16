@@ -81,6 +81,9 @@ def loadModel(Config):
         ShoreX, ShoreY (np.ndarray(float64)): positions of discretised 
             shoreline in model coordinate system (m)
         Dx (float): shoreline discretisation interval (m)
+        Dt (float): timestep (s)
+        SimTime (list): Two element list containing the simulation start
+            and end times (datetime)
         PhysicalPars (dict): Physical parameters including:
             RhoSed (float)
             RhoSea (float)
@@ -90,13 +93,14 @@ def loadModel(Config):
             VoidRatio (float)
             GammaRatio (float)
             WaveDataDepth (float)
-            K2coef (float): Calculated from other inputs
+            K2coef (float): Calculated from other inputs for use in calculation
+                of longshore transport rate. K2 = K / (RhoSed - RhoSea) * g * (1 - VoidRatio))
             BreakerCoef (float): Calculated from other inputs for use in 
                 calculation of depth of breaking waves. 
                 BreakerCoef = 8 / (RhoSea * Gravity^1.5 * GammaRatio^2)
     """
     
-    # Read the boundary condition timeseries
+    #%% Read the boundary condition timeseries
     logging.info('Reading flow timeseries from "%s"' % 
                  Config['BoundaryConditions']['RiverFlow'])
     FlowTs = pd.read_csv(Config['BoundaryConditions']['RiverFlow'], 
@@ -111,6 +115,7 @@ def loadModel(Config):
                  Config['BoundaryConditions']['SeaLevel'])
     SeaLevelTs = pd.read_csv(Config['BoundaryConditions']['SeaLevel'], 
                              index_col=0)
+    #%% Spatial inputs
     
     # Read the initial shoreline position
     logging.info('Reading initial shoreline position from "%s"' %
@@ -169,7 +174,13 @@ def loadModel(Config):
     # Make sure all wave angles are in the range -pi to +pi
     WaveTs.EAngle_h = np.mod(WaveTs.EAngle_h + np.pi, 2.0 * np.pi) - np.pi 
         
-    # Read physical parameters
+    #%% Time inputs
+    Dt = float(Config['Time']['Timestep'])
+    SimTime = [pd.to_datetime(Config['Time']['StartTime']),
+               pd.to_datetime(Config['Time']['EndTime'])]
+    
+        
+    #%% Read physical parameters
     logging.info('Processing physical parameters')
     PhysicalPars = {'RhoSed': float(Config['PhysicalParameters']['RhoSed']),
                     'RhoSea': float(Config['PhysicalParameters']['RhoSea']),
@@ -178,7 +189,8 @@ def loadModel(Config):
                     'Gravity': float(Config['PhysicalParameters']['Gravity']),
                     'VoidRatio': float(Config['PhysicalParameters']['VoidRatio']),
                     'GammaRatio': float(Config['PhysicalParameters']['GammaRatio']),
-                    'WaveDataDepth': float(Config['PhysicalParameters']['WaveDataDepth'])}
+                    'WaveDataDepth': float(Config['PhysicalParameters']['WaveDataDepth']),
+                    'ClosureDepth': float(Config['PhysicalParameters']['ClosureDepth'])}
     
     GammaLST = ((PhysicalPars['RhoSed'] - PhysicalPars['RhoSea']) * 
                 PhysicalPars['Gravity'] * (1 - PhysicalPars['VoidRatio']))
@@ -200,4 +212,4 @@ def loadModel(Config):
     # Read time inputs
     
     return (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, ShoreX, 
-            ShoreY, Dx, PhysicalPars)
+            ShoreY, Dx, Dt, SimTime, PhysicalPars)
