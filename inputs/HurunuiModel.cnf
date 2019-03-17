@@ -12,6 +12,8 @@ SeaLevel = SeaLevel.csv
 Shoreline = HurunuiShoreline.shp
 # point shapefile of location river flows into lagoon
 RiverLocation = RiverInflow.shp
+# polygon shapefile of lagoon including outlet channel
+LagoonOutline = LagoonPolygon.shp
 # Alongshore discretisation resolution (m)
 AlongShoreDx = 20
 

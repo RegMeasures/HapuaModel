@@ -19,10 +19,11 @@ except NameError:
 # Test model load (particularly geometry processing)
 ModelConfigFile = 'inputs\HurunuiModel.cnf'
 Config = hm.load.readConfig(ModelConfigFile)
-(FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, ShoreX, ShoreY, Dx, Dt,
- SimTime, PhysicalPars) = hm.load.loadModel(Config)
+(FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, ShoreX, ShoreY, LagoonY,
+ Dx, Dt, SimTime, PhysicalPars) = hm.load.loadModel(Config)
 
-hm.visualise.mapView(ShoreX, ShoreY, Origin, BaseShoreNormDir)
+hm.visualise.mapView(ShoreX, ShoreY, LagoonY, Origin, BaseShoreNormDir)
+hm.visualise.modelView(ShoreX, ShoreY, LagoonY)
 
 # Test longshore transport routine
 EAngle_h = WaveTs.EAngle_h[0]

@@ -27,3 +27,24 @@ def real2mod(Xreal, Yreal, Origin, ShoreNormalDir):
     Xmod = Dist * np.cos(ShoreNormalDir - Dir + np.pi/2)
     Ymod = Dist * np.sin(ShoreNormalDir - Dir + np.pi/2)
     return (Xmod, Ymod)
+
+def intersectPolygon(Polygon, Xcoord):
+    """ Identifies points where a polygon intersects a given x coordinate
+    
+    YIntersects = intersectPolygon(Polygon, Xcoord)
+    """
+    # Find polygon points to left of X coordinate
+    LeftOfX = Polygon[:,0] < Xcoord
+    
+    # Identify points where polygon crosses X coordinate
+    IntPoints = np.where(LeftOfX[0:-2] != LeftOfX[1:-1])[0]
+    
+    # Loop over each crossing and interpolate Y coord of crossing
+    YIntersects = np.zeros(IntPoints.size)
+    for IntNo in range(IntPoints.size):
+        YIntersects[IntNo] = (Polygon[IntPoints[IntNo],1] +
+                              (Xcoord-Polygon[IntPoints[IntNo],0]) *
+                              (Polygon[IntPoints[IntNo]+1,1] - Polygon[IntPoints[IntNo],1]) / 
+                              (Polygon[IntPoints[IntNo]+1,0] - Polygon[IntPoints[IntNo],0]))
+    
+    return YIntersects

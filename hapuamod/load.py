@@ -37,6 +37,8 @@ def readConfig(ModelConfigFile):
         os.path.join(ConfigFilePath, Config['SpatialInputs']['Shoreline'])
     Config['SpatialInputs']['RiverLocation'] = \
         os.path.join(ConfigFilePath, Config['SpatialInputs']['RiverLocation'])
+    Config['SpatialInputs']['LagoonOutline'] = \
+        os.path.join(ConfigFilePath, Config['SpatialInputs']['LagoonOutline'])
     
     # TODO: Add more some validation of inputs here or in loadModel
     
@@ -80,6 +82,9 @@ def loadModel(Config):
             position (radians).
         ShoreX, ShoreY (np.ndarray(float64)): positions of discretised 
             shoreline in model coordinate system (m)
+        LagoonY (np.ndarray(float64)): position of seaward and landward sides 
+            of the lagoon in model coordinate system at transects with 
+            x-coordinates given by ShoreX (m)
         Dx (float): shoreline discretisation interval (m)
         Dt (float): timestep (s)
         SimTime (list): Two element list containing the simulation start
@@ -136,6 +141,15 @@ def loadModel(Config):
     assert len(RiverShp.shapes())==1, 'multiple points in RiverLocation shapefile. There should only be 1.'
     InflowCoord = np.asarray(RiverShp.shape(0).points[:]).squeeze()
     
+    # Read the lagoon outline polygon
+    logging.info('Reading lagoon outline from from "%s"' %
+                 Config['SpatialInputs']['LagoonOutline'])
+    LagoonShp = shapefile.Reader(Config['SpatialInputs']['LagoonOutline'])
+    # check it is a polygon and there is only one
+    assert LagoonShp.shapeType==5, 'Lagoon outline must be a polygon shapefile'
+    assert len(LagoonShp.shapes())==1, 'multiple polygons in LagoonOutline shapefile. There should only be 1.'
+    LagoonCoords = np.asarray(LagoonShp.shape(0).points[:])
+    
     # Pre-process model inputs into model coordinate system
     logging.info('Processing inputs into model coordinate system')
     
@@ -156,11 +170,15 @@ def loadModel(Config):
         BaseShoreNormDir = math.atan2(-Baseline[0],1)
         
     # Convert shoreline coords into model coordinate system
-    IniShoreCoords2 = np.empty([np.size(IniShoreCoords, axis=0), 2])
+    IniShoreCoords2 = np.empty(IniShoreCoords.shape)
     (IniShoreCoords2[:,0], IniShoreCoords2[:,1]) = geom.real2mod(IniShoreCoords[:,0], IniShoreCoords[:,1], Origin, BaseShoreNormDir)
     if IniShoreCoords2[0,0] > IniShoreCoords2[-1,0]:
         IniShoreCoords2 = IniShoreCoords2 = np.flipud(IniShoreCoords2)
     assert np.all(np.diff(IniShoreCoords2[:,0]) > 0), 'Shoreline includes recurvature???'
+    
+    # Convert lagoon outline into model coordinate system
+    LagoonCoords2 = np.empty(LagoonCoords.shape)
+    (LagoonCoords2[:,0], LagoonCoords2[:,1]) = geom.real2mod(LagoonCoords[:,0], LagoonCoords[:,1], Origin, BaseShoreNormDir)
     
     # Discretise shoreline at fixed intervals in model coordinate system
     Dx = float(Config['SpatialInputs']['AlongShoreDx'])
@@ -168,11 +186,33 @@ def loadModel(Config):
                        IniShoreCoords2[-1,0], Dx)
     ShoreY = np.interp(ShoreX, IniShoreCoords2[:,0], IniShoreCoords2[:,1])
     
+    # Check lagoon extent is within limits of shoreline
+    LagoonExtent = [np.amin(LagoonCoords2[:,0]), np.amax(LagoonCoords2[:,0])]
+    assert LagoonExtent[1] < ShoreX[-1] and LagoonExtent[0] > ShoreX[0], 'Lagoon exdends beyond shoreline extent. Extend shoreline shapefile to cover full extent of lagoon.'
+    
+    # Discretise lagoon
+    LagoonY = np.full([ShoreX.size,2], np.nan)
+    for ii in range(ShoreX.size):
+        if LagoonExtent[0] < ShoreX[ii] < LagoonExtent[1]:
+            # identify inersections of lagoon polygon and relevant shore normal transect
+            YIntersects = geom.intersectPolygon(LagoonCoords2, ShoreX[ii])
+            LagoonY[ii,0] = np.amin(YIntersects)
+            LagoonY[ii,1] = np.amax(YIntersects)
+    
     # Convert wave directions into radians in model coordinate system
     WaveTs.EAngle_h = np.deg2rad(WaveTs.EAngle_h) - (BaseShoreNormDir)
     
     # Make sure all wave angles are in the range -pi to +pi
     WaveTs.EAngle_h = np.mod(WaveTs.EAngle_h + np.pi, 2.0 * np.pi) - np.pi 
+    
+    # Produce a map showing the spatial inputs
+#    (ShoreXreal, ShoreYreal) = geom.mod2real(ShoreX, ShoreY, Origin, BaseShoreNormDir)
+#    plt.plot(IniShoreCoords[:,0], IniShoreCoords[:,1], 'bx')
+#    plt.plot(IniShoreCoords[:,0], IniShoreCoords[:,0] * Baseline[0] + Baseline[1], 'k:')
+#    plt.plot(ShoreXreal, ShoreYreal, 'g.')
+#    plt.plot(InflowCoord[0], InflowCoord[1],'ro')
+#    plt.plot(Origin[0], Origin[1], 'go')
+#    plt.axis('equal')
         
     #%% Time inputs
     Dt = float(Config['Time']['Timestep'])
@@ -200,16 +240,7 @@ def loadModel(Config):
                                          PhysicalPars['Gravity']**1.5 *
                                          PhysicalPars['GammaRatio']**2.0)
     
-    # Produce a map showing the spatial inputs
-#    (ShoreXreal, ShoreYreal) = geom.mod2real(ShoreX, ShoreY, Origin, BaseShoreNormDir)
-#    plt.plot(IniShoreCoords[:,0], IniShoreCoords[:,1], 'bx')
-#    plt.plot(IniShoreCoords[:,0], IniShoreCoords[:,0] * Baseline[0] + Baseline[1], 'k:')
-#    plt.plot(ShoreXreal, ShoreYreal, 'g.')
-#    plt.plot(InflowCoord[0], InflowCoord[1],'ro')
-#    plt.plot(Origin[0], Origin[1], 'go')
-#    plt.axis('equal')
-    
     # Read time inputs
     
     return (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, ShoreX, 
-            ShoreY, Dx, Dt, SimTime, PhysicalPars)
+            ShoreY, LagoonY, Dx, Dt, SimTime, PhysicalPars)
