@@ -55,7 +55,7 @@ def shoreChange(LST, Dx, Dt, PhysicalPars):
             -ve = erosion (m)
     """
     
-    # TODO: handle shoreline coundary conditions
+    # TODO: handle shoreline boundary conditions
     
     Dy = np.zeros([LST.size + 1])
     Dy[1:-2] = (LST[0:-2] - LST[1:-1]) * Dt / (PhysicalPars['ClosureDepth'] * Dx)

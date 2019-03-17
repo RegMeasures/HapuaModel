@@ -39,6 +39,8 @@ def readConfig(ModelConfigFile):
         os.path.join(ConfigFilePath, Config['SpatialInputs']['RiverLocation'])
     Config['SpatialInputs']['LagoonOutline'] = \
         os.path.join(ConfigFilePath, Config['SpatialInputs']['LagoonOutline'])
+    Config['SpatialInputs']['OutletLocation'] = \
+        os.path.join(ConfigFilePath, Config['SpatialInputs']['OutletLocation'])
     
     # TODO: Add more some validation of inputs here or in loadModel
     
@@ -150,7 +152,56 @@ def loadModel(Config):
     assert len(LagoonShp.shapes())==1, 'multiple polygons in LagoonOutline shapefile. There should only be 1.'
     LagoonCoords = np.asarray(LagoonShp.shape(0).points[:])
     
-    # Pre-process model inputs into model coordinate system
+    # Read the initial outlet position polyline
+    logging.info('Reading lagoon outline from from "%s"' %
+                 Config['SpatialInputs']['OutletLocation'])
+    OutletShp = shapefile.Reader(Config['SpatialInputs']['LagoonOutline'])
+    # check it is a polyline and there is only 1
+    assert OutletShp.shapeType==5, 'OutletLocation must be a polyline shapefile'
+    assert len(OutletShp.shapes())==1, 'multiple polylines in OutletLocation. You can only specify a single initial outlet.'
+    OutletCoords = np.asarray(OutletShp.shape(0).points[:])
+    
+    #%% Initial conditions
+    logging.info('Processing initial conditions')
+    IniCond = {'OutletWidth': float(Config['InitialConditions']['OutletWidth']),
+               'LagoonBed': float(Config['InitialConditions']['LagoonBed']),
+               'LagoonWL': float(Config['InitialConditions']['LagoonWL'])}
+    
+    #%% Time inputs
+    Dt = float(Config['Time']['Timestep'])
+    SimTime = [pd.to_datetime(Config['Time']['StartTime']),
+               pd.to_datetime(Config['Time']['EndTime'])]
+    
+    # TODO: check time-series inputs extend over full model duration and remove any unecessary bits at the ends
+        
+    #%% Read physical parameters
+    logging.info('Processing physical parameters')
+    PhysicalPars = {'RhoSed': float(Config['PhysicalParameters']['RhoSed']),
+                    'RhoSea': float(Config['PhysicalParameters']['RhoSea']),
+                    'RhoRiv': float(Config['PhysicalParameters']['RhoSea']),
+                    'Kcoef': float(Config['PhysicalParameters']['Kcoef']),
+                    'Gravity': float(Config['PhysicalParameters']['Gravity']),
+                    'VoidRatio': float(Config['PhysicalParameters']['VoidRatio']),
+                    'GammaRatio': float(Config['PhysicalParameters']['GammaRatio']),
+                    'WaveDataDepth': float(Config['PhysicalParameters']['WaveDataDepth']),
+                    'ClosureDepth': float(Config['PhysicalParameters']['ClosureDepth']),
+                    'RiverSlope': float(Config['PhysicalParameters']['RiverSlope']),
+                    'GrainSize': float(Config['PhysicalParameters']['GrainSize']),
+                    'UpstreamLength': float(Config['PhysicalParameters']['UpstreamLength']),
+                    'RiverWidth': float(Config['PhysicalParameters']['RiverWidth'])}
+
+    GammaLST = ((PhysicalPars['RhoSed'] - PhysicalPars['RhoSea']) * 
+                PhysicalPars['Gravity'] * (1 - PhysicalPars['VoidRatio']))
+    
+    PhysicalPars['K2coef'] = PhysicalPars['Kcoef'] / GammaLST
+    PhysicalPars['BreakerCoef'] = 8.0 / (PhysicalPars['RhoSea'] *
+                                         PhysicalPars['Gravity']**1.5 *
+                                         PhysicalPars['GammaRatio']**2.0)
+    
+    #%% Read numerical parameters
+    Dx = float(Config['NumericalParameters']['AlongShoreDx'])
+    
+    #%% Pre-process model inputs into model coordinate system
     logging.info('Processing inputs into model coordinate system')
     
     # Fit a straight reference baseline through the specified shoreline points
@@ -181,7 +232,6 @@ def loadModel(Config):
     (LagoonCoords2[:,0], LagoonCoords2[:,1]) = geom.real2mod(LagoonCoords[:,0], LagoonCoords[:,1], Origin, BaseShoreNormDir)
     
     # Discretise shoreline at fixed intervals in model coordinate system
-    Dx = float(Config['SpatialInputs']['AlongShoreDx'])
     ShoreX = np.arange(math.ceil(IniShoreCoords2[0,0]/Dx)*Dx, 
                        IniShoreCoords2[-1,0], Dx)
     ShoreY = np.interp(ShoreX, IniShoreCoords2[:,0], IniShoreCoords2[:,1])
@@ -205,6 +255,16 @@ def loadModel(Config):
     # Make sure all wave angles are in the range -pi to +pi
     WaveTs.EAngle_h = np.mod(WaveTs.EAngle_h + np.pi, 2.0 * np.pi) - np.pi 
     
+    # Create river variables
+    RiverElev = np.flipud(np.arange(IniCond['LagoonBed'],
+                                    IniCond['LagoonBed']
+                                    + PhysicalPars['RiverSlope']
+                                    * PhysicalPars['UpstreamLength'],
+                                    PhysicalPars['RiverSlope'] * Dx))
+    
+    # Create outlet channel variables
+    
+    
     # Produce a map showing the spatial inputs
 #    (ShoreXreal, ShoreYreal) = geom.mod2real(ShoreX, ShoreY, Origin, BaseShoreNormDir)
 #    plt.plot(IniShoreCoords[:,0], IniShoreCoords[:,1], 'bx')
@@ -214,33 +274,9 @@ def loadModel(Config):
 #    plt.plot(Origin[0], Origin[1], 'go')
 #    plt.axis('equal')
         
-    #%% Time inputs
-    Dt = float(Config['Time']['Timestep'])
-    SimTime = [pd.to_datetime(Config['Time']['StartTime']),
-               pd.to_datetime(Config['Time']['EndTime'])]
+
     
-        
-    #%% Read physical parameters
-    logging.info('Processing physical parameters')
-    PhysicalPars = {'RhoSed': float(Config['PhysicalParameters']['RhoSed']),
-                    'RhoSea': float(Config['PhysicalParameters']['RhoSea']),
-                    'RhoRiv': float(Config['PhysicalParameters']['RhoSea']),
-                    'Kcoef': float(Config['PhysicalParameters']['Kcoef']),
-                    'Gravity': float(Config['PhysicalParameters']['Gravity']),
-                    'VoidRatio': float(Config['PhysicalParameters']['VoidRatio']),
-                    'GammaRatio': float(Config['PhysicalParameters']['GammaRatio']),
-                    'WaveDataDepth': float(Config['PhysicalParameters']['WaveDataDepth']),
-                    'ClosureDepth': float(Config['PhysicalParameters']['ClosureDepth'])}
     
-    GammaLST = ((PhysicalPars['RhoSed'] - PhysicalPars['RhoSea']) * 
-                PhysicalPars['Gravity'] * (1 - PhysicalPars['VoidRatio']))
-    
-    PhysicalPars['K2coef'] = PhysicalPars['Kcoef'] / GammaLST
-    PhysicalPars['BreakerCoef'] = 8.0 / (PhysicalPars['RhoSea'] *
-                                         PhysicalPars['Gravity']**1.5 *
-                                         PhysicalPars['GammaRatio']**2.0)
-    
-    # Read time inputs
     
     return (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, ShoreX, 
-            ShoreY, LagoonY, Dx, Dt, SimTime, PhysicalPars)
+            ShoreY, LagoonY, RiverElev, Dx, Dt, SimTime, PhysicalPars)

@@ -32,6 +32,16 @@ def intersectPolygon(Polygon, Xcoord):
     """ Identifies points where a polygon intersects a given x coordinate
     
     YIntersects = intersectPolygon(Polygon, Xcoord)
+    
+    Parameters:
+        Polygon (np.ndarry(float)): Two-column numpy array giving X and Y
+            coordinates of points definiing a polygon (first and last points 
+            are identical)
+        Xcoord (float): X coordinate at which to intersect the polygon
+    
+    Returns:
+        YIntersects (np.ndarray(float)): 1d array listing the Y coordinate of 
+            all the locations the polygon intersects the specified X coordinate
     """
     # Find polygon points to left of X coordinate
     LeftOfX = Polygon[:,0] < Xcoord

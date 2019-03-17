@@ -14,33 +14,53 @@ Shoreline = HurunuiShoreline.shp
 RiverLocation = RiverInflow.shp
 # polygon shapefile of lagoon including outlet channel
 LagoonOutline = LagoonPolygon.shp
-# Alongshore discretisation resolution (m)
-AlongShoreDx = 20
+# Initial outlet position (polyline shapefile)
+OutletLocation = InitialOutlet.shp
+
+[InitialConditions]
+# Initial outlet width [m]
+OutletWidth = 35
+# Lagoon bed elevation [m]
+LagoonBed = -1.0
+# Lagoon level [m]
+LagoonWL = 1.2
 
 [Time]
 # Simulation start date
 StartTime = '1 Jul 2015'
 # Simulation end date
 EndTime = '30 Jun 2016'
-# Timestep (s)
+# Timestep [s]
 Timestep = 3600
 
 [PhysicalParameters]
 # K coefficient for longshore transport calculation (non-dimensional)
 Kcoef = 0.017
-# Sediment density (kg/m^3)
+# Sediment density [kg/m^3]
 RhoSed = 2650
-# Seawater density (kg/m^3)
+# Seawater density [kg/m^3]
 RhoSea = 1025
-# River water density (kg/m^3)
+# River water density [kg/m^3]
 RhoRiv = 1000
 # Sediment void ratio
 VoidRatio = 0.4
-# Gravity (m/s^2)
+# Gravity [m/s^2]
 Gravity = 9.81
 # Ratio of water depth at breakpoint to breaking wave height (WaveHeightAtBreaking = GammaRatio x WaterDepthAtBreakPoint)
 GammaRatio = 0.5
-# Depth of output point for wave model data given in WaveConditions file (m)
+# Depth of output point for wave model data given in WaveConditions file [m]
 WaveDataDepth = 10.0
 # Closure depth for single line shoreline model [m]
 ClosureDepth = 5.0
+# River bed slope upstream of lagoon [m/m]
+RiverSlope = 0.003
+# Grain size for fluvial sediment transport [m]
+GrainSize = 0.032
+# Upstream river length to simulate [m]
+UpstreamLength = 1000
+# River width upstream of hapua [m]
+RiverWidth = 100
+
+[NumericalParameters]
+# Alongshore discretisation resolution (transect spacing) [m]
+AlongShoreDx = 20
