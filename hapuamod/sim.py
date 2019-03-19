@@ -21,7 +21,7 @@ def longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, Wlen_h, EAngle_h, Phys
     """
     
     # Calculate offshore wave angle relative to each shoreline segment
-    LocalRelShoreDir = np.arctan((ShoreY[0:-2] - ShoreY[1:-1])/Dx)
+    LocalRelShoreDir = np.arctan((ShoreY[0:-1] - ShoreY[1:])/Dx)
     LocalEAngle_h = EAngle_h - LocalRelShoreDir
     
     # Calculate breaking wave depth
@@ -58,7 +58,7 @@ def shoreChange(LST, Dx, Dt, PhysicalPars):
     # TODO: handle shoreline boundary conditions
     
     Dy = np.zeros([LST.size + 1])
-    Dy[1:-2] = (LST[0:-2] - LST[1:-1]) * Dt / (PhysicalPars['ClosureDepth'] * Dx)
+    Dy[1:-1] = (LST[0:-1] - LST[1:]) * Dt / (PhysicalPars['ClosureDepth'] * Dx)
     
     return Dy
     

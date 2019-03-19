@@ -20,10 +20,11 @@ except NameError:
 ModelConfigFile = 'inputs\HurunuiModel.cnf'
 Config = hm.load.readConfig(ModelConfigFile)
 (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, ShoreX, ShoreY, LagoonY,
- RiverElev, Dx, Dt, SimTime, PhysicalPars) = hm.load.loadModel(Config)
+ LagoonElev, RiverElev, OutletX, OutletY, OutletDx, OutletElev, OutletWidth, 
+ Dx, Dt, SimTime, PhysicalPars) = hm.load.loadModel(Config)
 
 hm.visualise.mapView(ShoreX, ShoreY, LagoonY, Origin, BaseShoreNormDir)
-hm.visualise.modelView(ShoreX, ShoreY, LagoonY)
+hm.visualise.modelView(ShoreX, ShoreY, LagoonY, OutletX, OutletY)
 hm.visualise.riverLongSection(RiverElev, Dx)
 
 # Test longshore transport routine

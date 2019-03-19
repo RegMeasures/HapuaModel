@@ -34,7 +34,7 @@ def mapView(ShoreX, ShoreY, LagoonY, Origin, ShoreNormalDir):
     # tidy up the plot
     plt.axis('equal')
 
-def modelView(ShoreX, ShoreY, LagoonY):
+def modelView(ShoreX, ShoreY, LagoonY, OutletX, OutletY):
     """ Map the current model state in model coordinates
     """
     # Create new figure
@@ -50,6 +50,9 @@ def modelView(ShoreX, ShoreY, LagoonY):
     plt.plot([ShoreX[EndTransects[0]],ShoreX[EndTransects[0]]], LagoonY[EndTransects[0],:], 'b-')
     plt.plot([ShoreX[EndTransects[1]],ShoreX[EndTransects[1]]], LagoonY[EndTransects[1],:], 'b-')
     
+    # Plot Outlet channel
+    plt.plot(OutletX, OutletY, 'r-x')
+    
     plt.axis('equal')
     
 def riverLongSection(RiverElev, Dx):
@@ -61,5 +64,5 @@ def riverLongSection(RiverElev, Dx):
     # Calculatethe distance along the channel
     RivDist = np.arange(0, RiverElev.size * Dx, Dx)
     
-    # Plot teh river bed level
+    # Plot the river bed level
     plt.plot(RivDist, RiverElev)

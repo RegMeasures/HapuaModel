@@ -107,21 +107,6 @@ def loadModel(Config):
                 BreakerCoef = 8 / (RhoSea * Gravity^1.5 * GammaRatio^2)
     """
     
-    #%% Read the boundary condition timeseries
-    logging.info('Reading flow timeseries from "%s"' % 
-                 Config['BoundaryConditions']['RiverFlow'])
-    FlowTs = pd.read_csv(Config['BoundaryConditions']['RiverFlow'], 
-                         index_col=0)
-    
-    logging.info('Reading wave timeseries from "%s"' % 
-                 Config['BoundaryConditions']['WaveConditions'])
-    WaveTs = pd.read_csv(Config['BoundaryConditions']['WaveConditions'], 
-                         index_col=0)
-    
-    logging.info('Reading sea level timeseries from "%s"' % 
-                 Config['BoundaryConditions']['SeaLevel'])
-    SeaLevelTs = pd.read_csv(Config['BoundaryConditions']['SeaLevel'], 
-                             index_col=0)
     #%% Spatial inputs
     
     # Read the initial shoreline position
@@ -155,15 +140,55 @@ def loadModel(Config):
     # Read the initial outlet position polyline
     logging.info('Reading lagoon outline from from "%s"' %
                  Config['SpatialInputs']['OutletLocation'])
-    OutletShp = shapefile.Reader(Config['SpatialInputs']['LagoonOutline'])
+    OutletShp = shapefile.Reader(Config['SpatialInputs']['OutletLocation'])
     # check it is a polyline and there is only 1
-    assert OutletShp.shapeType==5, 'OutletLocation must be a polyline shapefile'
+    assert OutletShp.shapeType==3, 'OutletLocation must be a polyline shapefile'
     assert len(OutletShp.shapes())==1, 'multiple polylines in OutletLocation. You can only specify a single initial outlet.'
     OutletCoords = np.asarray(OutletShp.shape(0).points[:])
+    
+    #%% Develop model coordinate system
+    logging.info('Creating shore-parallel model coordinate system')
+    
+    # Fit a straight reference baseline through the specified shoreline points
+    Baseline = np.polyfit(IniShoreCoords[:,0], IniShoreCoords[:,1], 1)
+    
+    # Defin origin point on baseline (in line with river inflow)
+    Origin = np.empty(2)
+    Origin[0] = ((InflowCoord[1] + 
+                  (InflowCoord[0]/Baseline[0]) - Baseline[1]) / 
+                 (Baseline[0] + 1/Baseline[0]))
+    Origin[1] = Origin[0] * Baseline[0] + Baseline[1]
+    if ((InflowCoord[0] * Baseline[0] + Baseline[1])>0):
+        # land is to north of baseline
+        BaseShoreNormDir = math.atan2(Baseline[0],-1)
+    else:
+        # land is to south of baseline
+        BaseShoreNormDir = math.atan2(-Baseline[0],1)
+    
+    #%% Read the boundary condition timeseries
+    logging.info('Reading flow timeseries from "%s"' % 
+                 Config['BoundaryConditions']['RiverFlow'])
+    FlowTs = pd.read_csv(Config['BoundaryConditions']['RiverFlow'], 
+                         index_col=0)
+    
+    logging.info('Reading wave timeseries from "%s"' % 
+                 Config['BoundaryConditions']['WaveConditions'])
+    WaveTs = pd.read_csv(Config['BoundaryConditions']['WaveConditions'], 
+                         index_col=0)
+    # Convert wave directions into radians in model coordinate system
+    WaveTs.EAngle_h = np.deg2rad(WaveTs.EAngle_h) - (BaseShoreNormDir)
+    # Make sure all wave angles are in the range -pi to +pi
+    WaveTs.EAngle_h = np.mod(WaveTs.EAngle_h + np.pi, 2.0 * np.pi) - np.pi 
+    
+    logging.info('Reading sea level timeseries from "%s"' % 
+                 Config['BoundaryConditions']['SeaLevel'])
+    SeaLevelTs = pd.read_csv(Config['BoundaryConditions']['SeaLevel'], 
+                             index_col=0)
     
     #%% Initial conditions
     logging.info('Processing initial conditions')
     IniCond = {'OutletWidth': float(Config['InitialConditions']['OutletWidth']),
+               'OutletBed': float(Config['InitialConditions']['OutletBed']),
                'LagoonBed': float(Config['InitialConditions']['LagoonBed']),
                'LagoonWL': float(Config['InitialConditions']['LagoonWL'])}
     
@@ -200,41 +225,26 @@ def loadModel(Config):
     
     #%% Read numerical parameters
     Dx = float(Config['NumericalParameters']['AlongShoreDx'])
-    
-    #%% Pre-process model inputs into model coordinate system
-    logging.info('Processing inputs into model coordinate system')
-    
-    # Fit a straight reference baseline through the specified shoreline points
-    Baseline = np.polyfit(IniShoreCoords[:,0], IniShoreCoords[:,1], 1)
-    
-    # Defin origin point on baseline (in line with river inflow)
-    Origin = np.empty(2)
-    Origin[0] = ((InflowCoord[1] + 
-                  (InflowCoord[0]/Baseline[0]) - Baseline[1]) / 
-                 (Baseline[0] + 1/Baseline[0]))
-    Origin[1] = Origin[0] * Baseline[0] + Baseline[1]
-    if ((InflowCoord[0] * Baseline[0] + Baseline[1])>0):
-        # land is to north of baseline
-        BaseShoreNormDir = math.atan2(Baseline[0],-1)
-    else:
-        # land is to south of baseline
-        BaseShoreNormDir = math.atan2(-Baseline[0],1)
         
-    # Convert shoreline coords into model coordinate system
+    #%% Initialise shoreline variables
+    
+    # Convert shoreline into model coordinate system
     IniShoreCoords2 = np.empty(IniShoreCoords.shape)
     (IniShoreCoords2[:,0], IniShoreCoords2[:,1]) = geom.real2mod(IniShoreCoords[:,0], IniShoreCoords[:,1], Origin, BaseShoreNormDir)
     if IniShoreCoords2[0,0] > IniShoreCoords2[-1,0]:
         IniShoreCoords2 = IniShoreCoords2 = np.flipud(IniShoreCoords2)
     assert np.all(np.diff(IniShoreCoords2[:,0]) > 0), 'Shoreline includes recurvature???'
     
-    # Convert lagoon outline into model coordinate system
-    LagoonCoords2 = np.empty(LagoonCoords.shape)
-    (LagoonCoords2[:,0], LagoonCoords2[:,1]) = geom.real2mod(LagoonCoords[:,0], LagoonCoords[:,1], Origin, BaseShoreNormDir)
-    
     # Discretise shoreline at fixed intervals in model coordinate system
     ShoreX = np.arange(math.ceil(IniShoreCoords2[0,0]/Dx)*Dx, 
                        IniShoreCoords2[-1,0], Dx)
     ShoreY = np.interp(ShoreX, IniShoreCoords2[:,0], IniShoreCoords2[:,1])
+    
+    #%% Initialise lagoon variables
+    
+    # Convert lagoon outline into model coordinate system
+    LagoonCoords2 = np.empty(LagoonCoords.shape)
+    (LagoonCoords2[:,0], LagoonCoords2[:,1]) = geom.real2mod(LagoonCoords[:,0], LagoonCoords[:,1], Origin, BaseShoreNormDir)
     
     # Check lagoon extent is within limits of shoreline
     LagoonExtent = [np.amin(LagoonCoords2[:,0]), np.amax(LagoonCoords2[:,0])]
@@ -249,21 +259,44 @@ def loadModel(Config):
             LagoonY[ii,0] = np.amin(YIntersects)
             LagoonY[ii,1] = np.amax(YIntersects)
     
-    # Convert wave directions into radians in model coordinate system
-    WaveTs.EAngle_h = np.deg2rad(WaveTs.EAngle_h) - (BaseShoreNormDir)
+    # Initialise lagoon bed elevation
+    LagoonElev = np.full(ShoreX.size, IniCond['LagoonBed'])
+    LagoonElev[np.isnan(LagoonY[:,1])] = np.nan
     
-    # Make sure all wave angles are in the range -pi to +pi
-    WaveTs.EAngle_h = np.mod(WaveTs.EAngle_h + np.pi, 2.0 * np.pi) - np.pi 
-    
-    # Create river variables
+    #%% Initialising river variables
     RiverElev = np.flipud(np.arange(IniCond['LagoonBed'],
                                     IniCond['LagoonBed']
                                     + PhysicalPars['RiverSlope']
                                     * PhysicalPars['UpstreamLength'],
                                     PhysicalPars['RiverSlope'] * Dx))
     
-    # Create outlet channel variables
+    # Convert outlet channel into model coordinate system
+    OutletCoords2 = np.empty(OutletCoords.shape)
+    (OutletCoords2[:,0], OutletCoords2[:,1]) = geom.real2mod(OutletCoords[:,0], OutletCoords[:,1], Origin, BaseShoreNormDir)
     
+    # Check outlet coords ordered from lagoon to sea
+    if OutletCoords2[0,1] > OutletCoords2[-1,1]:
+        OutletCoords2 = np.flipud(OutletCoords2)
+    
+    # Trim outlet channel to shoreline and sea
+    (OutletX, OutletY) = geom.trimSegment(OutletCoords2[:,0], OutletCoords2[:,1], 
+                                          ShoreX, ShoreY)
+    (OutletX, OutletY) = geom.trimSegment(np.flipud(OutletX), np.flipud(OutletY), 
+                                          ShoreX, LagoonY[:,1])
+    OutletX = np.flipud(OutletX)
+    OutletY = np.flipud(OutletY)
+    
+    # Divide outlet channel into appropriate segments
+    (OutletX, OutletY) = geom.adjustLineDx(OutletX, OutletY, Dx)
+    
+    # Create outlet channel variables
+    OutletDx = np.sqrt((OutletX[1:]-OutletX[0:-1])**2 + 
+                       (OutletY[1:]-OutletY[0:-1])**2)
+    OutletElev = np.linspace(IniCond['LagoonBed'], IniCond['OutletBed'],
+                             OutletX.size)
+    OutletWidth = np.tile(IniCond['OutletWidth'], OutletDx.size)
+    
+  
     
     # Produce a map showing the spatial inputs
 #    (ShoreXreal, ShoreYreal) = geom.mod2real(ShoreX, ShoreY, Origin, BaseShoreNormDir)
@@ -279,4 +312,5 @@ def loadModel(Config):
     
     
     return (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, ShoreX, 
-            ShoreY, LagoonY, RiverElev, Dx, Dt, SimTime, PhysicalPars)
+            ShoreY, LagoonY, LagoonElev, RiverElev, OutletX, OutletY, OutletDx, 
+            OutletElev, OutletWidth, Dx, Dt, SimTime, PhysicalPars)
