@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 # import standard packages
-import pandas as pd
 import numpy as np
 
 def longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, Wlen_h, EAngle_h, PhysicalPars):

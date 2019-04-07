@@ -21,11 +21,9 @@ OutletLocation = InitialOutlet.shp
 # Initial outlet width [m]
 OutletWidth = 35
 # Initial bed level of the seaward end of the outlet channel
-OutletBed = -1.0
+OutletBed = -1.5
 # Lagoon bed elevation [m]
 LagoonBed = -1.0
-# Lagoon level [m]
-LagoonWL = 1.2
 
 [Time]
 # Simulation start date

@@ -6,6 +6,7 @@ import numpy as np
 
 # import local packages
 import hapuamod.geom as geom
+import hapuamod.riv as riv
 
 def mapView(ShoreX, ShoreY, LagoonY, Origin, ShoreNormalDir):
     """ Map the current model state in real world coordinates
@@ -55,14 +56,18 @@ def modelView(ShoreX, ShoreY, LagoonY, OutletX, OutletY):
     
     plt.axis('equal')
     
-def riverLongSection(RiverElev, Dx):
+def longSection(RiverElev, ShoreX, LagoonY, LagoonElev, OutletDx, 
+                OutletElev, OutletWidth, OutletX, RiverWidth, Dx):
     """ View a long section of the river to the lagoon outlet
     """
     # Create new figure
     plt.figure()
     
-    # Calculatethe distance along the channel
-    RivDist = np.arange(0, RiverElev.size * Dx, Dx)
+    # Assemble the complete channel
+    (ChanDx, ChanElev, ChanWidth, ChanArea) = \
+        riv.assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, OutletDx, 
+                            OutletElev, OutletWidth, OutletX, RiverWidth, Dx)
     
     # Plot the river bed level
-    plt.plot(RivDist, RiverElev)
+    ChanDist = np.insert(np.cumsum(ChanDx),0,0)
+    plt.plot(ChanDist, ChanElev)

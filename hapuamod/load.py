@@ -169,12 +169,15 @@ def loadModel(Config):
     logging.info('Reading flow timeseries from "%s"' % 
                  Config['BoundaryConditions']['RiverFlow'])
     FlowTs = pd.read_csv(Config['BoundaryConditions']['RiverFlow'], 
-                         index_col=0)
+                         index_col=0, parse_dates=True,
+                         infer_datetime_format=True)
+    FlowTs = FlowTs.Flow
     
     logging.info('Reading wave timeseries from "%s"' % 
                  Config['BoundaryConditions']['WaveConditions'])
     WaveTs = pd.read_csv(Config['BoundaryConditions']['WaveConditions'], 
-                         index_col=0)
+                         index_col=0, parse_dates=True,
+                         infer_datetime_format=True)
     # Convert wave directions into radians in model coordinate system
     WaveTs.EAngle_h = np.deg2rad(WaveTs.EAngle_h) - (BaseShoreNormDir)
     # Make sure all wave angles are in the range -pi to +pi
@@ -183,14 +186,15 @@ def loadModel(Config):
     logging.info('Reading sea level timeseries from "%s"' % 
                  Config['BoundaryConditions']['SeaLevel'])
     SeaLevelTs = pd.read_csv(Config['BoundaryConditions']['SeaLevel'], 
-                             index_col=0)
+                             index_col=0, parse_dates=True,
+                             infer_datetime_format=True)
+    SeaLevelTs = SeaLevelTs.SeaLevel
     
     #%% Initial conditions
     logging.info('Processing initial conditions')
     IniCond = {'OutletWidth': float(Config['InitialConditions']['OutletWidth']),
                'OutletBed': float(Config['InitialConditions']['OutletBed']),
-               'LagoonBed': float(Config['InitialConditions']['LagoonBed']),
-               'LagoonWL': float(Config['InitialConditions']['LagoonWL'])}
+               'LagoonBed': float(Config['InitialConditions']['LagoonBed'])}
     
     #%% Time inputs
     Dt = float(Config['Time']['Timestep'])
@@ -213,7 +217,8 @@ def loadModel(Config):
                     'RiverSlope': float(Config['PhysicalParameters']['RiverSlope']),
                     'GrainSize': float(Config['PhysicalParameters']['GrainSize']),
                     'UpstreamLength': float(Config['PhysicalParameters']['UpstreamLength']),
-                    'RiverWidth': float(Config['PhysicalParameters']['RiverWidth'])}
+                    'RiverWidth': float(Config['PhysicalParameters']['RiverWidth']),
+                    'Roughness': float(Config['PhysicalParameters']['RoughnessManning'])}
 
     GammaLST = ((PhysicalPars['RhoSed'] - PhysicalPars['RhoSea']) * 
                 PhysicalPars['Gravity'] * (1 - PhysicalPars['VoidRatio']))
@@ -294,7 +299,7 @@ def loadModel(Config):
                        (OutletY[1:]-OutletY[0:-1])**2)
     OutletElev = np.linspace(IniCond['LagoonBed'], IniCond['OutletBed'],
                              OutletX.size)
-    OutletWidth = np.tile(IniCond['OutletWidth'], OutletDx.size)
+    OutletWidth = np.tile(IniCond['OutletWidth'], OutletX.size)
     
   
     

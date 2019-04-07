@@ -13,4 +13,5 @@ hapuamod requires: numpy, pandas, matplotlib, configobj, os, shapefile
 import hapuamod.load
 import hapuamod.geom
 import hapuamod.visualise
-import hapuamod.sim
+import hapuamod.coast
+import hapuamod.riv
