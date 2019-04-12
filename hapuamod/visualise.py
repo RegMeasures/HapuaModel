@@ -11,8 +11,6 @@ import hapuamod.riv as riv
 def mapView(ShoreX, ShoreY, LagoonY, Origin, ShoreNormalDir):
     """ Map the current model state in real world coordinates
     """
-    # Create new figure
-    plt.figure()
     
     # Plot the shoreline
     (ShoreXreal, ShoreYreal) = geom.mod2real(ShoreX, ShoreY, Origin, ShoreNormalDir)
@@ -38,8 +36,6 @@ def mapView(ShoreX, ShoreY, LagoonY, Origin, ShoreNormalDir):
 def modelView(ShoreX, ShoreY, LagoonY, OutletX, OutletY):
     """ Map the current model state in model coordinates
     """
-    # Create new figure
-    plt.figure(figsize=(12,5))
     
     # Plot shoreline
     plt.plot(ShoreX, ShoreY, 'k-')
@@ -56,8 +52,8 @@ def modelView(ShoreX, ShoreY, LagoonY, OutletX, OutletY):
     
     plt.axis('equal')
     
-def longSection(RiverElev, ShoreX, LagoonY, LagoonElev, OutletDx, 
-                OutletElev, OutletWidth, OutletX, RiverWidth, Dx):
+def longSection(RiverElev, ShoreX, LagoonY, LagoonElev, 
+                OutletElev, OutletWidth, OutletX, OutletY, RiverWidth, Dx):
     """ View a long section of the river to the lagoon outlet
     """
     # Create new figure
@@ -65,8 +61,8 @@ def longSection(RiverElev, ShoreX, LagoonY, LagoonElev, OutletDx,
     
     # Assemble the complete channel
     (ChanDx, ChanElev, ChanWidth, ChanArea) = \
-        riv.assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, OutletDx, 
-                            OutletElev, OutletWidth, OutletX, RiverWidth, Dx)
+        riv.assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, OutletX, 
+                            OutletY, OutletElev, OutletWidth, RiverWidth, Dx)
     
     # Plot the river bed level
     ChanDist = np.insert(np.cumsum(ChanDx),0,0)

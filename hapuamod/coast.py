@@ -3,7 +3,7 @@
 # import standard packages
 import numpy as np
 
-def longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, Wlen_h, EAngle_h, PhysicalPars):
+def longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, Wlen_h, EDir_h, PhysicalPars):
     """ Calculates longshore transport rate for each shore segment
     
     Calculation performed for whole model for a single timestep.
@@ -21,7 +21,7 @@ def longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, Wlen_h, EAngle_h, Phys
     
     # Calculate offshore wave angle relative to each shoreline segment
     LocalRelShoreDir = np.arctan((ShoreY[0:-1] - ShoreY[1:])/Dx)
-    LocalEAngle_h = EAngle_h - LocalRelShoreDir
+    LocalEDir_h = EDir_h - LocalRelShoreDir
     
     # Calculate breaking wave depth
     BreakerDepth = (PhysicalPars['BreakerCoef'] * WavePower)**0.2
@@ -31,9 +31,9 @@ def longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, Wlen_h, EAngle_h, Phys
     C_h = ((PhysicalPars['Gravity'] * WavePeriod / (2.0 * np.pi)) * 
            np.tanh(2.0 * np.pi * PhysicalPars['WaveDataDepth'] / Wlen_h))
     # sin(alpha_b)/sin(alpha_h) = C_b/C_h
-    BreakerAngle = np.arcsin(np.sin(LocalEAngle_h) * (C_b / C_h))
+    BreakerAngle = np.arcsin(np.sin(LocalEDir_h) * (C_b / C_h))
     
-    LST = PhysicalPars['K2coef'] * WavePower * np.cos(LocalEAngle_h) * np.sin(BreakerAngle)
+    LST = - PhysicalPars['K2coef'] * WavePower * np.cos(LocalEDir_h) * np.sin(BreakerAngle)
     
     return LST
 
@@ -57,7 +57,7 @@ def shoreChange(LST, Dx, Dt, PhysicalPars):
     # TODO: handle shoreline boundary conditions
     
     Dy = np.zeros([LST.size + 1])
-    Dy[1:-1] = (LST[0:-1] - LST[1:]) * Dt / (PhysicalPars['ClosureDepth'] * Dx)
+    Dy[1:-1] = (LST[0:-1] - LST[1:]) * Dt.seconds / (PhysicalPars['ClosureDepth'] * Dx)
     
     return Dy
     

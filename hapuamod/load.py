@@ -54,8 +54,10 @@ def loadModel(Config):
     variables. Prior to running loadModel the onfig file should first be parsed
     using the readConfig function.
     
-    (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, 
-     ShoreX, ShoreY, Dx) = loadModel(Config)
+    (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, ShoreX, 
+     ShoreY, LagoonY, LagoonElev, RiverElev, OutletX, OutletY, 
+     OutletElev, OutletWidth, Dx, Dt, SimTime, 
+     PhysicalPars) = loadModel(Config)
     
     Parameters:
         Config (Dict): Model config file read into a dict variable by the 
@@ -77,7 +79,8 @@ def loadModel(Config):
                       radians as part of the pre-processing (radians)
         SeaLevelTs (DataFrame): Sea level timeseries as single column DataFrame
             with datetime index. Column name is SeaLevel (m)
-        Origin
+        Origin (np.ndarray(float64)): Real world X and Y coordinates of the
+            origin of the model coordinate system (m)
         BaseShoreNormDir (float): Direction of offshore pointing line at 90 
             degrees to overall average coast direction. Computed based on a 
             straightline fitted thruogh the initial condition shoreline 
@@ -87,24 +90,42 @@ def loadModel(Config):
         LagoonY (np.ndarray(float64)): position of seaward and landward sides 
             of the lagoon in model coordinate system at transects with 
             x-coordinates given by ShoreX (m)
+        LagoonElev (np.ndarray(float64)): 
+        RiverElev (np.ndarray(float64)): 
+        OutletX, OutletY (np.ndarray(float64)): coordinates of discretised 
+            outlet channel nodes in model coordinate system (m)
+        OutletElev (np.ndarray(float64)): 
+        OutletWidth (np.ndarray(float64)): 
         Dx (float): shoreline discretisation interval (m)
-        Dt (float): timestep (s)
+        Dt (pd.Timedelta): timestep
         SimTime (list): Two element list containing the simulation start
             and end times (datetime)
         PhysicalPars (dict): Physical parameters including:
-            RhoSed (float)
-            RhoSea (float)
-            RhoRiv (float)
-            Gravity (float)
-            Kcoef (float)
-            VoidRatio (float)
-            GammaRatio (float)
-            WaveDataDepth (float)
+            RhoSed (float): Sediment density (kg/m3)
+            RhoSea (float): Seawater density (kg/m3)
+            RhoRiv (float): Riverwater density (kg/m3)
+            Gravity (float): Gravity (m/s2)
+            Kcoef (float): K coefficient for longshore transport 
+                (non-dimensional)
+            VoidRatio (float): Sediment void ratio (0-1)
+            GammaRatio (float): Ratio of water depth at breakpoint to breaking 
+                wave height (non-dimensional)
+            WaveDataDepth (float): Depth contour of input wave data (m)
+            ClosureDepth (float): Closure depth for 1-line shoreline model (m)
+            RiverSlope (float): Initial condition slope for river upstream of 
+                hapua (m/m)
+            GrainSize (float): Sediment size for fluvial sediment transport 
+                calculation (assumed uniform) (m) 
+            UpstreamLength (float): Length of river upstream of hapua to 
+                include in model (m)
+            RiverWidth (float): width of river upstream of hapua (assumed 
+                       uniform) (m)
+            Roughness (float): Manning's 'n' for river hydraulics (m^(1/3)/s) 
             K2coef (float): Calculated from other inputs for use in calculation
                 of longshore transport rate. K2 = K / (RhoSed - RhoSea) * g * (1 - VoidRatio))
             BreakerCoef (float): Calculated from other inputs for use in 
                 calculation of depth of breaking waves. 
-                BreakerCoef = 8 / (RhoSea * Gravity^1.5 * GammaRatio^2)
+                BreakerCoef = 8 / (RhoSea * Gravity^1.5 * GammaRatio^2)                        
     """
     
     #%% Spatial inputs
@@ -179,9 +200,9 @@ def loadModel(Config):
                          index_col=0, parse_dates=True,
                          infer_datetime_format=True)
     # Convert wave directions into radians in model coordinate system
-    WaveTs.EAngle_h = np.deg2rad(WaveTs.EAngle_h) - (BaseShoreNormDir)
+    WaveTs.EDir_h = np.deg2rad(WaveTs.EDir_h) - (BaseShoreNormDir)
     # Make sure all wave angles are in the range -pi to +pi
-    WaveTs.EAngle_h = np.mod(WaveTs.EAngle_h + np.pi, 2.0 * np.pi) - np.pi 
+    WaveTs.EDir_h = np.mod(WaveTs.EDir_h + np.pi, 2.0 * np.pi) - np.pi 
     
     logging.info('Reading sea level timeseries from "%s"' % 
                  Config['BoundaryConditions']['SeaLevel'])
@@ -197,7 +218,7 @@ def loadModel(Config):
                'LagoonBed': float(Config['InitialConditions']['LagoonBed'])}
     
     #%% Time inputs
-    Dt = float(Config['Time']['Timestep'])
+    Dt = pd.Timedelta(seconds=float(Config['Time']['Timestep']))
     SimTime = [pd.to_datetime(Config['Time']['StartTime']),
                pd.to_datetime(Config['Time']['EndTime'])]
     
@@ -295,14 +316,10 @@ def loadModel(Config):
     (OutletX, OutletY) = geom.adjustLineDx(OutletX, OutletY, Dx)
     
     # Create outlet channel variables
-    OutletDx = np.sqrt((OutletX[1:]-OutletX[0:-1])**2 + 
-                       (OutletY[1:]-OutletY[0:-1])**2)
     OutletElev = np.linspace(IniCond['LagoonBed'], IniCond['OutletBed'],
                              OutletX.size)
     OutletWidth = np.tile(IniCond['OutletWidth'], OutletX.size)
-    
-  
-    
+      
     # Produce a map showing the spatial inputs
 #    (ShoreXreal, ShoreYreal) = geom.mod2real(ShoreX, ShoreY, Origin, BaseShoreNormDir)
 #    plt.plot(IniShoreCoords[:,0], IniShoreCoords[:,1], 'bx')
@@ -311,11 +328,7 @@ def loadModel(Config):
 #    plt.plot(InflowCoord[0], InflowCoord[1],'ro')
 #    plt.plot(Origin[0], Origin[1], 'go')
 #    plt.axis('equal')
-        
-
-    
-    
     
     return (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, ShoreX, 
-            ShoreY, LagoonY, LagoonElev, RiverElev, OutletX, OutletY, OutletDx, 
+            ShoreY, LagoonY, LagoonElev, RiverElev, OutletX, OutletY, 
             OutletElev, OutletWidth, Dx, Dt, SimTime, PhysicalPars)

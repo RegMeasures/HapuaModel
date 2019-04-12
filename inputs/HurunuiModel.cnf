@@ -28,8 +28,8 @@ LagoonBed = -1.0
 [Time]
 # Simulation start date
 StartTime = '1 Jul 2015'
-# Simulation end date
-EndTime = '30 Jun 2016'
+# Simulation end date '30 Jun 2016'
+EndTime = '30 Jul 2015'
 # Timestep [s]
 Timestep = 3600
 

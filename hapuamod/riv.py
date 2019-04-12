@@ -5,8 +5,8 @@
 import numpy as np
 import logging
 
-def assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, OutletDx, 
-                    OutletElev, OutletWidth, OutletX, RiverWidth, Dx):
+def assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, OutletX, OutletY,
+                    OutletElev, OutletWidth, RiverWidth, Dx):
     """ Combine river, lagoon and outlet into single channel for hyd-calcs
     
     (ChanDx, ChanElev, ChanWidth, ChanArea) = \
@@ -14,7 +14,8 @@ def assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, OutletDx,
                             OutletElev, OutletWidth, OutletX, RiverWidth, Dx)
     """
     LagoonWidth = LagoonY[:,1] - LagoonY[:,0]
-    
+    OutletDx = np.sqrt((OutletX[1:]-OutletX[0:-1])**2 + 
+                       (OutletY[1:]-OutletY[0:-1])**2)
     # TODO: Account for potentially dry parts of the lagoon when 
     #       calculating ChanArea
     
@@ -47,9 +48,14 @@ def assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, OutletDx,
     return (ChanDx, ChanElev, ChanWidth, ChanArea)
 
 def solveSteady(ChanDx, ChanElev, ChanWidth, Roughness, Qin, DsWL):
+    """ Solve steady state river hydraulics
     
+    (ChanDep, ChanVel) = solveSteady(ChanDx, ChanElev, ChanWidth, 
+                                     Roughness, Qin, DsWL)
+    """
     Grav = 9.81
     Tol = 0.005
+    MaxIter = 10
     
     # Find critical depth
     # Fr = Vel/sqrt(Grav*Dep) = 1 i.e. Vel^2 = Grav*Dep
@@ -88,7 +94,7 @@ def solveSteady(ChanDx, ChanElev, ChanWidth, Roughness, Qin, DsWL):
             ChanDep[XS] -= DepErr / Gradient
             DepErr = ChanDep[XS] + Acoef*ChanDep[XS]**(-2) - Bcoef*ChanDep[XS]**(-10/3) + Cconst
             CheckCount += 1
-            assert CheckCount < 10, 'Maximum iterations exceeded solving steady state water level'
+            assert CheckCount < MaxIter, 'Maximum iterations exceeded solving steady state water level'
         
         # Check for supercritical
         if ChanDep[XS] < CritDep[XS]:
@@ -98,4 +104,4 @@ def solveSteady(ChanDx, ChanElev, ChanWidth, Roughness, Qin, DsWL):
         Energy[XS] = ChanElev[XS] + ChanDep[XS] + ChanVel[XS]**2 / (2*Grav)
         S_f[XS] = ChanVel[XS]**2 * Roughness**2 / ChanDep[XS]**(4/3)
     
-    return ChanDep      
+    return ChanDep, ChanVel

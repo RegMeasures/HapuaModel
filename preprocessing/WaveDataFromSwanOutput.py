@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 WaveModelOutputFile = 'C:\\Users\measuresrj\OneDrive - NIWA\Hapua\Hurunui\SWAN\output\TS_hurunui.txt'
-ShoreNormalDir = 128 # [degrees]
+ShoreNormalDir = 128 # [degrees] used for back refracting to deep water
 
 #%% Read model wave data
 ColNames = ['ModelTime', 'Year', 'Month', 'Day', 'Hour', 'Min', 
@@ -21,7 +21,8 @@ OutputData = WaveData.loc[:,['WavePeriod','Wlen_h']]
 #%% Calculate net wave power magnitude and direction
 OutputData['WavePower'] = 1025 * 9.81 * np.sqrt(np.power(WaveData['XWForce'],2) + 
                                                 np.power(WaveData['YWForce'],2))
-OutputData['EAngle_h'] = np.rad2deg(np.arctan2(WaveData['XWForce'], WaveData['YWForce']))
+OutputData['EDir_h'] = np.rad2deg(np.arctan2(-WaveData['XWForce'], -WaveData['YWForce']))
+OutputData['EDir_h'] = OutputData['EDir_h'] % 360
 
 #%% Calculate offshore significant wave height
 
