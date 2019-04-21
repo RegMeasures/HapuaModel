@@ -68,7 +68,15 @@ hm.visualise.longSection(RiverElev, ShoreX, LagoonY, LagoonElev,
                          PhysicalPars['RiverWidth'], Dx)
 
 ChanDist = np.insert(np.cumsum(ChanDx),0,0)
-plt.plot(ChanDist, ChanDep+ChanElev)
+plt.plot(ChanDist, ChanDep+ChanElev, 'b-')
+
+# Unsteady hydraulics
+(ChanDep, ChanVel) = hm.riv.solveFullPreissmann(ChanElev, ChanWidth, ChanDep, 
+                                                ChanVel, ChanDx, 10, 
+                                                PhysicalPars['Roughness'], 
+                                                RivFlow, SeaLevel, 
+                                                0.6, 0.001, 20, 9.81)
+plt.plot(ChanDist, ChanDep+ChanElev, 'r:')
 
 #%% Test core timestepping
 Time = SimTime[0]
