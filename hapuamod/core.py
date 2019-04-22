@@ -32,7 +32,7 @@ def run(ModelConfigFile):
     Config = loadmod.readConfig(ModelConfigFile)
     (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, ShoreX, ShoreY, 
      LagoonY, LagoonElev, RiverElev, OutletX, OutletY, OutletElev, OutletWidth, 
-     Dx, TimePars, PhysicalPars, OutputOpts) = loadmod.loadModel(Config)
+     TimePars, PhysicalPars, NumericalPars, OutputOpts) = loadmod.loadModel(Config)
     
     #%% Generate initial conditions for river model
     RivFlow = interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']])).values
@@ -41,7 +41,7 @@ def run(ModelConfigFile):
     (ChanDx, ChanElev, ChanWidth, ChanArea) = \
     riv.assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, 
                         OutletX, OutletY, OutletElev, OutletWidth, 
-                        PhysicalPars['RiverWidth'], Dx)
+                        PhysicalPars['RiverWidth'], NumericalPars['Dx'])
     
     (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
                                          PhysicalPars['Roughness'], 
@@ -71,7 +71,7 @@ def run(ModelConfigFile):
                                                      TimePars['HydDt'], 
                                                      PhysicalPars['Roughness'], 
                                                      RivFlow, SeaLevel, 
-                                                     0.6, 0.001, 20, 9.81)
+                                                     NumericalPars)
         
         # Run shoreline model
         WavesAtT = interpolate_at(WaveTs, pd.DatetimeIndex([MorTime]))
@@ -80,9 +80,11 @@ def run(ModelConfigFile):
         WavePeriod = WavesAtT.WavePeriod[0]
         Wlen_h = WavesAtT.Wlen_h[0]
         
-        LST = coast.longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, 
-                                       Wlen_h, EDir_h, PhysicalPars)
-        ShoreY += coast.shoreChange(LST, Dx, TimePars['MorDt'], PhysicalPars)
+        LST = coast.longShoreTransport(ShoreY, NumericalPars['Dx'], WavePower, 
+                                       WavePeriod, Wlen_h, EDir_h, 
+                                       PhysicalPars)
+        ShoreY += coast.shoreChange(LST, NumericalPars['Dx'], 
+                                    TimePars['MorDt'], PhysicalPars)
             
         # updates to user
         if MorTime >= LogTime:

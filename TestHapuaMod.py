@@ -10,8 +10,8 @@ import hapuamod as hm
 ModelConfigFile = 'inputs\HurunuiModel.cnf'
 Config = hm.loadmod.readConfig(ModelConfigFile)
 (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, ShoreX, ShoreY, LagoonY,
- LagoonElev, RiverElev, OutletX, OutletY, OutletElev, OutletWidth, 
- Dx, TimePars, PhysicalPars, OutputOpts) = hm.loadmod.loadModel(Config)
+ LagoonElev, RiverElev, OutletX, OutletY, OutletElev, OutletWidth, TimePars, 
+ PhysicalPars, NumericalPars, OutputOpts) = hm.loadmod.loadModel(Config)
 
 #plt.figure()
 #hm.visualise.mapView(ShoreX, ShoreY, LagoonY, Origin, BaseShoreNormDir)    
@@ -29,12 +29,13 @@ plt.figure()
 plt.subplot(3, 1, 1)
 plt.plot(ShoreX, ShoreY)
 
-LST = hm.coast.longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, Wlen_h, 
-                                EDir_h, PhysicalPars)
+LST = hm.coast.longShoreTransport(ShoreY, NumericalPars['Dx'], WavePower, 
+                                  WavePeriod, Wlen_h, EDir_h, PhysicalPars)
 plt.subplot(3, 1, 2)
 plt.plot((ShoreX[0:-1]+ShoreX[1:])/2, LST)
 
-Dy = hm.coast.shoreChange(LST, Dx, TimePars['MorDt'], PhysicalPars)
+Dy = hm.coast.shoreChange(LST, NumericalPars['Dx'], TimePars['MorDt'], 
+                          PhysicalPars)
 plt.subplot(3, 1, 3)
 plt.plot(ShoreX, Dy)
 
@@ -43,7 +44,7 @@ plt.plot(ShoreX, Dy)
 (ChanDx, ChanElev, ChanWidth, ChanArea) = \
     hm.riv.assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, 
                            OutletX, OutletY, OutletElev, OutletWidth, 
-                           PhysicalPars['RiverWidth'], Dx)
+                           PhysicalPars['RiverWidth'], NumericalPars['Dx'])
 
 # Steady state hydraulics
 RivFlow = hm.core.interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']])).values
@@ -54,7 +55,7 @@ SeaLevel = hm.core.interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartT
 
 hm.visualise.longSection(RiverElev, ShoreX, LagoonY, LagoonElev, 
                          OutletElev, OutletWidth, OutletX, OutletY,
-                         PhysicalPars['RiverWidth'], Dx)
+                         PhysicalPars['RiverWidth'], NumericalPars['Dx'])
 
 ChanDist = np.insert(np.cumsum(ChanDx),0,0)
 plt.plot(ChanDist, ChanDep+ChanElev, 'b-')
@@ -63,8 +64,7 @@ plt.plot(ChanDist, ChanDep+ChanElev, 'b-')
 (ChanDep, ChanVel) = hm.riv.solveFullPreissmann(ChanElev, ChanWidth, ChanDep, 
                                                 ChanVel, ChanDx, TimePars['HydDt'], 
                                                 PhysicalPars['Roughness'], 
-                                                RivFlow, SeaLevel, 
-                                                0.6, 0.001, 20, 9.81)
+                                                RivFlow, SeaLevel, NumericalPars)
 plt.plot(ChanDist, ChanDep+ChanElev, 'r:')
 
 #%% Test core timestepping

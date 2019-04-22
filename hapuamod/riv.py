@@ -107,14 +107,13 @@ def solveSteady(ChanDx, ChanElev, ChanWidth, Roughness, Qin, DsWL):
     
     return ChanDep, ChanVel
 
-def solveFullPreissmann(z, B, y, V, dx, dt, n, Q_Ts, DsWl_Ts, alpha, Tol, 
-                        MaxIt, g):
+def solveFullPreissmann(z, B, y, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
     """ Solve full S-V eqns for a rectangular channel using preissmann scheme.
         Uses a newton raphson solution to the preissmann discretisation of the 
         Saint-Venant equations.
         
         (y, V) = solveFullPreissmann(z, B, y, V, dx, dt, n, Q, DsWl, 
-                                     alpha, Tol, MaxIt, g)
+                                     Theta, Tol, MaxIt)
         
         Parameters:
             z (np.ndarray(float64)): Bed elevation at each node (m)
@@ -132,24 +131,28 @@ def solveFullPreissmann(z, B, y, V, dx, dt, n, Q_Ts, DsWl_Ts, alpha, Tol,
                 boundary water levels at upstream end of channel corresponding 
                 to each timestep. Function will loop over each inflow in turn 
                 (m^3/s)
-            alpha (float): temporal weighting coefficient for preissmann scheme
+            Theta (float): temporal weighting coefficient for preissmann scheme
             Tol (float): error tolerance (both m and m/s)
             MaxIt (integer): maximum number of iterations to find solution
-            g (float): gravity (m/s^2)
+            g (float): 
         
         Returns:
             y
             V
         
     """
+    g = 9.81                    # gravity [m/s^2]
     
-    dt = dt.seconds
-    N = z.size
-    S_0 = (z[:-1]-z[1:])/dx
+    Theta = NumericalPars['Theta']
+    Tol = NumericalPars['ErrTol']
+    MaxIt = NumericalPars['MaxIt']
+    dt = dt.seconds             # timestep for hydraulics [s]
+    N = z.size                  # number of cross-sections
+    S_0 = (z[:-1]-z[1:])/dx     # bed slope in each reach between XS [m/m]
     
     # Pre-compute some variables required within the loop
-    A = y*B
-    Sf = V**2 * n**2 / y**(4/3)
+    A = y*B                     # area of flow at each XS [m^2]
+    Sf = V**2 * n**2 / y**(4/3) # friction slope at each XS [m/m]
     
     # Main timestepping loop
     for StepNo in range(Q_Ts.shape[0]):
@@ -163,14 +166,14 @@ def solveFullPreissmann(z, B, y, V, dx, dt, n, Q_Ts, DsWl_Ts, alpha, Tol,
         
         # Constant parts of the S-V Equations which can be computed outside the loop
         # For continuity equation
-        C1 = A_old[:-1] + A_old[1:] - 2*(dt/dx)*(1-alpha) * (V_old[1:]*A_old[1:] - V_old[:-1]*A_old[:-1])
+        C1 = A_old[:-1] + A_old[1:] - 2*(dt/dx)*(1-Theta) * (V_old[1:]*A_old[1:] - V_old[:-1]*A_old[:-1])
         
         # For momentum equation
-        C2 = (g*dt*(1-alpha) * (A_old[1:]*(S_0 - Sf_old[1:]) 
+        C2 = (g*dt*(1-Theta) * (A_old[1:]*(S_0 - Sf_old[1:]) 
                                 + A_old[:-1]*(S_0 - Sf_old[:-1]))
               + V_old[:-1]*A_old[:-1]
               + V_old[1:]*A_old[1:]
-              -2*(dt/dx)*(1-alpha) * (V_old[1:]**2*A_old[1:] - V_old[:-1]**2*A_old[:-1]))
+              -2*(dt/dx)*(1-Theta) * (V_old[1:]**2*A_old[1:] - V_old[:-1]**2*A_old[:-1]))
         
         # Iterative solution
         ItCount = 0
@@ -182,14 +185,14 @@ def solveFullPreissmann(z, B, y, V, dx, dt, n, Q_Ts, DsWl_Ts, alpha, Tol,
             
             # Error in continuity equation
             Err[np.arange(1,2*N-1,2)] = (A[:-1] + A[1:]
-                                         + 2*(dt/dx)*alpha * (V[1:]*A[1:] - V[:-1]*A[:-1])) - C1
+                                         + 2*(dt/dx)*Theta * (V[1:]*A[1:] - V[:-1]*A[:-1])) - C1
             
             # Error in momentum equation
             Err[np.arange(2,2*N-1,2)] = (V[:-1]*A[:-1] + V[1:]*A[1:]
-                                         + 2*(dt/dx)*alpha * (V[1:]**2*A[1:] - V[:-1]**2*A[:-1]) 
-                                         - g*dt*alpha * (A[1:]*(S_0-Sf[1:]) + A[:-1]*(S_0-Sf[:-1]))
-                                         + g*(dt/dx)*(alpha*(A[1:]+A[:-1]) + (1-alpha)*(A_old[1:]+A_old[:-1]))
-                                                    *(alpha*(y[1:]-y[:-1]) + (1-alpha)*(y_old[1:]-y_old[:-1]))
+                                         + 2*(dt/dx)*Theta * (V[1:]**2*A[1:] - V[:-1]**2*A[:-1]) 
+                                         - g*dt*Theta * (A[1:]*(S_0-Sf[1:]) + A[:-1]*(S_0-Sf[:-1]))
+                                         + g*(dt/dx)*(Theta*(A[1:]+A[:-1]) + (1-Theta)*(A_old[1:]+A_old[:-1]))
+                                                    *(Theta*(y[1:]-y[:-1]) + (1-Theta)*(y_old[1:]-y_old[:-1]))
                                         ) - C2
             
             # Error in Ds Bdy
@@ -208,35 +211,35 @@ def solveFullPreissmann(z, B, y, V, dx, dt, n, Q_Ts, DsWl_Ts, alpha, Tol,
             
             # Continuity equation derivatives
             # d/dy[0]
-            a_banded[3,np.arange(0,2*(N)-2,2)] = B[:-1] - 2*dt/dx*alpha*V[:-1]*B[:-1]
+            a_banded[3,np.arange(0,2*(N)-2,2)] = B[:-1] - 2*dt/dx*Theta*V[:-1]*B[:-1]
             # d/dV[0]
-            a_banded[2,np.arange(1,2*(N)-2,2)] = -2*dt/dx*alpha*A[:-1]
+            a_banded[2,np.arange(1,2*(N)-2,2)] = -2*dt/dx*Theta*A[:-1]
             # d/dy[1]
-            a_banded[1,np.arange(2,2*(N),2)] = B[1:] + 2*dt/dx*alpha*V[1:]*B[1:]
+            a_banded[1,np.arange(2,2*(N),2)] = B[1:] + 2*dt/dx*Theta*V[1:]*B[1:]
             # d/dV[1]
-            a_banded[0,np.arange(3,2*(N),2)] = 2*dt/dx*alpha*A[1:]
+            a_banded[0,np.arange(3,2*(N),2)] = 2*dt/dx*Theta*A[1:]
             
             # Momentum equation derivatives
             # d/dy[0]
             a_banded[4,np.arange(0,2*(N)-2,2)] = (V[:-1]*B[:-1] 
-                                                  - 2*(dt/dx)*alpha*V[:-1]**2*B[:-1]
-                                                  - g*dt*alpha*(B[:-1]*(S_0+(1/3)*Sf[:-1]))
-                                                  + alpha*g*(dt/dx)*(B[:-1]*(alpha*(y[1:]-y[:-1]) + (1-alpha)*(y_old[1:]-y_old[:-1]))
-                                                                     - (alpha*(A[1:]+A[:-1]) + (1-alpha)*(A_old[1:]+A_old[:-1]))))
+                                                  - 2*(dt/dx)*Theta*V[:-1]**2*B[:-1]
+                                                  - g*dt*Theta*(B[:-1]*(S_0+(1/3)*Sf[:-1]))
+                                                  + Theta*g*(dt/dx)*(B[:-1]*(Theta*(y[1:]-y[:-1]) + (1-Theta)*(y_old[1:]-y_old[:-1]))
+                                                                     - (Theta*(A[1:]+A[:-1]) + (1-Theta)*(A_old[1:]+A_old[:-1]))))
             # d/dV[0]
             a_banded[3,np.arange(1,2*(N)-2,2)] = (A[:-1] 
-                                                  - 4*(dt/dx)*alpha*V[:-1]*A[:-1] 
-                                                  + g*dt*alpha*A[:-1]*2*Sf[:-1]/V[:-1])
+                                                  - 4*(dt/dx)*Theta*V[:-1]*A[:-1] 
+                                                  + g*dt*Theta*A[:-1]*2*Sf[:-1]/V[:-1])
             # d/dy[1]
             a_banded[2,np.arange(2,2*(N),2)] = (V[1:]*B[1:] 
-                                                + 2*(dt/dx)*alpha*(V[1:]**2*B[1:] + g*A[1:]) 
-                                                - g*dt*alpha*(B[1:]*(S_0-(1/3)*Sf[1:]))
-                                                + alpha*g*(dt/dx)*(B[1:]*(alpha*(y[1:]-y[:-1]) + (1-alpha)*(y_old[1:]-y_old[:-1]))
-                                                                   + alpha*(A[1:]+A[:-1]) + (1-alpha)*(A_old[1:]+A_old[:-1])))
+                                                + 2*(dt/dx)*Theta*(V[1:]**2*B[1:] + g*A[1:]) 
+                                                - g*dt*Theta*(B[1:]*(S_0-(1/3)*Sf[1:]))
+                                                + Theta*g*(dt/dx)*(B[1:]*(Theta*(y[1:]-y[:-1]) + (1-Theta)*(y_old[1:]-y_old[:-1]))
+                                                                   + Theta*(A[1:]+A[:-1]) + (1-Theta)*(A_old[1:]+A_old[:-1])))
             # d/dV[1]
             a_banded[1,np.arange(3,2*(N),2)] = (A[1:] 
-                                                + 4*dt/dx*alpha*V[1:]*A[1:] 
-                                                + g*dt*alpha*A[1:]*2*Sf[1:]/V[1:])
+                                                + 4*dt/dx*Theta*V[1:]*A[1:] 
+                                                + g*dt*Theta*A[1:]*2*Sf[1:]/V[1:])
             
             # Ds Bdy condition derivatives
             a_banded[2,2*N-1] = 0

@@ -255,7 +255,11 @@ def loadModel(Config):
     
     #%% Read numerical parameters
     Dx = float(Config['NumericalParameters']['AlongShoreDx'])
-    
+    NumericalPars = {'Dx': Dx,
+                     'Theta': float(Config['NumericalParameters']['Theta']),
+                     'ErrTol': float(Config['NumericalParameters']['ErrTol']),
+                     'MaxIt': float(Config['NumericalParameters']['MaxIt'])}
+
     #%% Read output options
     OutputOpts = {'LogInt': pd.Timedelta(seconds=float(Config['OutputOptions']['LogInt'])),
                   'PlotInt': pd.Timedelta(seconds=float(Config['OutputOptions']['PlotInt']))}
@@ -339,4 +343,4 @@ def loadModel(Config):
     
     return (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, ShoreX, 
             ShoreY, LagoonY, LagoonElev, RiverElev, OutletX, OutletY, 
-            OutletElev, OutletWidth, Dx, TimePars, PhysicalPars, OutputOpts)
+            OutletElev, OutletWidth, TimePars, PhysicalPars, NumericalPars, OutputOpts)

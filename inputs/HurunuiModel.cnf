@@ -31,7 +31,7 @@ StartTime = '1 Jul 2015'
 # Simulation end date '30 Jun 2016'
 EndTime = '30 Jul 2015'
 # Hydraulic Timestep [s]
-HydDt = 10
+HydDt = 20
 # Morphology Timestep [s]
 MorDt = 3600
 
@@ -68,9 +68,16 @@ RoughnessManning = 0.03
 [NumericalParameters]
 # Alongshore discretisation resolution (transect spacing) [m]
 AlongShoreDx = 20
+# Temporal weighting factor for implicit Preissmann scheme 
+Theta = 0.7
+# Error tolerance for implicit solution to unsteady river hydraulics [m and m/s]
+ErrTol = 0.001
+# Maximum iterations for implicit solution to unsteady river hydraulics
+MaxIt = 20
 
 [OutputOptions]
 # Interval (model time) at which info will be logged during simulation [s]
 LogInt = 600
 # Interval to update plots (zero means no plotting will occur) [s]
 PlotInt = 3600
+
