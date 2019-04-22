@@ -226,6 +226,7 @@ def loadModel(Config):
                 'MorDt': pd.Timedelta(seconds=float(Config['Time']['MorDt']))}
     
     # TODO: check time-series inputs extend over full model duration and remove any unecessary bits at the ends
+    # TODO: check mortime is a multiple of hydtime (or replace with morscaling?)
         
     #%% Read physical parameters
     logging.info('Processing physical parameters')

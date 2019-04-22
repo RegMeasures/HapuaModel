@@ -35,8 +35,8 @@ def run(ModelConfigFile):
      Dx, TimePars, PhysicalPars, OutputOpts) = loadmod.loadModel(Config)
     
     #%% Generate initial conditions for river model
-    RivFlow = interpolate_at(FlowTs, TimePars['StartTime'])[0]
-    SeaLevel = interpolate_at(SeaLevelTs, TimePars['StartTime'])[0]
+    RivFlow = interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']])).values
+    SeaLevel = interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartTime']])).values
     
     (ChanDx, ChanElev, ChanWidth, ChanArea) = \
     riv.assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, 
@@ -48,10 +48,9 @@ def run(ModelConfigFile):
                                          RivFlow, SeaLevel)
     
     #%% Main timestepping loop
-    HydTime = TimePars['StartTime']
     MorTime = TimePars['StartTime']
     LogTime = TimePars['StartTime']
-    while HydTime <= TimePars['EndTime']:
+    while MorTime <= TimePars['EndTime']:
         
         
         
@@ -61,8 +60,12 @@ def run(ModelConfigFile):
 
         
         # Run the river model
-        RivFlow = interpolate_at(FlowTs, HydTime)[0]
-        SeaLevel = interpolate_at(SeaLevelTs, HydTime)[0]
+        # HydTimes = np.arange(MorTime, MorTime+TimePars['MorDt'], TimePars['HydDt'])
+        HydTimes = pd.date_range(MorTime, MorTime+TimePars['MorDt'], 
+                                 freq=TimePars['HydDt'], closed='right')
+        
+        RivFlow = interpolate_at(FlowTs, HydTimes).values
+        SeaLevel = interpolate_at(SeaLevelTs, HydTimes).values
         (ChanDep, ChanVel) = riv.solveFullPreissmann(ChanElev, ChanWidth, 
                                                      ChanDep, ChanVel, ChanDx, 
                                                      TimePars['HydDt'], 
@@ -70,33 +73,29 @@ def run(ModelConfigFile):
                                                      RivFlow, SeaLevel, 
                                                      0.6, 0.001, 20, 9.81)
         
-        # Morphology
-        if HydTime >= MorTime:
-            
-            # Run shoreline model
-            WavesAtT = interpolate_at(WaveTs, MorTime)
-            EDir_h = WavesAtT.EDir_h[0]
-            WavePower = WavesAtT.WavePower[0]
-            WavePeriod = WavesAtT.WavePeriod[0]
-            Wlen_h = WavesAtT.Wlen_h[0]
-            
-            LST = coast.longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, 
-                                           Wlen_h, EDir_h, PhysicalPars)
-            ShoreY += coast.shoreChange(LST, Dx, TimePars['MorDt'], PhysicalPars)
-            MorTime += TimePars['MorDt']
+        # Run shoreline model
+        WavesAtT = interpolate_at(WaveTs, pd.DatetimeIndex([MorTime]))
+        EDir_h = WavesAtT.EDir_h[0]
+        WavePower = WavesAtT.WavePower[0]
+        WavePeriod = WavesAtT.WavePeriod[0]
+        Wlen_h = WavesAtT.Wlen_h[0]
+        
+        LST = coast.longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, 
+                                       Wlen_h, EDir_h, PhysicalPars)
+        ShoreY += coast.shoreChange(LST, Dx, TimePars['MorDt'], PhysicalPars)
             
         # updates to user
-        if HydTime >= LogTime:
-            logging.info('Time = %s', HydTime)
+        if MorTime >= LogTime:
+            logging.info('Time = %s', MorTime)
             LogTime += OutputOpts['LogInt']
         
         # increment time
-        HydTime += TimePars['HydDt']
+        MorTime += TimePars['MorDt']
 
-def interpolate_at(Df, Time):
-    """ Linearly interpolate dataframe for specific time
-    Interpolate wave, river flow and sea level input data for specific 
-    model time.
+def interpolate_at(Df, New_idxs):
+    """ Linearly interpolate dataframe for specified index values
+    interpolate_at is used to Linearly interpolate wave, river flow and sea 
+    level input data for specific model times.
     
     New_df = interpolate_at(Df, Time)
     
@@ -108,10 +107,7 @@ def interpolate_at(Df, Time):
         New_df: new data frame containing linearly interpolated data at the 
                 specified time.
     """
-    New_idxs = pd.DatetimeIndex([Time])
-    #df = df.drop_duplicates().dropna()
     Df = Df.reindex(Df.index.append(New_idxs).unique())
     Df = Df.sort_index()
     Df = Df.interpolate(method='time')
     return Df.loc[New_idxs]
-

@@ -46,8 +46,8 @@ plt.plot(ShoreX, Dy)
                            PhysicalPars['RiverWidth'], Dx)
 
 # Steady state hydraulics
-RivFlow = hm.core.interpolate_at(FlowTs, TimePars['StartTime'])[0]
-SeaLevel = hm.core.interpolate_at(SeaLevelTs, TimePars['StartTime'])[0]
+RivFlow = hm.core.interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']])).values
+SeaLevel = hm.core.interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartTime']])).values
 (ChanDep, ChanVel) = hm.riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
                                         PhysicalPars['Roughness'], 
                                         RivFlow, SeaLevel)

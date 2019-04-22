@@ -2,7 +2,7 @@
 
 hapuamod can be run from the commandline using the command
 
-> python hapuamod MODEL_CONFIG_FILE.cnf
+> python -m hapuamod MODEL_CONFIG_FILE.cnf
 
 hapuamod contains functions grouped into several sub-modules:
     load      Reading model inputs and model pre-processing
