@@ -30,8 +30,10 @@ LagoonBed = -1.0
 StartTime = '1 Jul 2015'
 # Simulation end date '30 Jun 2016'
 EndTime = '30 Jul 2015'
-# Timestep [s]
-Timestep = 3600
+# Hydraulic Timestep [s]
+HydDt = 10
+# Morphology Timestep [s]
+MorDt = 3600
 
 [PhysicalParameters]
 # K coefficient for longshore transport calculation (non-dimensional)
@@ -66,3 +68,9 @@ RoughnessManning = 0.03
 [NumericalParameters]
 # Alongshore discretisation resolution (transect spacing) [m]
 AlongShoreDx = 20
+
+[OutputOptions]
+# Interval (model time) at which info will be logged during simulation [s]
+LogInt = 600
+# Interval to update plots (zero means no plotting will occur) [s]
+PlotInt = 3600

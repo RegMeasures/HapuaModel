@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # import local packages
-import hapuamod.geom as geom
-import hapuamod.riv as riv
+from hapuamod import geom
+from hapuamod import riv
 
 def mapView(ShoreX, ShoreY, LagoonY, Origin, ShoreNormalDir):
     """ Map the current model state in real world coordinates

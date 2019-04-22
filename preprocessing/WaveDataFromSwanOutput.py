@@ -54,4 +54,5 @@ OutputData['Hsig_Offshore'] = (WaveData['Hsig'] /
                                         np.cos(WaveData['Angle_h']))))
 
 # Save the data ready for the model to use
-OutputData.to_csv('..\inputs\WaveData.csv')
+OutputData.to_csv('..\inputs\WaveData.csv', float_format='%1.3f', 
+                  date_format='%d/%m/%Y %H:%M')

@@ -1,5 +1,9 @@
 """hapuamode is a model for simulating hapua morphology.
 
+hapuamod can be run from the commandline using the command
+
+> python hapuamod MODEL_CONFIG_FILE.cnf
+
 hapuamod contains functions grouped into several sub-modules:
     load      Reading model inputs and model pre-processing
     geom      Geometry transformations between model and real world 
@@ -12,7 +16,7 @@ hapuamod contains functions grouped into several sub-modules:
 hapuamod requires: numpy, pandas, matplotlib, configobj, os, shapefile
 """
 
-import hapuamod.load
+import hapuamod.loadmod
 import hapuamod.geom
 import hapuamod.visualise
 import hapuamod.coast

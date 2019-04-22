@@ -122,7 +122,7 @@ def solveFullPreissmann(z, B, y, V, dx, dt, n, Q, DsWl, alpha, Tol, MaxIt, g):
             V (np.ndarray(float64)): Mean velocity at each node at the last timestep (m)
             dx (np.ndarray(float64)): Length of each reach between nodes (m)
                 note the dx array should be one shorter than for z, B, etc
-            dt (float): timestep (s)
+            dt (pd.timedelta): timestep
             n (float): mannings 'n' roughness
             Q (float): inflow at upstream end of channel (m^3/s)
             DsWl (float): downstream water level (m)
@@ -130,9 +130,14 @@ def solveFullPreissmann(z, B, y, V, dx, dt, n, Q, DsWl, alpha, Tol, MaxIt, g):
             Tol (float): error tolerance (both m and m/s)
             MaxIt (integer): maximum number of iterations to find solution
             g (float): gravity (m/s^2)
+        
+        Returns:
+            y
+            V
+        
     """
     
-#    dt = dt.seconds
+    dt = dt.seconds
     
     N = z.size
     S_0 = (z[:-1]-z[1:])/dx
@@ -144,10 +149,11 @@ def solveFullPreissmann(z, B, y, V, dx, dt, n, Q, DsWl, alpha, Tol, MaxIt, g):
     Sf_old = Sf
     A_old = A
     
-    # Eq 14-47 RHS
+    # Constant parts of the S-V Equations which can be computed outside the loop
+    # For continuity equation
     C1 = A_old[:-1] + A_old[1:] - 2*(dt/dx)*(1-alpha) * (V_old[1:]*A_old[1:] - V_old[:-1]*A_old[:-1])
     
-    # Eq 14-46 RHS
+    # For momentum equation
     C2 = (g*dt*(1-alpha) * (A_old[1:]*(S_0 - Sf_old[1:]) 
                             + A_old[:-1]*(S_0 - Sf_old[:-1]))
           + V_old[:-1]*A_old[:-1]
@@ -162,11 +168,11 @@ def solveFullPreissmann(z, B, y, V, dx, dt, n, Q, DsWl, alpha, Tol, MaxIt, g):
         # Error in Us Bdy
         Err[0] = A[0]*V[0]-Q
         
-        # Error in Eq 14-47
+        # Error in continuity equation
         Err[np.arange(1,2*N-1,2)] = (A[:-1] + A[1:]
                                      + 2*(dt/dx)*alpha * (V[1:]*A[1:] - V[:-1]*A[:-1])) - C1
         
-        # Error in Eq 14-48
+        # Error in momentum equation
         Err[np.arange(2,2*N-1,2)] = (V[:-1]*A[:-1] + V[1:]*A[1:]
                                      + 2*(dt/dx)*alpha * (V[1:]**2*A[1:] - V[:-1]**2*A[:-1]) 
                                      - g*dt*alpha * (A[1:]*(S_0-Sf[1:]) + A[:-1]*(S_0-Sf[:-1]))
@@ -188,7 +194,7 @@ def solveFullPreissmann(z, B, y, V, dx, dt, n, Q, DsWl, alpha, Tol, MaxIt, g):
         a_banded[1,1] = A[0]
         a_banded[2,0] = V[0]*B[0]
         
-        # Eq 14-47 derivatives
+        # Continuity equation derivatives
         # d/dy[0]
         a_banded[3,np.arange(0,2*(N)-2,2)] = B[:-1] - 2*dt/dx*alpha*V[:-1]*B[:-1]
         # d/dV[0]
@@ -198,7 +204,7 @@ def solveFullPreissmann(z, B, y, V, dx, dt, n, Q, DsWl, alpha, Tol, MaxIt, g):
         # d/dV[1]
         a_banded[0,np.arange(3,2*(N),2)] = 2*dt/dx*alpha*A[1:]
         
-        # Eq 14-48 derivatives
+        # Momentum equation derivatives
         # d/dy[0]
         a_banded[4,np.arange(0,2*(N)-2,2)] = (V[:-1]*B[:-1] 
                                               - 2*(dt/dx)*alpha*V[:-1]**2*B[:-1]
@@ -225,7 +231,7 @@ def solveFullPreissmann(z, B, y, V, dx, dt, n, Q, DsWl, alpha, Tol, MaxIt, g):
         #a_banded[2,2*N-1] = V[N-1]/g
         a_banded[3,2*N-2] = 1
         
-        # Solve the matrix
+        # Solve the banded matrix
         Delta = linalg.solve_banded([2,2],a_banded,Err)
         
         # Update y & V
@@ -236,10 +242,10 @@ def solveFullPreissmann(z, B, y, V, dx, dt, n, Q, DsWl, alpha, Tol, MaxIt, g):
         Sf = V**2 * n**2 / y**(4/3)
         A = y*B
         
-        # Check if acceptable solution has ben found
+        # Check if solution is within tolerance
 #        if np.sum(np.abs(Delta)) < Tol:
 #            break
-        if np.all(np.abs(Err) < Tol):
+        if np.all(np.abs(Delta) < Tol):
             break
         
         ItCount += 1

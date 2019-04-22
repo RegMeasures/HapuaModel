@@ -6,23 +6,12 @@ import matplotlib.animation as animation
 
 import hapuamod as hm
 
-# Set up logging (will be moved into main wrapper code)
-try:
-    RootLogger # check to see if code is being re-run to prevent dulicate outputs
-except NameError:
-    RootLogger = logging.getLogger()
-    RootLogger.setLevel(logging.DEBUG)
-    
-    ConsoleHandler = logging.StreamHandler()
-    ConsoleHandler.setLevel(logging.DEBUG)
-    RootLogger.addHandler(ConsoleHandler)
-
 #%% Test model load (particularly geometry processing)
 ModelConfigFile = 'inputs\HurunuiModel.cnf'
-Config = hm.load.readConfig(ModelConfigFile)
+Config = hm.loadmod.readConfig(ModelConfigFile)
 (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, ShoreX, ShoreY, LagoonY,
  LagoonElev, RiverElev, OutletX, OutletY, OutletElev, OutletWidth, 
- Dx, Dt, SimTime, PhysicalPars) = hm.load.loadModel(Config)
+ Dx, TimePars, PhysicalPars, OutputOpts) = hm.loadmod.loadModel(Config)
 
 #plt.figure()
 #hm.visualise.mapView(ShoreX, ShoreY, LagoonY, Origin, BaseShoreNormDir)    
@@ -45,7 +34,7 @@ LST = hm.coast.longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, Wlen_h,
 plt.subplot(3, 1, 2)
 plt.plot((ShoreX[0:-1]+ShoreX[1:])/2, LST)
 
-Dy = hm.coast.shoreChange(LST, Dx, Dt, PhysicalPars)
+Dy = hm.coast.shoreChange(LST, Dx, TimePars['MorDt'], PhysicalPars)
 plt.subplot(3, 1, 3)
 plt.plot(ShoreX, Dy)
 
@@ -57,8 +46,8 @@ plt.plot(ShoreX, Dy)
                            PhysicalPars['RiverWidth'], Dx)
 
 # Steady state hydraulics
-RivFlow = FlowTs[0]
-SeaLevel = SeaLevelTs[0]
+RivFlow = hm.core.interpolate_at(FlowTs, TimePars['StartTime'])[0]
+SeaLevel = hm.core.interpolate_at(SeaLevelTs, TimePars['StartTime'])[0]
 (ChanDep, ChanVel) = hm.riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
                                         PhysicalPars['Roughness'], 
                                         RivFlow, SeaLevel)
@@ -72,20 +61,12 @@ plt.plot(ChanDist, ChanDep+ChanElev, 'b-')
 
 # Unsteady hydraulics
 (ChanDep, ChanVel) = hm.riv.solveFullPreissmann(ChanElev, ChanWidth, ChanDep, 
-                                                ChanVel, ChanDx, 10, 
+                                                ChanVel, ChanDx, TimePars['HydDt'], 
                                                 PhysicalPars['Roughness'], 
                                                 RivFlow, SeaLevel, 
                                                 0.6, 0.001, 20, 9.81)
 plt.plot(ChanDist, ChanDep+ChanElev, 'r:')
 
 #%% Test core timestepping
-Time = SimTime[0]
-CurrentDay = Time.day
-plt.figure(figsize=(12,5))
-hm.visualise.modelView(ShoreX, ShoreY, LagoonY, OutletX, OutletY)
-while Time <= SimTime[1]:
-    hm.core.timestep(Time, Dx, Dt, WaveTs, SeaLevelTs, FlowTs, PhysicalPars,
-                     ShoreX, ShoreY, LagoonY, LagoonElev, RiverElev, 
-                     OutletX, OutletY, OutletElev, OutletWidth)
-    Time += Dt
-hm.visualise.modelView(ShoreX, ShoreY, LagoonY, OutletX, OutletY)
+ModelConfigFile = 'inputs\HurunuiModel.cnf'
+hm.core.run(ModelConfigFile)
