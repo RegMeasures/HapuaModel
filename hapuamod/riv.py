@@ -155,7 +155,7 @@ def solveFullPreissmann(z, B, h, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
     
     # Pre-compute some variables required within the loop
     A = h*B                     # area of flow at each XS [m^2]
-    Sf = V**2 * n**2 / h**(4/3) # friction slope at each XS [m/m]
+    Sf = V*np.abs(V) * n**2 / h**(4/3) # friction slope at each XS [m/m]
     
     # Main timestepping loop
     for StepNo in range(Q_Ts.shape[0]):
@@ -257,7 +257,7 @@ def solveFullPreissmann(z, B, h, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
             V -= Delta[np.arange(1,2*N,2)]
             
             # Update Sf and A
-            Sf = V**2 * n**2 / h**(4/3)
+            Sf = V*np.abs(V) * n**2 / h**(4/3)
             A = h*B
             
             # Check if solution is within tolerance
