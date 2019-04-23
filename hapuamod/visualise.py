@@ -52,18 +52,62 @@ def modelView(ShoreX, ShoreY, LagoonY, OutletX, OutletY):
     
     plt.axis('equal')
     
-def longSection(RiverElev, ShoreX, LagoonY, LagoonElev, 
-                OutletElev, OutletWidth, OutletX, OutletY, RiverWidth, Dx):
+def longSection(ChanDx, ChanElev, ChanDep, ChanVel):
     """ View a long section of the river to the lagoon outlet
-    """
-    # Create new figure
-    plt.figure()
     
-    # Assemble the complete channel
-    (ChanDx, ChanElev, ChanWidth, ChanArea) = \
-        riv.assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, OutletX, 
-                            OutletY, OutletElev, OutletWidth, RiverWidth, Dx)
+    Parameters:
+        ChanDx
+        ChanElev
+        ChanDep
+        ChanVel
+    
+    Returns:
+        WaterLine
+        EnergyLine
+        VelLine
+        FrLine
+    """
+    g = 9.81
+    Dist = np.insert(np.cumsum(ChanDx),0,0)
+    WL = ChanElev + ChanDep
+    Energy = WL + ChanVel**2 / (2*g)
+    Fr = ChanVel/np.sqrt(g*ChanDep)
+    
+    # Create new figure with sub plots
+    RivFig = plt.figure()
+    RivTopAx = RivFig.add_subplot(2,1,1)
+    RivBotAx = RivFig.add_subplot(2,1,2, sharex=RivTopAx)
     
     # Plot the river bed level
-    ChanDist = np.insert(np.cumsum(ChanDx),0,0)
-    plt.plot(ChanDist, ChanElev)
+    RivTopAx.plot(Dist, ChanElev, 'k-')
+    
+    # Plot water surface and energy line
+    WaterLine = RivTopAx.plot(Dist, WL, 'b-')
+    EnergyLine = RivTopAx.plot(Dist, Energy, 'b:')
+    
+    # Plot velocity and Froude number
+    VelLine = RivBotAx.plot(Dist, ChanVel, 'r-')
+    FrLine = RivBotAx.plot(Dist, Fr, 'g-')
+    
+    LongSecFig = (RivFig, WaterLine, EnergyLine, VelLine, FrLine)
+    
+    return(LongSecFig)
+
+def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanDep, ChanVel):
+    
+    # Calculate required variables to plot
+    g = 9.81
+    Dist = np.insert(np.cumsum(ChanDx),0,0)
+    WL = ChanElev + ChanDep
+    Energy = WL + ChanVel**2 / (2*g)
+    Fr = ChanVel/np.sqrt(g*ChanDep)
+    
+    # Update the lines
+    LongSecFig[1][0].set_data(Dist, WL)
+    LongSecFig[2][0].set_data(Dist, Energy)
+    LongSecFig[3][0].set_data(Dist, ChanVel)
+    LongSecFig[4][0].set_data(Dist, Fr)
+    
+    # Redraw
+    LongSecFig[0].canvas.draw()
+    LongSecFig[0].canvas.flush_events()

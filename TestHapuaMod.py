@@ -53,9 +53,7 @@ SeaLevel = hm.core.interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartT
                                         PhysicalPars['Roughness'], 
                                         RivFlow, SeaLevel)
 
-hm.visualise.longSection(RiverElev, ShoreX, LagoonY, LagoonElev, 
-                         OutletElev, OutletWidth, OutletX, OutletY,
-                         PhysicalPars['RiverWidth'], NumericalPars['Dx'])
+hm.visualise.longSection(ChanDx, ChanElev, ChanDep, ChanVel)
 
 ChanDist = np.insert(np.cumsum(ChanDx),0,0)
 plt.plot(ChanDist, ChanDep+ChanElev, 'b-')

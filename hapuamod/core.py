@@ -11,6 +11,7 @@ import pandas as pd
 from hapuamod import loadmod
 from hapuamod import riv
 from hapuamod import coast
+from hapuamod import visualise
 
 def run(ModelConfigFile):
     """ Main hapuamod run script
@@ -47,19 +48,19 @@ def run(ModelConfigFile):
                                          PhysicalPars['Roughness'], 
                                          RivFlow, SeaLevel)
     
+    #%% Prepare plotting
+    LivePlot = OutputOpts['PlotInt'] > pd.Timedelta(0)
+    if LivePlot:
+        LsLines = visualise.longSection(ChanDx, ChanElev, ChanDep, ChanVel)
+    
     #%% Main timestepping loop
     MorTime = TimePars['StartTime']
     LogTime = TimePars['StartTime']
+    PlotTime = TimePars['StartTime']
     while MorTime <= TimePars['EndTime']:
+                
+        # Run the river model for all the timesteps upto the next morphology step
         
-        
-        
-        
-        
-        #%% Run the shoreline model
-
-        
-        # Run the river model
         # HydTimes = np.arange(MorTime, MorTime+TimePars['MorDt'], TimePars['HydDt'])
         HydTimes = pd.date_range(MorTime, MorTime+TimePars['MorDt'], 
                                  freq=TimePars['HydDt'], closed='right')
@@ -90,6 +91,13 @@ def run(ModelConfigFile):
         if MorTime >= LogTime:
             logging.info('Time = %s', MorTime)
             LogTime += OutputOpts['LogInt']
+            
+        # plotting
+        if LivePlot:
+            if MorTime >= PlotTime:
+                visualise.updateLongSection(LsLines, ChanDx, ChanElev, 
+                                            ChanDep, ChanVel)
+                PlotTime += OutputOpts['PlotInt']
         
         # increment time
         MorTime += TimePars['MorDt']

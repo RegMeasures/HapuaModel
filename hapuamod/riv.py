@@ -78,19 +78,22 @@ def solveSteady(ChanDx, ChanElev, ChanWidth, Roughness, Qin, DsWL):
         # Manning: Vel = R^(2/3)*Sf^(1/2) / n
         # Wide channel: R = h
         # Sf = Vel^2 * n^2 / h^(4/3)
-        # Rectangular channel: Vel = Q / (Width*Dep)
-        # Sf = Q^2 * n^2 / (Width^2 * Dep^(10/3))
+        # Rectangular channel: Vel = Q / (B*h)
+        # Sf = Q^2 * n^2 / (B^2 * h^(10/3))
         # Bernoulli: Energy = Zb + Dep + Vel^2/(2g)
+        # h[i] + (Q^2/(2*g*B[i]^2))*h^(-2) - (Dx*Q^2*n^2/(2*B[i]^2))*h^(-10/3) - Energy[i+1]+z[i]-(Dx/2)*Sf[i+1] = 0
+        # h[i] + A*h[i]^(-2) - B*h[i]^(-10/3) + C = 0
         
-        # iterate solution
-        ChanDep[XS] = ChanDep[XS+1] + ChanElev[XS+1] - ChanElev[XS] + S_f[XS+1]*ChanDx[XS] # initial estimate
+        # initial estimate
+        ChanDep[XS] = (ChanDep[XS+1] + ChanElev[XS+1]) - ChanElev[XS] + S_f[XS+1]*ChanDx[XS] 
         
+        # iterate solution for h
         Acoef = (Qin**2 / (2*Grav*ChanWidth[XS]**2))
         Bcoef = (ChanDx[XS] * Qin**2 * Roughness**2 / (2 * ChanWidth[XS]**2))
         Cconst = ChanElev[XS] - S_f[XS+1]*ChanDx[XS]/2 - Energy[XS+1] 
         DepErr = ChanDep[XS] + Acoef*ChanDep[XS]**(-2) - Bcoef*ChanDep[XS]**(-10/3) + Cconst
         CheckCount = 0
-        while DepErr > Tol:
+        while np.abs(DepErr) > Tol:
             Gradient = 1 - 2*Acoef*ChanDep[XS]**(-3) + (10/3)*Bcoef*ChanDep[XS]**(-13/3)
             ChanDep[XS] -= DepErr / Gradient
             DepErr = ChanDep[XS] + Acoef*ChanDep[XS]**(-2) - Bcoef*ChanDep[XS]**(-10/3) + Cconst
@@ -107,18 +110,18 @@ def solveSteady(ChanDx, ChanElev, ChanWidth, Roughness, Qin, DsWL):
     
     return ChanDep, ChanVel
 
-def solveFullPreissmann(z, B, y, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
+def solveFullPreissmann(z, B, h, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
     """ Solve full S-V eqns for a rectangular channel using preissmann scheme.
         Uses a newton raphson solution to the preissmann discretisation of the 
         Saint-Venant equations.
         
-        (y, V) = solveFullPreissmann(z, B, y, V, dx, dt, n, Q, DsWl, 
+        (h, V) = solveFullPreissmann(z, B, h, V, dx, dt, n, Q, DsWl, 
                                      Theta, Tol, MaxIt)
         
         Parameters:
             z (np.ndarray(float64)): Bed elevation at each node (m)
             B (np.ndarray(float64)): Channel width at each node (m)
-            y (np.ndarray(float64)): Depth at each node at the last timestep (m)
+            h (np.ndarray(float64)): Depth at each node at the last timestep (m)
             V (np.ndarray(float64)): Mean velocity at each node at the last timestep (m)
             dx (np.ndarray(float64)): Length of each reach between nodes (m)
                 note the dx array should be one shorter than for z, B, etc
@@ -137,7 +140,7 @@ def solveFullPreissmann(z, B, y, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
             g (float): 
         
         Returns:
-            y
+            h
             V
         
     """
@@ -151,8 +154,8 @@ def solveFullPreissmann(z, B, y, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
     S_0 = (z[:-1]-z[1:])/dx     # bed slope in each reach between XS [m/m]
     
     # Pre-compute some variables required within the loop
-    A = y*B                     # area of flow at each XS [m^2]
-    Sf = V**2 * n**2 / y**(4/3) # friction slope at each XS [m/m]
+    A = h*B                     # area of flow at each XS [m^2]
+    Sf = V**2 * n**2 / h**(4/3) # friction slope at each XS [m/m]
     
     # Main timestepping loop
     for StepNo in range(Q_Ts.shape[0]):
@@ -160,7 +163,7 @@ def solveFullPreissmann(z, B, y, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
         DsWl = DsWl_Ts[StepNo]
         
         V_old = V
-        y_old = y
+        h_old = h
         Sf_old = Sf
         A_old = A
         
@@ -192,16 +195,16 @@ def solveFullPreissmann(z, B, y, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
                                          + 2*(dt/dx)*Theta * (V[1:]**2*A[1:] - V[:-1]**2*A[:-1]) 
                                          - g*dt*Theta * (A[1:]*(S_0-Sf[1:]) + A[:-1]*(S_0-Sf[:-1]))
                                          + g*(dt/dx)*(Theta*(A[1:]+A[:-1]) + (1-Theta)*(A_old[1:]+A_old[:-1]))
-                                                    *(Theta*(y[1:]-y[:-1]) + (1-Theta)*(y_old[1:]-y_old[:-1]))
+                                                    *(Theta*(h[1:]-h[:-1]) + (1-Theta)*(h_old[1:]-h_old[:-1]))
                                         ) - C2
             
             # Error in Ds Bdy
-            Err[2*N-1] = z[N-1] + y[N-1] - DsWl
-            #Err[2*N-1] = z[N-1] + y[N-1] + V[N-1]**2/(2*g) - DsWl
+            Err[2*N-1] = z[N-1] + h[N-1] - DsWl
+            #Err[2*N-1] = z[N-1] + h[N-1] + V[N-1]**2/(2*g) - DsWl
             
             # Solve errors using Newton Raphson
             # a Delta = Err
-            # where Delta = [dy[0],dV[0],dy[1],dV[1],...,...,dy[N-1],dV[N-1]]
+            # where Delta = [dh[0],dV[0],dh[1],dV[1],...,...,dh[N-1],dV[N-1]]
             # a_banded = sparse 5 banded matrix see https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.solve_banded.html
             a_banded = np.zeros([5,2*N])
             
@@ -210,31 +213,31 @@ def solveFullPreissmann(z, B, y, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
             a_banded[2,0] = V[0]*B[0]
             
             # Continuity equation derivatives
-            # d/dy[0]
+            # d/dh[0]
             a_banded[3,np.arange(0,2*(N)-2,2)] = B[:-1] - 2*dt/dx*Theta*V[:-1]*B[:-1]
             # d/dV[0]
             a_banded[2,np.arange(1,2*(N)-2,2)] = -2*dt/dx*Theta*A[:-1]
-            # d/dy[1]
+            # d/dh[1]
             a_banded[1,np.arange(2,2*(N),2)] = B[1:] + 2*dt/dx*Theta*V[1:]*B[1:]
             # d/dV[1]
             a_banded[0,np.arange(3,2*(N),2)] = 2*dt/dx*Theta*A[1:]
             
             # Momentum equation derivatives
-            # d/dy[0]
+            # d/dh[0]
             a_banded[4,np.arange(0,2*(N)-2,2)] = (V[:-1]*B[:-1] 
                                                   - 2*(dt/dx)*Theta*V[:-1]**2*B[:-1]
                                                   - g*dt*Theta*(B[:-1]*(S_0+(1/3)*Sf[:-1]))
-                                                  + Theta*g*(dt/dx)*(B[:-1]*(Theta*(y[1:]-y[:-1]) + (1-Theta)*(y_old[1:]-y_old[:-1]))
+                                                  + Theta*g*(dt/dx)*(B[:-1]*(Theta*(h[1:]-h[:-1]) + (1-Theta)*(h_old[1:]-h_old[:-1]))
                                                                      - (Theta*(A[1:]+A[:-1]) + (1-Theta)*(A_old[1:]+A_old[:-1]))))
             # d/dV[0]
             a_banded[3,np.arange(1,2*(N)-2,2)] = (A[:-1] 
                                                   - 4*(dt/dx)*Theta*V[:-1]*A[:-1] 
                                                   + g*dt*Theta*A[:-1]*2*Sf[:-1]/V[:-1])
-            # d/dy[1]
+            # d/dh[1]
             a_banded[2,np.arange(2,2*(N),2)] = (V[1:]*B[1:] 
                                                 + 2*(dt/dx)*Theta*(V[1:]**2*B[1:] + g*A[1:]) 
                                                 - g*dt*Theta*(B[1:]*(S_0-(1/3)*Sf[1:]))
-                                                + Theta*g*(dt/dx)*(B[1:]*(Theta*(y[1:]-y[:-1]) + (1-Theta)*(y_old[1:]-y_old[:-1]))
+                                                + Theta*g*(dt/dx)*(B[1:]*(Theta*(h[1:]-h[:-1]) + (1-Theta)*(h_old[1:]-h_old[:-1]))
                                                                    + Theta*(A[1:]+A[:-1]) + (1-Theta)*(A_old[1:]+A_old[:-1])))
             # d/dV[1]
             a_banded[1,np.arange(3,2*(N),2)] = (A[1:] 
@@ -249,13 +252,13 @@ def solveFullPreissmann(z, B, y, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
             # Solve the banded matrix
             Delta = linalg.solve_banded([2,2],a_banded,Err)
             
-            # Update y & V
-            y -= Delta[np.arange(0,2*N,2)]
+            # Update h & V
+            h -= Delta[np.arange(0,2*N,2)]
             V -= Delta[np.arange(1,2*N,2)]
             
             # Update Sf and A
-            Sf = V**2 * n**2 / y**(4/3)
-            A = y*B
+            Sf = V**2 * n**2 / h**(4/3)
+            A = h*B
             
             # Check if solution is within tolerance
     #        if np.sum(np.abs(Delta)) < Tol:
@@ -267,4 +270,4 @@ def solveFullPreissmann(z, B, y, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
         
         assert ItCount < MaxIt, 'Max iterations exceeded.'
     
-    return(y, V)
+    return(h, V)
