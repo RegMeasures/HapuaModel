@@ -49,10 +49,16 @@ def run(ModelConfigFile):
                                          PhysicalPars['Roughness'], 
                                          RivFlow, SeaLevel)
     
+    #%% Set up variables to hold output timeseries
+    OutputTs = pd.DataFrame(list(zip([RivFlow],[RivFlow],[SeaLevel])),
+                                     columns=['Qin','Qout','SeaLevel'],
+                                     index=pd.DatetimeIndex([TimePars['StartTime']]))
+    
     #%% Prepare plotting
     LivePlot = OutputOpts['PlotInt'] > pd.Timedelta(0)
     if LivePlot:
         LsLines = visualise.longSection(ChanDx, ChanElev, ChanDep, ChanVel)
+        BdyFig = visualise.BdyCndFig(OutputTs)
     
     #%% Main timestepping loop
     MorTime = TimePars['StartTime']
@@ -89,7 +95,13 @@ def run(ModelConfigFile):
                                        PhysicalPars)
         ShoreY += coast.shoreChange(LST, NumericalPars['Dx'], 
                                     TimePars['MorDt'], PhysicalPars)
-            
+        
+        # Store outputs
+        OutputTs = OutputTs.append(pd.DataFrame({'Qin': [RivFlow[-1]], 
+                                                 'Qout': [ChanDep[-1]*ChanVel[-1]*ChanWidth[-1]],
+                                                 'SeaLevel': [SeaLevel[-1]]},
+                                                index=pd.DatetimeIndex([MorTime])))
+        
         # updates to user
         if MorTime >= LogTime:
             logging.info('Time = %s', MorTime)
@@ -100,11 +112,14 @@ def run(ModelConfigFile):
             if MorTime >= PlotTime:
                 visualise.updateLongSection(LsLines, ChanDx, ChanElev, 
                                             ChanDep, ChanVel)
+                visualise.updateBdyCndFig(BdyFig, OutputTs)
                 PlotTime += OutputOpts['PlotInt']
         
         # increment time
         MorTime += TimePars['MorDt']
-
+        
+    return(OutputTs)
+    
 def interpolate_at(Df, New_idxs):
     """ Linearly interpolate dataframe for specified index values
     interpolate_at is used to Linearly interpolate wave, river flow and sea 

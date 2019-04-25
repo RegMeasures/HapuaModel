@@ -111,3 +111,35 @@ def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanDep, ChanVel):
     # Redraw
     LongSecFig[0].canvas.draw()
     LongSecFig[0].canvas.flush_events()
+
+def BdyCndFig(OutputTs):
+    Fig = plt.figure(figsize=(9,3))
+    
+    # Flow plots
+    QAx = Fig.subplots()
+    QInLine = QAx.plot(OutputTs.index, OutputTs.Qin, 'b-')
+    QOutLine = QAx.plot(OutputTs.index, OutputTs.Qout, 'r-')
+    QAx.set_ylim([0,200])
+    
+    # Sea level plot
+    WlAx = QAx.twinx()
+    DsWlLine = WlAx.plot(OutputTs.index, OutputTs.SeaLevel, 'g-')
+    WlAx.set_ylim([-1,3])
+    
+    BdyFig = (Fig, QAx, WlAx, QInLine, QOutLine, DsWlLine)
+    return BdyFig
+
+def updateBdyCndFig(BdyFig, OutputTs):
+    # update lines
+    BdyFig[3][0].set_data(OutputTs.index, OutputTs.Qin)
+    BdyFig[4][0].set_data(OutputTs.index, OutputTs.Qout)
+    BdyFig[5][0].set_data(OutputTs.index, OutputTs.SeaLevel)
+    
+    # extend x-axis
+    BdyFig[1].set_xlim(OutputTs.index[[0,-1]])
+    
+    # Redraw
+    BdyFig[0].canvas.draw()
+    BdyFig[0].canvas.flush_events()
+    
+    

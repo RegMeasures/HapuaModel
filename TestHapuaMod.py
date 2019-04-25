@@ -67,4 +67,4 @@ plt.plot(ChanDist, ChanDep+ChanElev, 'r:')
 
 #%% Test core timestepping
 ModelConfigFile = 'inputs\HurunuiModel.cnf'
-hm.core.run(ModelConfigFile)
+OutputTs = hm.core.run(ModelConfigFile)
