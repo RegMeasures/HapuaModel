@@ -10,7 +10,7 @@ def assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, OutletX, OutletY,
                     OutletElev, OutletWidth, RiverWidth, Dx):
     """ Combine river, lagoon and outlet into single channel for hyd-calcs
     
-    (ChanDx, ChanElev, ChanWidth, ChanArea) = \
+    (ChanDx, ChanElev, ChanWidth, LagArea) = \
         riv.assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, OutletDx, 
                             OutletElev, OutletWidth, OutletX, RiverWidth, Dx)
     """
@@ -42,11 +42,11 @@ def assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, OutletX, OutletY,
     ChanElev = np.concatenate([RiverElev, OnlineElev, OutletElev])
     ChanWidth = np.concatenate([np.tile(RiverWidth, RiverElev.size), 
                                 OnlineWidth, OutletWidth])
-    ChanArea = np.insert(ChanDx, 0, 0) * ChanWidth
-    ChanArea[RiverElev.size] += StartArea
-    ChanArea[-(OutletX.size+1)] += EndArea
+    LagArea = np.zeros(ChanElev.size)
+    LagArea[RiverElev.size] = StartArea
+    LagArea[-(OutletX.size+1)] = EndArea
     
-    return (ChanDx, ChanElev, ChanWidth, ChanArea)
+    return (ChanDx, ChanElev, ChanWidth, LagArea)
 
 def solveSteady(ChanDx, ChanElev, ChanWidth, Roughness, Qin, DsWL):
     """ Solve steady state river hydraulics for a rectangular channel
@@ -110,7 +110,7 @@ def solveSteady(ChanDx, ChanElev, ChanWidth, Roughness, Qin, DsWL):
     
     return ChanDep, ChanVel
 
-def solveFullPreissmann(z, B, h, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
+def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
     """ Solve full S-V eqns for a rectangular channel using preissmann scheme.
         Uses a newton raphson solution to the preissmann discretisation of the 
         Saint-Venant equations.
@@ -121,6 +121,7 @@ def solveFullPreissmann(z, B, h, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
         Parameters:
             z (np.ndarray(float64)): Bed elevation at each node (m)
             B (np.ndarray(float64)): Channel width at each node (m)
+            LagArea
             h (np.ndarray(float64)): Depth at each node at the last timestep (m)
             V (np.ndarray(float64)): Mean velocity at each node at the last timestep (m)
             dx (np.ndarray(float64)): Length of each reach between nodes (m)
@@ -153,6 +154,13 @@ def solveFullPreissmann(z, B, h, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
     N = z.size                  # number of cross-sections
     S_0 = (z[:-1]-z[1:])/dx     # bed slope in each reach between XS [m/m]
     
+    # Calculate effective width for volume change i.e. total planform area/reach length. 
+    dx2 = np.zeros(z.size)
+    dx2[0] = dx[0]
+    dx2[1:-1] = (dx[:-1]+dx[1:])/2
+    dx2[-1] = dx[-1]
+    Be = B + LagArea/dx2
+    
     # Pre-compute some variables required within the loop
     A = h*B                     # area of flow at each XS [m^2]
     Sf = V*np.abs(V) * n**2 / h**(4/3) # friction slope at each XS [m/m]
@@ -169,14 +177,18 @@ def solveFullPreissmann(z, B, h, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
         
         # Constant parts of the S-V Equations which can be computed outside the loop
         # For continuity equation
-        C1 = A_old[:-1] + A_old[1:] - 2*(dt/dx)*(1-Theta) * (V_old[1:]*A_old[1:] - V_old[:-1]*A_old[:-1])
+        C1 = (h_old[:-1]*Be[:-1] + h_old[1:]*Be[1:] 
+              - 2*(dt/dx)*(1-Theta) * (V_old[1:]*A_old[1:] 
+                                       - V_old[:-1]*A_old[:-1]))
         
         # For momentum equation
-        C2 = (g*dt*(1-Theta) * (A_old[1:]*(S_0 - Sf_old[1:]) 
-                                + A_old[:-1]*(S_0 - Sf_old[:-1]))
-              + V_old[:-1]*A_old[:-1]
+        C2 = (V_old[:-1]*A_old[:-1]
               + V_old[1:]*A_old[1:]
-              -2*(dt/dx)*(1-Theta) * (V_old[1:]**2*A_old[1:] - V_old[:-1]**2*A_old[:-1]))
+              -2*(dt/dx)*(1-Theta) * (V_old[1:]**2*A_old[1:]
+                                      - V_old[:-1]**2*A_old[:-1])
+              + g*dt*(1-Theta) * (A_old[1:]*(S_0 - Sf_old[1:]) 
+                                  + A_old[:-1]*(S_0 - Sf_old[:-1])))
+              
         
         # Iterative solution
         ItCount = 0
@@ -187,15 +199,16 @@ def solveFullPreissmann(z, B, h, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
             Err[0] = A[0]*V[0]-Q
             
             # Error in continuity equation
-            Err[np.arange(1,2*N-1,2)] = (A[:-1] + A[1:]
+            Err[np.arange(1,2*N-1,2)] = (h[:-1]*Be[:-1] + h[1:]*Be[1:]
                                          + 2*(dt/dx)*Theta * (V[1:]*A[1:] - V[:-1]*A[:-1])) - C1
             
             # Error in momentum equation
             Err[np.arange(2,2*N-1,2)] = (V[:-1]*A[:-1] + V[1:]*A[1:]
-                                         + 2*(dt/dx)*Theta * (V[1:]**2*A[1:] - V[:-1]**2*A[:-1]) 
+                                         + 2*(dt/dx)*Theta * (V[1:]**2*A[1:]
+                                                              - V[:-1]**2*A[:-1])
+                                         + g*(dt/dx)*(Theta*(A[1:]+A[:-1])+(1-Theta)*(A_old[1:]+A_old[:-1]))
+                                                    *(Theta*(h[1:]-h[:-1])+(1-Theta)*(h_old[1:]-h_old[:-1]))
                                          - g*dt*Theta * (A[1:]*(S_0-Sf[1:]) + A[:-1]*(S_0-Sf[:-1]))
-                                         + g*(dt/dx)*(Theta*(A[1:]+A[:-1]) + (1-Theta)*(A_old[1:]+A_old[:-1]))
-                                                    *(Theta*(h[1:]-h[:-1]) + (1-Theta)*(h_old[1:]-h_old[:-1]))
                                         ) - C2
             
             # Error in Ds Bdy
@@ -214,11 +227,11 @@ def solveFullPreissmann(z, B, h, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
             
             # Continuity equation derivatives
             # d/dh[0]
-            a_banded[3,np.arange(0,2*(N)-2,2)] = B[:-1] - 2*dt/dx*Theta*V[:-1]*B[:-1]
+            a_banded[3,np.arange(0,2*(N)-2,2)] = Be[:-1] - 2*dt/dx*Theta*V[:-1]*B[:-1]
             # d/dV[0]
             a_banded[2,np.arange(1,2*(N)-2,2)] = -2*dt/dx*Theta*A[:-1]
             # d/dh[1]
-            a_banded[1,np.arange(2,2*(N),2)] = B[1:] + 2*dt/dx*Theta*V[1:]*B[1:]
+            a_banded[1,np.arange(2,2*(N),2)] = Be[1:] + 2*dt/dx*Theta*V[1:]*B[1:]
             # d/dV[1]
             a_banded[0,np.arange(3,2*(N),2)] = 2*dt/dx*Theta*A[1:]
             
@@ -226,23 +239,25 @@ def solveFullPreissmann(z, B, h, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
             # d/dh[0]
             a_banded[4,np.arange(0,2*(N)-2,2)] = (V[:-1]*B[:-1] 
                                                   - 2*(dt/dx)*Theta*V[:-1]**2*B[:-1]
-                                                  - g*dt*Theta*(B[:-1]*(S_0+(1/3)*Sf[:-1]))
-                                                  + Theta*g*(dt/dx)*(B[:-1]*(Theta*(h[1:]-h[:-1]) + (1-Theta)*(h_old[1:]-h_old[:-1]))
-                                                                     - (Theta*(A[1:]+A[:-1]) + (1-Theta)*(A_old[1:]+A_old[:-1]))))
+                                                  + g*(dt/dx)*Theta*(-2*Theta*A[:-1]
+                                                                     +B[:-1]*(Theta*h[1:]+(1-Theta)*(h_old[1:]-h_old[:-1]))
+                                                                     -(Theta*A[1:]+(1-Theta)*(A_old[1:]+A_old[:-1])))
+                                                  - g*dt*Theta*B[:-1]*(S_0+(1/3)*Sf[:-1]))
             # d/dV[0]
             a_banded[3,np.arange(1,2*(N)-2,2)] = (A[:-1] 
                                                   - 4*(dt/dx)*Theta*V[:-1]*A[:-1] 
-                                                  + g*dt*Theta*A[:-1]*2*Sf[:-1]/V[:-1])
+                                                  + g*dt*Theta*A[:-1]*Sf[:-1]/V[:-1])
             # d/dh[1]
             a_banded[2,np.arange(2,2*(N),2)] = (V[1:]*B[1:] 
-                                                + 2*(dt/dx)*Theta*(V[1:]**2*B[1:] + g*A[1:]) 
-                                                - g*dt*Theta*(B[1:]*(S_0-(1/3)*Sf[1:]))
-                                                + Theta*g*(dt/dx)*(B[1:]*(Theta*(h[1:]-h[:-1]) + (1-Theta)*(h_old[1:]-h_old[:-1]))
-                                                                   + Theta*(A[1:]+A[:-1]) + (1-Theta)*(A_old[1:]+A_old[:-1])))
+                                                + 2*(dt/dx)*Theta*V[1:]**2*B[1:]
+                                                + g*(dt/dx)*Theta*(2*Theta*A[1:]
+                                                                   +B[1:]*(-Theta*h[:-1]+(1-Theta)*(h_old[1:]-h_old[:-1]))
+                                                                   +(Theta*A[:-1]+(1-Theta)*(A_old[1:]+A_old[:-1])))
+                                                - g*dt*Theta*B[1:]*(S_0+(1/3)*Sf[1:]))
             # d/dV[1]
             a_banded[1,np.arange(3,2*(N),2)] = (A[1:] 
                                                 + 4*dt/dx*Theta*V[1:]*A[1:] 
-                                                + g*dt*Theta*A[1:]*2*Sf[1:]/V[1:])
+                                                + g*dt*Theta*A[1:]*Sf[1:]/V[1:])
             
             # Ds Bdy condition derivatives
             a_banded[2,2*N-1] = 0

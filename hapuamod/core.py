@@ -6,6 +6,7 @@
 # import standard packages
 import logging
 import pandas as pd
+import numpy as np
 
 # import local modules
 from hapuamod import loadmod
@@ -39,7 +40,7 @@ def run(ModelConfigFile):
     RivFlow = interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']])).values
     SeaLevel = interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartTime']])).values
     
-    (ChanDx, ChanElev, ChanWidth, ChanArea) = \
+    (ChanDx, ChanElev, ChanWidth, LagArea) = \
     riv.assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, 
                         OutletX, OutletY, OutletElev, OutletWidth, 
                         PhysicalPars['RiverWidth'], NumericalPars['Dx'])
@@ -67,7 +68,9 @@ def run(ModelConfigFile):
         
         RivFlow = interpolate_at(FlowTs, HydTimes).values
         SeaLevel = interpolate_at(SeaLevelTs, HydTimes).values
-        (ChanDep, ChanVel) = riv.solveFullPreissmann(ChanElev, ChanWidth, 
+        
+        #LagArea = np.zeros(ChanElev.size) # INSERTED FOR TESTING NEED TO REMOVE!
+        (ChanDep, ChanVel) = riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, 
                                                      ChanDep, ChanVel, ChanDx, 
                                                      TimePars['HydDt'], 
                                                      PhysicalPars['Roughness'], 
