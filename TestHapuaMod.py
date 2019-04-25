@@ -41,7 +41,7 @@ plt.plot(ShoreX, Dy)
 
 #%% Test river routines
 # Join river and outlet through lagoon
-(ChanDx, ChanElev, ChanWidth, ChanArea) = \
+(ChanDx, ChanElev, ChanWidth, LagArea) = \
     hm.riv.assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, 
                            OutletX, OutletY, OutletElev, OutletWidth, 
                            PhysicalPars['RiverWidth'], NumericalPars['Dx'])
@@ -59,7 +59,7 @@ ChanDist = np.insert(np.cumsum(ChanDx),0,0)
 plt.plot(ChanDist, ChanDep+ChanElev, 'b-')
 
 # Unsteady hydraulics
-(ChanDep, ChanVel) = hm.riv.solveFullPreissmann(ChanElev, ChanWidth, ChanDep, 
+(ChanDep, ChanVel) = hm.riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, ChanDep, 
                                                 ChanVel, ChanDx, TimePars['HydDt'], 
                                                 PhysicalPars['Roughness'], 
                                                 RivFlow, SeaLevel, NumericalPars)

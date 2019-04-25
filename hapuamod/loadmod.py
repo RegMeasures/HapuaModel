@@ -258,7 +258,8 @@ def loadModel(Config):
     NumericalPars = {'Dx': Dx,
                      'Theta': float(Config['NumericalParameters']['Theta']),
                      'ErrTol': float(Config['NumericalParameters']['ErrTol']),
-                     'MaxIt': float(Config['NumericalParameters']['MaxIt'])}
+                     'MaxIt': float(Config['NumericalParameters']['MaxIt']),
+                     'WarnTol': float(Config['NumericalParameters']['WarnTol'])}
 
     #%% Read output options
     OutputOpts = {'LogInt': pd.Timedelta(seconds=float(Config['OutputOptions']['LogInt'])),

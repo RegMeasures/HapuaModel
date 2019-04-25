@@ -267,6 +267,16 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
             # Solve the banded matrix
             Delta = linalg.solve_banded([2,2],a_banded,Err)
             
+            # Stability check
+            if np.max(Delta)>NumericalPars['WarnTol']:
+                WarnNode = np.floor(np.argmax(Delta)/2)
+                if np.argmax(Delta)%2 == 0:
+                    WarnVar = 'Depth'
+                else:
+                    WarnVar = 'Velocity'
+                logging.warning('%s change in cross-section %i equals %f (greater than WarnTol)',
+                                WarnVar, WarnNode, np.max(Delta))
+            
             # Update h & V
             h -= Delta[np.arange(0,2*N,2)]
             V -= Delta[np.arange(1,2*N,2)]
