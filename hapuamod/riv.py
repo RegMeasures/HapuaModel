@@ -298,7 +298,7 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
     return(h, V)
     
 def calcBedload(z, B, h, V, dx, PhysicalPars):
-    """ Calculate bedload transport using Bagnold streampower approach
+    """ Calculate bedload transport using Bagnold 1980 streampower approach
     """
     
     Rho = PhysicalPars['RhoRiv']
@@ -315,7 +315,7 @@ def calcBedload(z, B, h, V, dx, PhysicalPars):
     S = (TotHead[:-1]-TotHead[1:])/dx
     
     # Threshold streampower per unit width [kg/m/s]
-    omega_0 = 5.75*(0.04*(RhoS - Rho))**(3/2) * (g/Rho)**(1/2) * D**(3/2) * np.log10(h_reach/D) 
+    omega_0 = 5.75*(0.04*(RhoS - Rho))**(3/2) * (g/Rho)**(1/2) * D**(3/2) * np.log10(12*h_reach/D) 
     # TODO move constant part of above line into loadmod (i.e. out of loop)
     
     # streampower per unit width [kg/m/s]
