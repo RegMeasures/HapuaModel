@@ -224,10 +224,36 @@ def loadModel(Config):
                 'EndTime': pd.to_datetime(Config['Time']['EndTime']),
                 'HydDt': pd.Timedelta(seconds=float(Config['Time']['HydDt'])),
                 'MorDt': pd.Timedelta(seconds=float(Config['Time']['MorDt']))}
-    
-    # TODO: check time-series inputs extend over full model duration and remove any unecessary bits at the ends
     # TODO: check mortime is a multiple of hydtime (or replace with morscaling?)
-        
+    
+    #%% Trim time-series inputs to model time
+    assert (FlowTs.index[0] <= TimePars['StartTime'] 
+            and FlowTs.index[-1] >= TimePars['EndTime']), \
+        'Flow timeseries %s does not extend over full model duration' \
+        % Config['BoundaryConditions']['RiverFlow']
+    KeepTimes = np.zeros(FlowTs.shape[0], dtype=bool)
+    KeepTimes[:-1] = FlowTs.index[1:] > TimePars['StartTime']
+    KeepTimes[1:] = FlowTs.index[:-1]<TimePars['EndTime']
+    FlowTs = FlowTs[KeepTimes]
+
+    assert (WaveTs.index[0] <= TimePars['StartTime'] 
+            and WaveTs.index[-1] >= TimePars['EndTime']), \
+        'Wave timeseries %s does not extend over full model duration' \
+        % Config['BoundaryConditions']['WaveConditions']
+    KeepTimes = np.zeros(WaveTs.shape[0], dtype=bool)
+    KeepTimes[:-1] = WaveTs.index[1:] > TimePars['StartTime']
+    KeepTimes[1:] = WaveTs.index[:-1]<TimePars['EndTime']
+    WaveTs = WaveTs[KeepTimes]
+    
+    assert (SeaLevelTs.index[0] <= TimePars['StartTime'] 
+            and SeaLevelTs.index[-1] >= TimePars['EndTime']), \
+        'Sea level timeseries %s does not extend over full model duration' \
+        % Config['BoundaryConditions']['SeaLevel']        
+    KeepTimes = np.zeros(SeaLevelTs.shape[0], dtype=bool)
+    KeepTimes[:-1] = SeaLevelTs.index[1:] > TimePars['StartTime']
+    KeepTimes[1:] = SeaLevelTs.index[:-1]<TimePars['EndTime']
+    SeaLevelTs = SeaLevelTs[KeepTimes]
+    
     #%% Read physical parameters
     logging.info('Processing physical parameters')
     PhysicalPars = {'RhoSed': float(Config['PhysicalParameters']['RhoSed']),
