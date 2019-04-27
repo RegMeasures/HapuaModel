@@ -296,3 +296,33 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
         assert ItCount < MaxIt, 'Max iterations exceeded.'
     
     return(h, V)
+    
+def calcBedload(z, B, h, V, dx, PhysicalPars):
+    """ Calculate bedload transport using Bagnold streampower approach
+    """
+    
+    Rho = PhysicalPars['RhoRiv']
+    RhoS = PhysicalPars['RhoSed']
+    g = PhysicalPars['Gravity']
+    D = PhysicalPars['GrainSize']
+    VoidRatio = PhysicalPars['VoidRatio']
+    
+    # Shift focus from cross-sections to the reaches between them.
+    V_reach = (V[:-1]+V[1:])/2
+    h_reach = (h[:-1]+h[1:])/2
+    B_reach = (B[:-1]+B[1:])/2
+    TotHead = z + h + V**2/(2*g)
+    S = (TotHead[:-1]-TotHead[1:])/dx
+    
+    # Threshold streampower per unit width [kg/m/s]
+    omega_0 = 5.75*(0.04*(RhoS - Rho))**(3/2) * (g/Rho)**(1/2) * D**(3/2) * np.log10(h_reach/D) 
+    # TODO move constant part of above line into loadmod (i.e. out of loop)
+    
+    # streampower per unit width [kg/m/s]
+    omega = Rho * S * V_reach * h_reach 
+    
+    # bedload transport rate (bulk volume accounting for voids) [m^3/s]
+    Qs = RhoS/(RhoS-Rho) * 0.01 * (np.maximum(omega-omega_0,0.0)/0.5)**(3/2) * (h_reach/0.1)**(-2/3) * (D/0.0011)**(-1/2) * B_reach / (RhoS*(1-VoidRatio)) 
+    # TODO move constant part of above line into loadmod (i.e. out of loop)
+    
+    return(Qs)

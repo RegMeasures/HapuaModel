@@ -57,7 +57,8 @@ def run(ModelConfigFile):
     #%% Prepare plotting
     LivePlot = OutputOpts['PlotInt'] > pd.Timedelta(0)
     if LivePlot:
-        LsLines = visualise.longSection(ChanDx, ChanElev, ChanDep, ChanVel)
+        LsLines = visualise.longSection(ChanDx, ChanElev, ChanDep, ChanVel, 
+                                        np.zeros(ChanDx.size))
         BdyFig = visualise.BdyCndFig(OutputTs)
     
     #%% Main timestepping loop
@@ -75,13 +76,16 @@ def run(ModelConfigFile):
         RivFlow = interpolate_at(FlowTs, HydTimes).values
         SeaLevel = interpolate_at(SeaLevelTs, HydTimes).values
         
-        #LagArea = np.zeros(ChanElev.size) # INSERTED FOR TESTING NEED TO REMOVE!
         (ChanDep, ChanVel) = riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, 
                                                      ChanDep, ChanVel, ChanDx, 
                                                      TimePars['HydDt'], 
                                                      PhysicalPars['Roughness'], 
                                                      RivFlow, SeaLevel, 
                                                      NumericalPars)
+        
+        # Calculate bedload transport
+        Bedload = riv.calcBedload(ChanElev, ChanWidth, ChanDep, ChanVel, 
+                                  ChanDx, PhysicalPars)
         
         # Run shoreline model
         WavesAtT = interpolate_at(WaveTs, pd.DatetimeIndex([MorTime]))
@@ -111,7 +115,7 @@ def run(ModelConfigFile):
         if LivePlot:
             if MorTime >= PlotTime:
                 visualise.updateLongSection(LsLines, ChanDx, ChanElev, 
-                                            ChanDep, ChanVel)
+                                            ChanDep, ChanVel, Bedload)
                 visualise.updateBdyCndFig(BdyFig, OutputTs)
                 PlotTime += OutputOpts['PlotInt']
         

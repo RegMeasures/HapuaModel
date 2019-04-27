@@ -29,7 +29,7 @@ LagoonBed = -1.0
 # Simulation start date
 StartTime = '1 Jul 2015'
 # Simulation end date '30 Jun 2016'
-EndTime = '30 Jul 2015'
+EndTime = '3 Jul 2015'
 # Hydraulic Timestep [s]
 HydDt = 5
 # Morphology Timestep [s]

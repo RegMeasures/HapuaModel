@@ -53,7 +53,10 @@ SeaLevel = hm.core.interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartT
                                         PhysicalPars['Roughness'], 
                                         RivFlow, SeaLevel)
 
-hm.visualise.longSection(ChanDx, ChanElev, ChanDep, ChanVel)
+# Bedload
+Bedload = hm.riv.calcBedload(ChanElev, ChanWidth, ChanDep, ChanVel, ChanDx, PhysicalPars)
+
+hm.visualise.longSection(ChanDx, ChanElev, ChanDep, ChanVel, Bedload)
 
 ChanDist = np.insert(np.cumsum(ChanDx),0,0)
 plt.plot(ChanDist, ChanDep+ChanElev, 'b-')
@@ -64,6 +67,7 @@ plt.plot(ChanDist, ChanDep+ChanElev, 'b-')
                                                 PhysicalPars['Roughness'], 
                                                 RivFlow, SeaLevel, NumericalPars)
 plt.plot(ChanDist, ChanDep+ChanElev, 'r:')
+
 
 #%% Test core timestepping
 ModelConfigFile = 'inputs\HurunuiModel.cnf'

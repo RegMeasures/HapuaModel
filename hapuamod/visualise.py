@@ -52,7 +52,7 @@ def modelView(ShoreX, ShoreY, LagoonY, OutletX, OutletY):
     
     plt.axis('equal')
     
-def longSection(ChanDx, ChanElev, ChanDep, ChanVel):
+def longSection(ChanDx, ChanElev, ChanDep, ChanVel, Bedload):
     """ View a long section of the river to the lagoon outlet
     
     Parameters:
@@ -69,35 +69,51 @@ def longSection(ChanDx, ChanElev, ChanDep, ChanVel):
     """
     g = 9.81
     Dist = np.insert(np.cumsum(ChanDx),0,0)
+    ReachDist = (Dist[:-1]+Dist[1:])/2
     WL = ChanElev + ChanDep
     Energy = WL + ChanVel**2 / (2*g)
     Fr = ChanVel/np.sqrt(g*ChanDep)
     
     # Create new figure with sub plots
     RivFig = plt.figure()
-    RivTopAx = RivFig.add_subplot(2,1,1)
-    RivBotAx = RivFig.add_subplot(2,1,2, sharex=RivTopAx)
+    ElevAx = RivFig.add_subplot(3,1,1)
+    VelAx = RivFig.add_subplot(3,1,2, sharex=ElevAx)
+    FrAx = VelAx.twinx()
+    QsAx = RivFig.add_subplot(3,1,3, sharex=ElevAx)
     
-    # Plot the river bed level
-    RivTopAx.plot(Dist, ChanElev, 'k-')
-    
-    # Plot water surface and energy line
-    WaterLine = RivTopAx.plot(Dist, WL, 'b-')
-    EnergyLine = RivTopAx.plot(Dist, Energy, 'b:')
+    # Plot the river bed level, water surface and energy line
+    ElevAx.plot(Dist, ChanElev, 'k-')
+    WaterLine = ElevAx.plot(Dist, WL, 'b-')
+    EnergyLine = ElevAx.plot(Dist, Energy, 'b:')
+    ElevAx.set_ylabel('Elevation [m]')
     
     # Plot velocity and Froude number
-    VelLine = RivBotAx.plot(Dist, ChanVel, 'r-')
-    FrLine = RivBotAx.plot(Dist, Fr, 'g-')
+    VelLine = VelAx.plot(Dist, ChanVel, 'r-')
+    VelAx.set_ylabel('Velocity [m/s]', color='red')
+    VelAx.tick_params(axis='y', colors='red')
+    VelAx.set_ylim([0,2])
     
-    LongSecFig = (RivFig, WaterLine, EnergyLine, VelLine, FrLine)
+    FrLine = FrAx.plot(Dist, Fr, 'g-')
+    FrAx.set_ylabel('Froude No.', color='green')
+    FrAx.tick_params(axis='y', colors='green')
+    FrAx.set_ylim([0,1.3])
+    
+    # Plot bedload
+    QsLine = QsAx.plot(ReachDist, Bedload*3600, 'k-')
+    QsAx.set_ylabel(r'Bedload [$\mathrm{m^3/hr}$]')
+    QsAx.set_xlabel('Distance downstream [m]')
+    QsAx.set_ylim([0,10])
+    
+    LongSecFig = (RivFig, WaterLine, EnergyLine, VelLine, FrLine, QsLine)
     
     return(LongSecFig)
 
-def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanDep, ChanVel):
+def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanDep, ChanVel, Bedload):
     
     # Calculate required variables to plot
     g = 9.81
     Dist = np.insert(np.cumsum(ChanDx),0,0)
+    ReachDist = (Dist[:-1]+Dist[1:])/2
     WL = ChanElev + ChanDep
     Energy = WL + ChanVel**2 / (2*g)
     Fr = ChanVel/np.sqrt(g*ChanDep)
@@ -107,6 +123,7 @@ def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanDep, ChanVel):
     LongSecFig[2][0].set_data(Dist, Energy)
     LongSecFig[3][0].set_data(Dist, ChanVel)
     LongSecFig[4][0].set_data(Dist, Fr)
+    LongSecFig[5][0].set_data(ReachDist, Bedload*3600)
     
     # Redraw
     LongSecFig[0].canvas.draw()
