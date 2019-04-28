@@ -45,6 +45,9 @@ plt.plot(ShoreX, Dy)
     hm.riv.assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, 
                            OutletX, OutletY, OutletElev, OutletWidth, 
                            PhysicalPars['RiverWidth'], NumericalPars['Dx'])
+    
+BankElev = np.ones(ChanElev.size) * 3
+# TODO remove above line by dealing with bank height correctly!
 
 # Steady state hydraulics
 RivFlow = hm.core.interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']])).values
@@ -57,6 +60,11 @@ SeaLevel = hm.core.interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartT
 Bedload = hm.riv.calcBedload(ChanElev, ChanWidth, ChanDep, ChanVel, ChanDx, PhysicalPars)
 
 hm.visualise.longSection(ChanDx, ChanElev, ChanDep, ChanVel, Bedload)
+# Bed updating
+hm.riv.riverMorphology(Bedload, ChanWidth, ChanDep, ChanElev, BankElev, ChanDx, 
+                       TimePars['MorDt'].seconds, PhysicalPars)
+
+
 
 ChanDist = np.insert(np.cumsum(ChanDx),0,0)
 plt.plot(ChanDist, ChanDep+ChanElev, 'b-')

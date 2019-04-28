@@ -45,6 +45,9 @@ def run(ModelConfigFile):
                         OutletX, OutletY, OutletElev, OutletWidth, 
                         PhysicalPars['RiverWidth'], NumericalPars['Dx'])
     
+    BankElev = np.ones(ChanElev.size) * 3
+# TODO remove above line by dealing with bank height correctly!
+    
     (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
                                          PhysicalPars['Roughness'], 
                                          RivFlow, SeaLevel)
@@ -58,7 +61,7 @@ def run(ModelConfigFile):
     LivePlot = OutputOpts['PlotInt'] > pd.Timedelta(0)
     if LivePlot:
         LsLines = visualise.longSection(ChanDx, ChanElev, ChanDep, ChanVel, 
-                                        np.zeros(ChanDx.size))
+                                        np.zeros(ChanElev.size))
         BdyFig = visualise.BdyCndFig(OutputTs)
     
     #%% Main timestepping loop
@@ -86,6 +89,7 @@ def run(ModelConfigFile):
         # Calculate bedload transport
         Bedload = riv.calcBedload(ChanElev, ChanWidth, ChanDep, ChanVel, 
                                   ChanDx, PhysicalPars)
+        assert Bedload.size == ChanElev.size
         
         # Run shoreline model
         WavesAtT = interpolate_at(WaveTs, pd.DatetimeIndex([MorTime]))
@@ -97,8 +101,12 @@ def run(ModelConfigFile):
         LST = coast.longShoreTransport(ShoreY, NumericalPars['Dx'], WavePower, 
                                        WavePeriod, Wlen_h, EDir_h, 
                                        PhysicalPars)
+        
+        # Update morphology
         ShoreY += coast.shoreChange(LST, NumericalPars['Dx'], 
                                     TimePars['MorDt'], PhysicalPars)
+        riv.riverMorphology(Bedload, ChanWidth, ChanDep, ChanElev, BankElev, 
+                            ChanDx, TimePars['MorDt'].seconds, PhysicalPars)
         
         # Store outputs
         OutputTs = OutputTs.append(pd.DataFrame({'Qin': [RivFlow[-1]], 

@@ -69,7 +69,6 @@ def longSection(ChanDx, ChanElev, ChanDep, ChanVel, Bedload):
     """
     g = 9.81
     Dist = np.insert(np.cumsum(ChanDx),0,0)
-    ReachDist = (Dist[:-1]+Dist[1:])/2
     WL = ChanElev + ChanDep
     Energy = WL + ChanVel**2 / (2*g)
     Fr = ChanVel/np.sqrt(g*ChanDep)
@@ -82,7 +81,7 @@ def longSection(ChanDx, ChanElev, ChanDep, ChanVel, Bedload):
     QsAx = RivFig.add_subplot(3,1,3, sharex=ElevAx)
     
     # Plot the river bed level, water surface and energy line
-    ElevAx.plot(Dist, ChanElev, 'k-')
+    BedLine = ElevAx.plot(Dist, ChanElev, 'k-')
     WaterLine = ElevAx.plot(Dist, WL, 'b-')
     EnergyLine = ElevAx.plot(Dist, Energy, 'b:')
     ElevAx.set_ylabel('Elevation [m]')
@@ -99,12 +98,12 @@ def longSection(ChanDx, ChanElev, ChanDep, ChanVel, Bedload):
     FrAx.set_ylim([0,1.3])
     
     # Plot bedload
-    QsLine = QsAx.plot(ReachDist, Bedload*3600, 'k-')
+    QsLine = QsAx.plot(Dist, Bedload*3600, 'k-')
     QsAx.set_ylabel(r'Bedload [$\mathrm{m^3/hr}$]')
     QsAx.set_xlabel('Distance downstream [m]')
     QsAx.set_ylim([0,10])
     
-    LongSecFig = (RivFig, WaterLine, EnergyLine, VelLine, FrLine, QsLine)
+    LongSecFig = (RivFig, BedLine, WaterLine, EnergyLine, VelLine, FrLine, QsLine)
     
     return(LongSecFig)
 
@@ -113,17 +112,17 @@ def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanDep, ChanVel, Bedload):
     # Calculate required variables to plot
     g = 9.81
     Dist = np.insert(np.cumsum(ChanDx),0,0)
-    ReachDist = (Dist[:-1]+Dist[1:])/2
     WL = ChanElev + ChanDep
     Energy = WL + ChanVel**2 / (2*g)
     Fr = ChanVel/np.sqrt(g*ChanDep)
     
     # Update the lines
-    LongSecFig[1][0].set_data(Dist, WL)
-    LongSecFig[2][0].set_data(Dist, Energy)
-    LongSecFig[3][0].set_data(Dist, ChanVel)
-    LongSecFig[4][0].set_data(Dist, Fr)
-    LongSecFig[5][0].set_data(ReachDist, Bedload*3600)
+    LongSecFig[1][0].set_data(Dist, ChanElev)
+    LongSecFig[2][0].set_data(Dist, WL)
+    LongSecFig[3][0].set_data(Dist, Energy)
+    LongSecFig[4][0].set_data(Dist, ChanVel)
+    LongSecFig[5][0].set_data(Dist, Fr)
+    LongSecFig[6][0].set_data(Dist, Bedload*3600)
     
     # Redraw
     LongSecFig[0].canvas.draw()

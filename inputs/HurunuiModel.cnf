@@ -64,6 +64,8 @@ UpstreamLength = 1000
 RiverWidth = 100
 # Fluvial hydraulic roughness (Manning's n) [m^(-1/3).s]
 RoughnessManning = 0.03
+# Width-Depth ratio of eroding channel [dimensionless]
+WidthDepthRatio = 40
 
 [NumericalParameters]
 # Alongshore discretisation resolution (transect spacing) [m]

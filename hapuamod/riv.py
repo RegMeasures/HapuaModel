@@ -307,22 +307,40 @@ def calcBedload(z, B, h, V, dx, PhysicalPars):
     D = PhysicalPars['GrainSize']
     VoidRatio = PhysicalPars['VoidRatio']
     
-    # Shift focus from cross-sections to the reaches between them.
-    V_reach = (V[:-1]+V[1:])/2
-    h_reach = (h[:-1]+h[1:])/2
-    B_reach = (B[:-1]+B[1:])/2
+    # Slope at each XS assumed to equal energy slope in reach upstream of XS
     TotHead = z + h + V**2/(2*g)
-    S = (TotHead[:-1]-TotHead[1:])/dx
+    S = np.empty(z.size)
+    S[0] = PhysicalPars['RiverSlope']
+    S[1:] = (TotHead[:-1]-TotHead[1:])/dx
     
     # Threshold streampower per unit width [kg/m/s]
-    omega_0 = 5.75*(0.04*(RhoS - Rho))**(3/2) * (g/Rho)**(1/2) * D**(3/2) * np.log10(12*h_reach/D) 
+    omega_0 = 5.75*(0.04*(RhoS - Rho))**(3/2) * (g/Rho)**(1/2) * D**(3/2) * np.log10(12*h/D)
     # TODO move constant part of above line into loadmod (i.e. out of loop)
     
     # streampower per unit width [kg/m/s]
-    omega = Rho * S * V_reach * h_reach 
+    omega = Rho * S * V * h 
     
     # bedload transport rate (bulk volume accounting for voids) [m^3/s]
-    Qs = RhoS/(RhoS-Rho) * 0.01 * (np.maximum(omega-omega_0,0.0)/0.5)**(3/2) * (h_reach/0.1)**(-2/3) * (D/0.0011)**(-1/2) * B_reach / (RhoS*(1-VoidRatio)) 
+    Qs = RhoS/(RhoS-Rho) * 0.01 * (np.maximum(omega-omega_0,0.0)/0.5)**(3/2) * (h/0.1)**(-2/3) * (D/0.0011)**(-1/2) * B / (RhoS*(1-VoidRatio)) 
     # TODO move constant part of above line into loadmod (i.e. out of loop)
     
     return(Qs)
+    
+def riverMorphology(Qs, B, h, z, BankElev, dx, dt, PhysicalPars):
+    
+    # Change in volume at each cross-section (except the upstream Bdy)
+    dVol = (Qs[:-1]-Qs[1:]) * dt
+    
+    # Some current physical properties of each XS
+    BedArea = dx * B[1:] 
+    AspectRatio = B[1:]/h[1:]
+    TooWide = AspectRatio > PhysicalPars['WidthRatio']
+    
+    # Update bed elevation
+    ErosionVol = np.minimum(dVol, 0.0)
+    z[1:] += (np.maximum(dVol, 0) + ErosionVol * TooWide)/BedArea
+    
+    # Update channel width
+    B[1:] += (-ErosionVol * np.logical_not(TooWide)) / ((BankElev[1:]-z[1:])*dx)
+    # TODO split L and R bank calculations and account for differences in bank height
+    

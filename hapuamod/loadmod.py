@@ -269,7 +269,8 @@ def loadModel(Config):
                     'GrainSize': float(Config['PhysicalParameters']['GrainSize']),
                     'UpstreamLength': float(Config['PhysicalParameters']['UpstreamLength']),
                     'RiverWidth': float(Config['PhysicalParameters']['RiverWidth']),
-                    'Roughness': float(Config['PhysicalParameters']['RoughnessManning'])}
+                    'Roughness': float(Config['PhysicalParameters']['RoughnessManning']),
+                    'WidthRatio': float(Config['PhysicalParameters']['WidthDepthRatio'])}
 
     GammaLST = ((PhysicalPars['RhoSed'] - PhysicalPars['RhoSea']) * 
                 PhysicalPars['Gravity'] * (1 - PhysicalPars['VoidRatio']))
