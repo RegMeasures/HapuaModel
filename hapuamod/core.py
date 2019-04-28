@@ -60,7 +60,7 @@ def run(ModelConfigFile):
     #%% Prepare plotting
     LivePlot = OutputOpts['PlotInt'] > pd.Timedelta(0)
     if LivePlot:
-        LsLines = visualise.longSection(ChanDx, ChanElev, ChanDep, ChanVel, 
+        LsLines = visualise.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, 
                                         np.zeros(ChanElev.size))
         BdyFig = visualise.BdyCndFig(OutputTs)
     
@@ -109,9 +109,10 @@ def run(ModelConfigFile):
                             ChanDx, TimePars['MorDt'].seconds, PhysicalPars)
         
         # Store outputs
-        OutputTs = OutputTs.append(pd.DataFrame({'Qin': [RivFlow[-1]], 
-                                                 'Qout': [ChanDep[-1]*ChanVel[-1]*ChanWidth[-1]],
-                                                 'SeaLevel': [SeaLevel[-1]]},
+        OutputTs = OutputTs.append(pd.DataFrame(list(zip([RivFlow[-1]],
+                                                         [ChanDep[-1]*ChanVel[-1]*ChanWidth[-1]],
+                                                         [SeaLevel[-1]])),
+                                                columns=['Qin','Qout','SeaLevel'],
                                                 index=pd.DatetimeIndex([MorTime])))
         
         # updates to user
@@ -123,7 +124,8 @@ def run(ModelConfigFile):
         if LivePlot:
             if MorTime >= PlotTime:
                 visualise.updateLongSection(LsLines, ChanDx, ChanElev, 
-                                            ChanDep, ChanVel, Bedload)
+                                            ChanWidth, ChanDep, ChanVel, 
+                                            Bedload)
                 visualise.updateBdyCndFig(BdyFig, OutputTs)
                 PlotTime += OutputOpts['PlotInt']
         

@@ -52,7 +52,7 @@ def modelView(ShoreX, ShoreY, LagoonY, OutletX, OutletY):
     
     plt.axis('equal')
     
-def longSection(ChanDx, ChanElev, ChanDep, ChanVel, Bedload):
+def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload):
     """ View a long section of the river to the lagoon outlet
     
     Parameters:
@@ -74,17 +74,23 @@ def longSection(ChanDx, ChanElev, ChanDep, ChanVel, Bedload):
     Fr = ChanVel/np.sqrt(g*ChanDep)
     
     # Create new figure with sub plots
-    RivFig = plt.figure()
-    ElevAx = RivFig.add_subplot(3,1,1)
-    VelAx = RivFig.add_subplot(3,1,2, sharex=ElevAx)
+    RivFig = plt.figure(figsize=(9,9))
+    ElevAx = RivFig.add_subplot(4,1,1)
+    WidthAx = RivFig.add_subplot(4,1,2)
+    VelAx = RivFig.add_subplot(4,1,3, sharex=ElevAx)
     FrAx = VelAx.twinx()
-    QsAx = RivFig.add_subplot(3,1,3, sharex=ElevAx)
+    QsAx = RivFig.add_subplot(4,1,4, sharex=ElevAx)
     
     # Plot the river bed level, water surface and energy line
     BedLine = ElevAx.plot(Dist, ChanElev, 'k-')
     WaterLine = ElevAx.plot(Dist, WL, 'b-')
     EnergyLine = ElevAx.plot(Dist, Energy, 'b:')
     ElevAx.set_ylabel('Elevation [m]')
+    
+    # Plot the river width
+    WidthLine = WidthAx.plot(Dist, ChanWidth, 'k-')
+    WidthAx.set_ylabel('Width [m]')
+    WidthAx.set_ylim([0,np.amax(ChanWidth)+10])
     
     # Plot velocity and Froude number
     VelLine = VelAx.plot(Dist, ChanVel, 'r-')
@@ -103,11 +109,13 @@ def longSection(ChanDx, ChanElev, ChanDep, ChanVel, Bedload):
     QsAx.set_xlabel('Distance downstream [m]')
     QsAx.set_ylim([0,10])
     
-    LongSecFig = (RivFig, BedLine, WaterLine, EnergyLine, VelLine, FrLine, QsLine)
+    LongSecFig = (RivFig, BedLine, WaterLine, EnergyLine, WidthLine, 
+                  VelLine, FrLine, QsLine)
     
     return(LongSecFig)
 
-def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanDep, ChanVel, Bedload):
+def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep, 
+                      ChanVel, Bedload):
     
     # Calculate required variables to plot
     g = 9.81
@@ -120,9 +128,10 @@ def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanDep, ChanVel, Bedload):
     LongSecFig[1][0].set_data(Dist, ChanElev)
     LongSecFig[2][0].set_data(Dist, WL)
     LongSecFig[3][0].set_data(Dist, Energy)
-    LongSecFig[4][0].set_data(Dist, ChanVel)
-    LongSecFig[5][0].set_data(Dist, Fr)
-    LongSecFig[6][0].set_data(Dist, Bedload*3600)
+    LongSecFig[4][0].set_data(Dist, ChanWidth)
+    LongSecFig[5][0].set_data(Dist, ChanVel)
+    LongSecFig[6][0].set_data(Dist, Fr)
+    LongSecFig[7][0].set_data(Dist, Bedload*3600)
     
     # Redraw
     LongSecFig[0].canvas.draw()
