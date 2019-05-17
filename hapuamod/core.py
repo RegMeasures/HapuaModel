@@ -12,6 +12,7 @@ import numpy as np
 from hapuamod import loadmod
 from hapuamod import riv
 from hapuamod import coast
+from hapuamod import mor
 from hapuamod import visualise
 
 def run(ModelConfigFile):
@@ -41,7 +42,7 @@ def run(ModelConfigFile):
     SeaLevel = interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartTime']])).values
     
     (ChanDx, ChanElev, ChanWidth, LagArea) = \
-    riv.assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, 
+    mor.assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, 
                         OutletX, OutletY, OutletElev, OutletWidth, 
                         PhysicalPars['RiverWidth'], NumericalPars['Dx'])
     
@@ -105,7 +106,7 @@ def run(ModelConfigFile):
         # Update morphology
         ShoreY += coast.shoreChange(LST, NumericalPars['Dx'], 
                                     TimePars['MorDt'], PhysicalPars)
-        riv.riverMorphology(Bedload, ChanWidth, ChanDep, ChanElev, BankElev, 
+        mor.riverMorphology(Bedload, ChanWidth, ChanDep, ChanElev, BankElev, 
                             ChanDx, TimePars['MorDt'].seconds, PhysicalPars)
         
         # Store outputs

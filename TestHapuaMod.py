@@ -42,7 +42,7 @@ plt.plot(ShoreX, Dy)
 #%% Test river routines
 # Join river and outlet through lagoon
 (ChanDx, ChanElev, ChanWidth, LagArea) = \
-    hm.riv.assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, 
+    hm.mor.assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, 
                            OutletX, OutletY, OutletElev, OutletWidth, 
                            PhysicalPars['RiverWidth'], NumericalPars['Dx'])
     
@@ -61,7 +61,7 @@ Bedload = hm.riv.calcBedload(ChanElev, ChanWidth, ChanDep, ChanVel, ChanDx, Phys
 
 hm.visualise.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload)
 # Bed updating
-hm.riv.riverMorphology(Bedload, ChanWidth, ChanDep, ChanElev, BankElev, ChanDx, 
+hm.mor.riverMorphology(Bedload, ChanWidth, ChanDep, ChanElev, BankElev, ChanDx, 
                        TimePars['MorDt'].seconds, PhysicalPars)
 
 

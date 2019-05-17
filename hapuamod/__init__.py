@@ -22,3 +22,4 @@ import hapuamod.visualise
 import hapuamod.coast
 import hapuamod.riv
 import hapuamod.core
+import hapuamod.mor
