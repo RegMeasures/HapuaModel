@@ -43,30 +43,45 @@ def assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, OutletX, OutletY,
     LagArea[RiverElev.size] = StartArea
     LagArea[-(OutletX.size+1)] = EndArea
     
-    return (ChanDx, ChanElev, ChanWidth, LagArea)
+    return (ChanDx, ChanElev, ChanWidth, LagArea, OnlineLagoon)
 
-def riverMorphology(Qs, B, h, z, BankElev, dx, dt, PhysicalPars):
+def updateMorphology(LST, Bedload, 
+                     ChanWidth, ChanDep, OnlineLagoon, RiverElev, 
+                     OutletWidth, OutletElev, OutletX, OutletY, 
+                     ShoreX, ShoreY, LagoonY, LagoonElev, BarrierElev,
+                     Dx, Dt, PhysicalPars):
     
+    #%% River morphology
     # Change in volume at each cross-section (except the upstream Bdy)
-    dVol = (Qs[:-1]-Qs[1:]) * dt
+    dVol = (Bedload[:-1]-Bedload[1:]) * Dt.seconds
     
     # Some current physical properties of each XS
-    BedArea = dx * B[1:] 
-    AspectRatio = B[1:]/h[1:]
+    #BedArea = ChanDx * ChanWidth[1:] 
+    AspectRatio = ChanWidth[1:]/ChanDep[1:]
     TooWide = AspectRatio > PhysicalPars['WidthRatio']
+    OutletDx1 = np.sqrt((OutletX[1:]-OutletX[:-1])**2 + 
+                        (OutletY[1:]-OutletY[:-1])**2)
+    OutletDx2 = np.zeros(OutletElev.size)
+    OutletDx2[[0,-1]] = OutletDx1[[0,-1]]
+    OutletDx2[1:-1] = (OutletDx1[1:] + OutletDx1[:-1])/2
     
-    # Update bed elevation
-    ErosionVol = np.minimum(dVol, 0.0)
-    z[1:] += (np.maximum(dVol, 0) + ErosionVol * TooWide)/BedArea
+    # Update river bed elevation
+    NRiv = RiverElev.size-1         # No of river cross-sections for updating
+    NOut = OutletElev.size          # No of outlet channel cross-sections for updating
+    EroVol = np.minimum(dVol, 0.0)  # Total erosion volume
+    BedEro = EroVol * TooWide       # Bed erosion volume
+    BankEro = EroVol * np.logical_not(TooWide) # Bank erosion volume
+    BedDep = np.maximum(dVol, 0.0)  # Bed deposition volume (=total)
+    # note that += updates variables in place so no need to explicitly return them!
+    RiverElev[1:] += (BedDep[:NRiv] + BedEro[:NRiv]) / (PhysicalPars['RiverWidth'] * Dx)
+    LagoonElev[OnlineLagoon] += ((BedDep[NRiv:-NOut] + BedEro[NRiv:-NOut])
+                                 / ((LagoonY[OnlineLagoon,1] - LagoonY[OnlineLagoon,0]) * Dx))
+    OutletElev += (BedDep[-NOut:] + BedEro[-NOut:]) / (OutletWidth * OutletDx2)
     
-    # Update channel width
-    B[1:] += (-ErosionVol * np.logical_not(TooWide)) / ((BankElev[1:]-z[1:])*dx)
-    # TODO split L and R bank calculations and account for differences in bank height
-
-#def updateMorphology(LST, Bedload, ShoreX, ShoreY, LagoonY, OutletX, OutletWidth, Dx, Dt):
-#    """
-#    """
-#    
-#    
-#    
-#    return (ShoreY)
+    # Update bank positions
+    # Note: River upstream of lagoon has fixed width - all morpho change is on bed
+    LagoonY[OnlineLagoon,0] += (BankEro[NRiv:-NOut]/2) / ((BarrierElev[OnlineLagoon] - LagoonElev[OnlineLagoon]) * Dx)
+    LagoonY[OnlineLagoon,1] += (BankEro[NRiv:-NOut]/2) / ((PhysicalPars['BackshoreElev'] - LagoonElev[OnlineLagoon]) * Dx)
+    # TODO use actual barrier height, split L and R bank calculations and account for differences in bank height and movement of channel centerline!
+    OutletWidth += BankEro[-NOut:] / ((3.0-OutletElev) * OutletDx2)
+    

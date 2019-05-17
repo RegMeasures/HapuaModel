@@ -25,29 +25,30 @@ def run(ModelConfigFile):
     
     #%% Set up logging
     RootLogger = logging.getLogger()
-    RootLogger.setLevel(logging.DEBUG)
+    RootLogger.setLevel(logging.INFO)
     
     ConsoleHandler = logging.StreamHandler()
-    ConsoleHandler.setLevel(logging.DEBUG)
+    ConsoleHandler.setLevel(logging.INFO)
     RootLogger.addHandler(ConsoleHandler)
     
     #%% Load the model
     Config = loadmod.readConfig(ModelConfigFile)
-    (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, ShoreX, ShoreY, 
-     LagoonY, LagoonElev, RiverElev, OutletX, OutletY, OutletElev, OutletWidth, 
+    (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, 
+     ShoreX, ShoreY, LagoonY, LagoonElev, BarrierElev, 
+     RiverElev, OutletX, OutletY, OutletElev, OutletWidth, 
      TimePars, PhysicalPars, NumericalPars, OutputOpts) = loadmod.loadModel(Config)
     
     #%% Generate initial conditions for river model
     RivFlow = interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']])).values
     SeaLevel = interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartTime']])).values
     
-    (ChanDx, ChanElev, ChanWidth, LagArea) = \
-    mor.assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, 
-                        OutletX, OutletY, OutletElev, OutletWidth, 
-                        PhysicalPars['RiverWidth'], NumericalPars['Dx'])
+    (ChanDx, ChanElev, ChanWidth, LagArea, OnlineLagoon) = \
+        mor.assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, 
+                            OutletX, OutletY, OutletElev, OutletWidth, 
+                            PhysicalPars['RiverWidth'], NumericalPars['Dx'])
     
-    BankElev = np.ones(ChanElev.size) * 3
-# TODO remove above line by dealing with bank height correctly!
+    BarrierHeight = np.ones(ChanElev.size) * 3
+    # TODO remove above line by dealing with bank height correctly!
     
     (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
                                          PhysicalPars['Roughness'], 
@@ -106,8 +107,16 @@ def run(ModelConfigFile):
         # Update morphology
         ShoreY += coast.shoreChange(LST, NumericalPars['Dx'], 
                                     TimePars['MorDt'], PhysicalPars)
-        mor.riverMorphology(Bedload, ChanWidth, ChanDep, ChanElev, BankElev, 
-                            ChanDx, TimePars['MorDt'].seconds, PhysicalPars)
+        mor.updateMorphology(LST, Bedload, 
+                             ChanWidth, ChanDep, OnlineLagoon, RiverElev, 
+                             OutletWidth, OutletElev, OutletX, OutletY, 
+                             ShoreX, ShoreY, LagoonY, LagoonElev, BarrierElev,
+                             NumericalPars['Dx'], TimePars['MorDt'], PhysicalPars)
+        
+        (ChanDx, ChanElev, ChanWidth, LagArea, OnlineLagoon) = \
+            mor.assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, 
+                                OutletX, OutletY, OutletElev, OutletWidth, 
+                                PhysicalPars['RiverWidth'], NumericalPars['Dx'])
         
         # Store outputs
         OutputTs = OutputTs.append(pd.DataFrame(list(zip([RivFlow[-1]],

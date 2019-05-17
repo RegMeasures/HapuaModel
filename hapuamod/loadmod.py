@@ -90,8 +90,12 @@ def loadModel(Config):
         LagoonY (np.ndarray(float64)): position of seaward and landward sides 
             of the lagoon in model coordinate system at transects with 
             x-coordinates given by ShoreX (m)
-        LagoonElev (np.ndarray(float64)): 
-        RiverElev (np.ndarray(float64)): 
+        LagoonElev (np.ndarray(float64)): elevation of lagoon bed at positions 
+            given by ShoreX (m)
+        BarrierElev (np.ndarray(float64)): elevation of barrier crest at 
+            positions given by ShoreX (m)
+        RiverElev (np.ndarray(float64)): elevation of river bed cross-sections 
+            upstream of lagoon (m)
         OutletX, OutletY (np.ndarray(float64)): coordinates of discretised 
             outlet channel nodes in model coordinate system (m)
         OutletElev (np.ndarray(float64)): 
@@ -119,8 +123,11 @@ def loadModel(Config):
             UpstreamLength (float): Length of river upstream of hapua to 
                 include in model (m)
             RiverWidth (float): width of river upstream of hapua (assumed 
-                       uniform) (m)
+                uniform) (m)
             Roughness (float): Manning's 'n' for river hydraulics (m^(1/3)/s) 
+            WidthRatio (float): Ratio of channel width to depth for eroding 
+                river channel
+            BackshoreElev (float): Elevation of lagoon backshore (m)
             K2coef (float): Calculated from other inputs for use in calculation
                 of longshore transport rate. K2 = K / (RhoSed - RhoSea) * g * (1 - VoidRatio))
             BreakerCoef (float): Calculated from other inputs for use in 
@@ -217,7 +224,8 @@ def loadModel(Config):
     logging.info('Processing initial conditions')
     IniCond = {'OutletWidth': float(Config['InitialConditions']['OutletWidth']),
                'OutletBed': float(Config['InitialConditions']['OutletBed']),
-               'LagoonBed': float(Config['InitialConditions']['LagoonBed'])}
+               'LagoonBed': float(Config['InitialConditions']['LagoonBed']),
+               'BarrierElev': float(Config['InitialConditions']['BarrierElev'])}
     
     #%% Time inputs
     TimePars = {'StartTime': pd.to_datetime(Config['Time']['StartTime']),
@@ -270,7 +278,8 @@ def loadModel(Config):
                     'UpstreamLength': float(Config['PhysicalParameters']['UpstreamLength']),
                     'RiverWidth': float(Config['PhysicalParameters']['RiverWidth']),
                     'Roughness': float(Config['PhysicalParameters']['RoughnessManning']),
-                    'WidthRatio': float(Config['PhysicalParameters']['WidthDepthRatio'])}
+                    'WidthRatio': float(Config['PhysicalParameters']['WidthDepthRatio']),
+                    'BackshoreElev': float(Config['PhysicalParameters']['BackshoreElev'])}
 
     GammaLST = ((PhysicalPars['RhoSed'] - PhysicalPars['RhoSea']) * 
                 PhysicalPars['Gravity'] * (1 - PhysicalPars['VoidRatio']))
@@ -329,6 +338,9 @@ def loadModel(Config):
     LagoonElev = np.full(ShoreX.size, IniCond['LagoonBed'])
     LagoonElev[np.isnan(LagoonY[:,1])] = np.nan
     
+    # Initialise barrier crest elevation
+    BarrierElev = np.full(ShoreX.size, IniCond['BarrierElev'])
+    
     #%% Initialising river variables
     RiverElev = np.flipud(np.arange(IniCond['LagoonBed'],
                                     IniCond['LagoonBed']
@@ -370,5 +382,5 @@ def loadModel(Config):
 #    plt.axis('equal')
     
     return (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, ShoreX, 
-            ShoreY, LagoonY, LagoonElev, RiverElev, OutletX, OutletY, 
+            ShoreY, LagoonY, LagoonElev, BarrierElev, RiverElev, OutletX, OutletY, 
             OutletElev, OutletWidth, TimePars, PhysicalPars, NumericalPars, OutputOpts)
