@@ -22,26 +22,22 @@ def assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, OutletX, OutletY,
     
     # To identify the 'online' section of lagoon the river flows through we 
     # first need to know which direction the offset is
-    RivToRight = OutletX[0] > 0
-    
-    if RivToRight:
-        OnlineLagoon = np.logical_and(0 <= ShoreX, ShoreX <= OutletX[0])
-        OnlineElev = LagoonElev[OnlineLagoon]
-        OnlineWidth = LagoonWidth[OnlineLagoon]
+    if OutletX[0] > 0:
+        # Outlet channel to right of river
+        OnlineLagoon = np.where(np.logical_and(0 <= ShoreX, ShoreX <= OutletX[0]))[0]
         StartArea = np.nansum(LagoonWidth[ShoreX < 0] * Dx)
         EndArea = np.nansum(LagoonWidth[ShoreX > OutletX[0]] * Dx)
     else:
-        OnlineLagoon = np.logical_and(0 >= ShoreX, ShoreX >= OutletX[0])
-        OnlineElev = np.flipud(LagoonElev[OnlineLagoon])
-        OnlineWidth = np.flipud(LagoonWidth[OnlineLagoon])
+        # Outlet channel to left of river
+        OnlineLagoon = np.flipud(np.where(np.logical_and(0 >= ShoreX, ShoreX >= OutletX[0]))[0])
         StartArea = np.nansum(LagoonWidth[ShoreX > 0] * Dx)
         EndArea = np.nansum(LagoonWidth[ShoreX < OutletX[0]] * Dx)
     
-    ChanDx = np.concatenate([np.tile(Dx, RiverElev.size + np.sum(OnlineLagoon)),
+    ChanDx = np.concatenate([np.tile(Dx, RiverElev.size + OnlineLagoon.size),
                              OutletDx])
-    ChanElev = np.concatenate([RiverElev, OnlineElev, OutletElev])
+    ChanElev = np.concatenate([RiverElev, LagoonElev[OnlineLagoon], OutletElev])
     ChanWidth = np.concatenate([np.tile(RiverWidth, RiverElev.size), 
-                                OnlineWidth, OutletWidth])
+                                LagoonWidth[OnlineLagoon], OutletWidth])
     LagArea = np.zeros(ChanElev.size)
     LagArea[RiverElev.size] = StartArea
     LagArea[-(OutletX.size+1)] = EndArea
