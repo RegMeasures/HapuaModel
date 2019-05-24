@@ -7,6 +7,9 @@ morphological updating and linking of different model components
 import numpy as np
 import logging
 
+# import local modules
+from hapuamod import geom
+
 def assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, OutletX, OutletY,
                     OutletElev, OutletWidth, RiverWidth, Dx):
     """ Combine river, lagoon and outlet into single channel for hyd-calcs
@@ -116,3 +119,4 @@ def updateMorphology(LST, Bedload,
     OutletBankElev = 3.0
     OutletWidth += (OutletLbEro / ((OutletBankElev-OutletElev) * OutletDx2) 
                     + OutletRbEro / ((OutletBankElev-OutletElev) * OutletDx2)) 
+    geom.shiftLineSideways(OutletX, OutletY, (OutletRbEro-OutletLbEro)/2)

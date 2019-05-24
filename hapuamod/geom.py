@@ -168,5 +168,32 @@ def adjustLineDx(LineX, LineY, MaxDx):
     return (NewLineX, NewLineY)
     
     # TODO: Extend function to interpolate line properties (supplied as new optional input(S?))
+
+def shiftLineSideways(LineX, LineY, Shift):
+    """ Apply lateral shift to a line by moving XY node coordinates
+    
+    shiftLineSideways(LineX, LineY, Shift)
+    
+    Notes: 
+        LineX and LineY are edited in-place so no return parameters are 
+            required.
+        Shift is positive to right (in direction of line)
+    """
+    Dx = np.zeros(LineX.size)
+    Dx[0] = LineX[1] - LineX[0]
+    Dx[1:-1] = LineX[2:] - LineX[:-2]
+    Dx[-1] = LineX[-1] - LineX[-2]
+    
+    Dy = np.zeros(LineY.size)
+    Dy[0] = LineY[1] - LineY[0]
+    Dy[1:-1] = LineY[2:] - LineY[:-2]
+    Dy[-1] = LineY[-1] - LineY[-2]
+    
+    SlopeLength = np.sqrt(Dx**2 + Dy**2)
+    Dx /= SlopeLength
+    Dy /= SlopeLength
+    
+    LineX += Shift * Dy
+    LineY -= Shift * Dx
     
     
