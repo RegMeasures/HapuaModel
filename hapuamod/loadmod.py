@@ -21,6 +21,9 @@ def readConfig(ModelConfigFile):
     paths contained in the config file.
     """
     
+    if not os.path.isfile(ModelConfigFile):
+        logging.error('%s not found' % ModelConfigFile)
+    
     # Read the main config file
     logging.info('Loading "%s"' % ModelConfigFile)
     Config = ConfigObj(ModelConfigFile)

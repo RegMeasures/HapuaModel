@@ -51,7 +51,12 @@ def updateMorphology(LST, Bedload,
                      ShoreX, ShoreY, LagoonY, LagoonElev, BarrierElev,
                      Dx, Dt, PhysicalPars):
     
-    #%% River morphology
+    #%% Pre-calculate some useful parameters
+    
+    # Find location outlet channel intersects shoreline
+    OutletRbShoreIx = np.where(OutletX[-1]<ShoreX)[0][0]
+    
+    #%% 1D River model morphology
     # Change in volume at each cross-section (except the upstream Bdy)
     dVol = (Bedload[:-1]-Bedload[1:]) * Dt.seconds
     
@@ -78,10 +83,36 @@ def updateMorphology(LST, Bedload,
                                  / ((LagoonY[OnlineLagoon,1] - LagoonY[OnlineLagoon,0]) * Dx))
     OutletElev += (BedDep[-NOut:] + BedEro[-NOut:]) / (OutletWidth * OutletDx2)
     
-    # Update bank positions
+    # Update lagoon bank positions
     # Note: River upstream of lagoon has fixed width - all morpho change is on bed
     LagoonY[OnlineLagoon,0] += (BankEro[NRiv:-NOut]/2) / ((BarrierElev[OnlineLagoon] - LagoonElev[OnlineLagoon]) * Dx)
     LagoonY[OnlineLagoon,1] += (BankEro[NRiv:-NOut]/2) / ((PhysicalPars['BackshoreElev'] - LagoonElev[OnlineLagoon]) * Dx)
-    # TODO use actual barrier height, split L and R bank calculations and account for differences in bank height and movement of channel centerline!
-    OutletWidth += BankEro[-NOut:] / ((3.0-OutletElev) * OutletDx2)
     
+    # Track sed vol for outlet channel bank adjustment
+    OutletLbEro = BankEro[-NOut:] / 2
+    OutletRbEro = BankEro[-NOut:] / 2
+    
+    # Put sediment discharged from outlet onto shoreline 
+    # TODO improve sediment distribution...
+    ShoreY[OutletRbShoreIx-1:OutletRbShoreIx] += (Bedload[-1] / 2) * Dt.seconds / (PhysicalPars['ClosureDepth'] * Dx)
+    
+    #%% 1-Line shoreline model morphology
+    
+    # Update shoreline position
+    # TODO add shoreline boundary conditions here (github issue #10)
+    ShoreY[1:-1] += (LST[:-1] - LST[1:]) * Dt.seconds / (PhysicalPars['ClosureDepth'] * Dx)
+    
+    # Remove LST driven sed supply out of outlet channel and put on outlet channel bank instead
+    if LST[OutletRbShoreIx-1]>0:
+        # Transport from L to R
+        ShoreY[OutletRbShoreIx] -= LST[OutletRbShoreIx-1] * Dt.seconds / (PhysicalPars['ClosureDepth'] * Dx)
+        OutletLbEro[-1] -= (LST[OutletRbShoreIx-1] * Dt.seconds)
+    else:
+        ShoreY[OutletRbShoreIx-1] += LST[OutletRbShoreIx-1] * Dt.seconds / (PhysicalPars['ClosureDepth'] * Dx)
+        OutletRbEro[-1] += (LST[OutletRbShoreIx-1] * Dt.seconds)
+    
+    #%% Update outlet channel width and position
+    # TODO use actual barrier height, split L and R bank calculations and account for differences in bank height and movement of channel centerline!
+    OutletBankElev = 3.0
+    OutletWidth += (OutletLbEro / ((OutletBankElev-OutletElev) * OutletDx2) 
+                    + OutletRbEro / ((OutletBankElev-OutletElev) * OutletDx2)) 

@@ -37,30 +37,6 @@ def longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, Wlen_h, EDir_h, Physic
     
     return LST
 
-def shoreChange(LST, Dx, Dt, PhysicalPars):
-    """ Calculate shoreline shift for a single timestep
-    
-    Dy = shoreChange(LST, Dx, Dt, PhysicalPars)
-    Calculate shoreline shift for each shoreline node for a single timestep.
-    
-    Parameters:
-        LST (np.ndarray(float)):
-        Dx (float):
-        Dt (float):
-        PhysicalPars (dict):
-    
-    Returns:
-        Dy (float): Shift in shoreline position for each node. +ve = accretion,
-            -ve = erosion (m)
-    """
-    
-    # TODO: handle shoreline boundary conditions
-    
-    Dy = np.zeros([LST.size + 1])
-    Dy[1:-1] = (LST[0:-1] - LST[1:]) * Dt.seconds / (PhysicalPars['ClosureDepth'] * Dx)
-    
-    return Dy
-    
 def runup(WavePeriod, BeachSlope):
     """ Calculates wave runup height """
     print('test')

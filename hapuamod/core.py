@@ -105,8 +105,6 @@ def run(ModelConfigFile):
                                        PhysicalPars)
         
         # Update morphology
-        ShoreY += coast.shoreChange(LST, NumericalPars['Dx'], 
-                                    TimePars['MorDt'], PhysicalPars)
         mor.updateMorphology(LST, Bedload, 
                              ChanWidth, ChanDep, OnlineLagoon, RiverElev, 
                              OutletWidth, OutletElev, OutletX, OutletY, 

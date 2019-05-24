@@ -26,18 +26,13 @@ WavePeriod = WaveTs.WavePeriod[0]
 Wlen_h = WaveTs.Wlen_h[0]
 
 plt.figure()
-plt.subplot(3, 1, 1)
+plt.subplot(2, 1, 1)
 plt.plot(ShoreX, ShoreY)
 
 LST = hm.coast.longShoreTransport(ShoreY, NumericalPars['Dx'], WavePower, 
                                   WavePeriod, Wlen_h, EDir_h, PhysicalPars)
-plt.subplot(3, 1, 2)
+plt.subplot(2, 1, 2)
 plt.plot((ShoreX[0:-1]+ShoreX[1:])/2, LST)
-
-Dy = hm.coast.shoreChange(LST, NumericalPars['Dx'], TimePars['MorDt'], 
-                          PhysicalPars)
-plt.subplot(3, 1, 3)
-plt.plot(ShoreX, Dy)
 
 #%% Test river routines
 # Join river and outlet through lagoon
@@ -69,12 +64,13 @@ plt.plot(ChanDist, ChanDep+ChanElev, 'r:')
 
 #%% Morphology updating
 # Bed updating
+OldShoreY = ShoreY.copy()
 hm.mor.updateMorphology(LST, Bedload, 
                         ChanWidth, ChanDep, OnlineLagoon, RiverElev, 
                         OutletWidth, OutletElev, OutletX, OutletY, 
                         ShoreX, ShoreY, LagoonY, LagoonElev, BarrierElev,
                         NumericalPars['Dx'], TimePars['MorDt'], PhysicalPars)
-
+plt.plot(ShoreX, (ShoreY-OldShoreY))
 
 #%% Test core timestepping
 ModelConfigFile = 'inputs\HurunuiModel.cnf'
