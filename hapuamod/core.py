@@ -47,9 +47,6 @@ def run(ModelConfigFile):
                             OutletX, OutletY, OutletElev, OutletWidth, 
                             PhysicalPars['RiverWidth'], NumericalPars['Dx'])
     
-    BarrierHeight = np.ones(ChanElev.size) * 3
-    # TODO remove above line by dealing with bank height correctly!
-    
     (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
                                          PhysicalPars['Roughness'], 
                                          RivFlow, SeaLevel)

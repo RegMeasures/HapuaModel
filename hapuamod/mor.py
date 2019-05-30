@@ -118,5 +118,18 @@ def updateMorphology(LST, Bedload,
     # TODO use actual barrier height, split L and R bank calculations and account for differences in bank height and movement of channel centerline!
     OutletBankElev = 3.0
     OutletWidth += (OutletLbEro / ((OutletBankElev-OutletElev) * OutletDx2) 
-                    + OutletRbEro / ((OutletBankElev-OutletElev) * OutletDx2)) 
+                    + OutletRbEro / ((OutletBankElev-OutletElev) * OutletDx2))
     geom.shiftLineSideways(OutletX, OutletY, (OutletRbEro-OutletLbEro)/2)
+    
+    # trim outlet channel ends as necessary
+    (OutletX, OutletY) = geom.trimSegment(OutletX, OutletY, 
+                                          ShoreX, ShoreY)
+    (OutletX, OutletY) = geom.trimSegment(np.flipud(OutletX), np.flipud(OutletY), 
+                                          ShoreX, LagoonY[:,1])
+    OutletX = np.flipud(OutletX)
+    OutletY = np.flipud(OutletY)
+    assert OutletX.size == OutletElev.size, 'trimSegment has changed number of nodes in outlet channel without adjusting associated outlet channel properties'
+    
+    # adjust outlet channel segmentation as necessary
+    (OutletX, OutletY, OutletElev, OutletWidth) = \
+        geom.adjustLineDx(OutletX, OutletY, Dx, OutletElev, OutletWidth)

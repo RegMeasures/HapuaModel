@@ -114,11 +114,16 @@ def trimSegment(LineX, LineY, TrimLineX, TrimLineY):
     
     return (NewLineX, NewLineY)
     
-def adjustLineDx(LineX, LineY, MaxDx):
+def adjustLineDx(LineX, LineY, MaxDx, *args):
     """ Move points on line to maintain Dx within target range
     
     (NewLineX, NewLineY) = adjustLineDx(LineX, LineY, MaxDx)
+        or
+    (NewLineX, NewLineY, NewLineProperties)
+        = adjustLineDx(LineX, LineY, MaxDx, LineProperties)
     """
+    LineProperties = list(args)
+    
     MinDx = 0.4 * MaxDx
     DefaultDx = 0.7 * MaxDx
     
@@ -136,38 +141,37 @@ def adjustLineDx(LineX, LineY, MaxDx):
     while np.any(SegLen < MinDx):
         Shortest = np.which(SegLen == np.amin(SegLen))[0]
         if Shortest == 0:
-            RemNode = 1
+            RemoveNode = 1
         elif Shortest == SegLen.size-1:
-            RemNode = Shortest
+            RemoveNode = Shortest
         elif SegLen[Shortest-1] <= SegLen[Shortest+1]:
-            RemNode = Shortest
+            RemoveNode = Shortest
         else:
-            RemNode = Shortest + 1
+            RemoveNode = Shortest + 1
         
-        SegLen = np.concatenate([SegLen[:RemNode-1],
-                                 SegLen[RemNode-1]+SegLen[RemNode],
-                                 SegLen[RemNode:]])
+        SegLen[RemoveNode-1] = SegLen[RemoveNode-1] + SegLen[RemoveNode]
+        SegLen = np.delete(SegLen, RemoveNode)
+        LineX = np.delete(LineX, RemoveNode)
+        LineY = np.delete(LineY, RemoveNode)
+        for Property in LineProperties:
+            Property = np.delete(Property, RemoveNode)
     
     # Split segments which are too long
     TooLong = np.where(SegLen > MaxDx)[0]
-    for Seg in np.nditer(TooLong):
-        SplitInto = int(np.ceil(SegLen[Seg]/DefaultDx))
-        SegLen = np.concatenate((SegLen[:Seg],
-                                 np.tile(SegLen[Seg] / SplitInto, SplitInto),
-                                 SegLen[Seg+1:]))
-    
-    # Re-interpolate line properties
-    NewCumSegLen = np.cumsum(SegLen)
-    NewLineX = np.concatenate([[LineX[0]], 
-                               np.interp(NewCumSegLen[0:-1], CumSegLen, LineX),
-                               [LineX[-1]]])
-    NewLineY = np.concatenate([[LineY[0]], 
-                               np.interp(NewCumSegLen[0:-1], CumSegLen, LineY),
-                               [LineY[-1]]])
-    
-    return (NewLineX, NewLineY)
-    
-    # TODO: Extend function to interpolate line properties (supplied as new optional input(S?))
+    for SegNo in np.nditer(TooLong):
+        SplitInto = int(np.ceil(SegLen[SegNo]/DefaultDx))
+        LineX = np.insert(LineX, SegNo, 
+                          LineX[SegNo-1] + (LineX[SegNo] - LineX[SegNo-1]) 
+                                           * (np.linspace(0,1,SplitInto,False)[1:]))
+        LineY = np.insert(LineY, SegNo, 
+                          LineY[SegNo-1] + (LineY[SegNo] - LineY[SegNo-1]) 
+                                           * (np.linspace(0,1,SplitInto,False)[1:]))
+        for Property in LineProperties:
+            Property = np.insert(Property, SegNo, 
+                                 Property[SegNo-1] + (Property[SegNo] - Property[SegNo-1]) 
+                                                     * (np.linspace(0,1,SplitInto,False)[1:]))
+
+    return tuple([LineX, LineY] + LineProperties)
 
 def shiftLineSideways(LineX, LineY, Shift):
     """ Apply lateral shift to a line by moving XY node coordinates
