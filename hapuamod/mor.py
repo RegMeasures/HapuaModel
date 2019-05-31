@@ -121,14 +121,8 @@ def updateMorphology(LST, Bedload,
                     + OutletRbEro / ((OutletBankElev-OutletElev) * OutletDx2))
     geom.shiftLineSideways(OutletX, OutletY, (OutletRbEro-OutletLbEro)/2)
     
-    # trim outlet channel ends as necessary
-    (OutletX, OutletY) = geom.trimSegment(OutletX, OutletY, 
-                                          ShoreX, ShoreY)
-    (OutletX, OutletY) = geom.trimSegment(np.flipud(OutletX), np.flipud(OutletY), 
-                                          ShoreX, LagoonY[:,1])
-    OutletX = np.flipud(OutletX)
-    OutletY = np.flipud(OutletY)
-    assert OutletX.size == OutletElev.size, 'trimSegment has changed number of nodes in outlet channel without adjusting associated outlet channel properties'
+    # trim/extend outlet channel ends as necessary
+    geom.trimLine(OutletX, OutletY, ShoreX, LagoonY[:,1], ShoreY)
     
     # adjust outlet channel segmentation as necessary
     (OutletX, OutletY, OutletElev, OutletWidth) = \

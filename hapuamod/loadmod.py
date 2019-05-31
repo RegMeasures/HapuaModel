@@ -360,12 +360,9 @@ def loadModel(Config):
         OutletCoords2 = np.flipud(OutletCoords2)
     
     # Trim outlet channel to shoreline and sea
-    (OutletX, OutletY) = geom.trimSegment(OutletCoords2[:,0], OutletCoords2[:,1], 
-                                          ShoreX, ShoreY)
-    (OutletX, OutletY) = geom.trimSegment(np.flipud(OutletX), np.flipud(OutletY), 
-                                          ShoreX, LagoonY[:,1])
-    OutletX = np.flipud(OutletX)
-    OutletY = np.flipud(OutletY)
+    OutletX = OutletCoords2[:,0]
+    OutletY = OutletCoords2[:,1]
+    geom.trimLine(OutletX, OutletY, ShoreX, LagoonY[:,1], ShoreY)
     
     # Divide outlet channel into appropriate segments
     (OutletX, OutletY) = geom.adjustLineDx(OutletX, OutletY, Dx)
