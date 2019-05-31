@@ -6,7 +6,6 @@ import numpy as np
 
 # import local packages
 from hapuamod import geom
-from hapuamod import riv
 
 def mapView(ShoreX, ShoreY, LagoonY, Origin, ShoreNormalDir):
     """ Map the current model state in real world coordinates
@@ -35,37 +34,78 @@ def mapView(ShoreX, ShoreY, LagoonY, Origin, ShoreNormalDir):
 
 def modelView(ShoreX, ShoreY, LagoonY, OutletX, OutletY):
     """ Map the current model state in model coordinates
+    
+    Parameters:
+        ShoreX
+        ShoreY
+        LagoonY
+        OutletX
+        OutletY
+        
+    Returns:
+        ModelFig = (PlanFig, PlanAx, ShoreLine, LagoonLine, OutletLine)
     """
     
+    # Create a new figure
+    PlanFig, PlanAx = plt.subplots()
+    PlanAx.axis('equal')
+    PlanAx.set_xlabel('Alongshore distance [m]')
+    PlanAx.set_ylabel('Crossshore distance [m]')
+    
     # Plot shoreline
-    plt.plot(ShoreX, ShoreY, 'k-')
+    ShoreLine = PlanAx.plot(ShoreX, ShoreY, 'k-')
     
     # Plot lagoon (inc closing ends)
-    plt.plot(ShoreX, LagoonY[:,0], 'b-')
-    plt.plot(ShoreX, LagoonY[:,1], 'b-')
-    EndTransects = np.where(np.isnan(LagoonY[:,0])==False)[0][[0,-1]]
-    plt.plot([ShoreX[EndTransects[0]],ShoreX[EndTransects[0]]], LagoonY[EndTransects[0],:], 'b-')
-    plt.plot([ShoreX[EndTransects[1]],ShoreX[EndTransects[1]]], LagoonY[EndTransects[1],:], 'b-')
+    LagoonMask = np.isnan(LagoonY[:,1])==False
+    PlotLagoonX = np.concatenate(([ShoreX[np.where(LagoonMask)[0][0]]],
+                                  ShoreX[LagoonMask], 
+                                  np.flipud(ShoreX[LagoonMask])))
+    PlotLagoonY = np.concatenate(([LagoonY[np.where(LagoonMask)[0][0],0]],
+                                  LagoonY[:,1][LagoonMask], 
+                                  np.flipud(LagoonY[:,0][LagoonMask])))
+    LagoonLine = plt.plot(PlotLagoonX, PlotLagoonY, 'b-')
     
     # Plot Outlet channel
-    plt.plot(OutletX, OutletY, 'r-x')
+    OutletLine = plt.plot(OutletX, OutletY, 'r-x')
     
-    plt.axis('equal')
+    ModelFig = (PlanFig, ShoreLine, LagoonLine, OutletLine)
+    
+    return ModelFig
+
+def updateModelView(ModelFig, ShoreX, ShoreY, LagoonY, OutletX, OutletY):
+    
+    # Calculate required variables to plot
+    LagoonMask = np.isnan(LagoonY[:,1])==False
+    PlotLagoonX = np.concatenate(([ShoreX[np.where(LagoonMask)[0][0]]],
+                                  ShoreX[LagoonMask], 
+                                  np.flipud(ShoreX[LagoonMask])))
+    PlotLagoonY = np.concatenate(([LagoonY[np.where(LagoonMask)[0][0],0]],
+                                  LagoonY[:,1][LagoonMask], 
+                                  np.flipud(LagoonY[:,0][LagoonMask])))
+    
+    # Update the lines
+    ModelFig[1][0].set_data(ShoreX, ShoreY)
+    ModelFig[2][0].set_data(PlotLagoonX, PlotLagoonY)
+    ModelFig[3][0].set_data(OutletX, OutletY)
+    
     
 def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload):
-    """ View a long section of the river to the lagoon outlet
+    """ Create a long section of the river to the lagoon outlet
+    
+    LongSecFig = longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, 
+                             Bedload)
     
     Parameters:
         ChanDx
         ChanElev
+        ChanWidth
         ChanDep
         ChanVel
+        Bedload
     
     Returns:
-        WaterLine
-        EnergyLine
-        VelLine
-        FrLine
+        LongSecFig = (RivFig, BedLine, WaterLine, EnergyLine, WidthLine, 
+                      VelLine, FrLine, QsLine)
     """
     g = 9.81
     Dist = np.insert(np.cumsum(ChanDx),0,0)

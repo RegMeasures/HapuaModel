@@ -62,6 +62,7 @@ def run(ModelConfigFile):
         LsLines = visualise.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, 
                                         np.zeros(ChanElev.size))
         BdyFig = visualise.BdyCndFig(OutputTs)
+        ModelFig = visualise.modelView(ShoreX, ShoreY, LagoonY, OutletX, OutletY)
     
     #%% Main timestepping loop
     MorTime = TimePars['StartTime']
@@ -132,6 +133,8 @@ def run(ModelConfigFile):
                                             ChanWidth, ChanDep, ChanVel, 
                                             Bedload)
                 visualise.updateBdyCndFig(BdyFig, OutputTs)
+                visualise.updateModelView(ModelFig, ShoreX, ShoreY, LagoonY, 
+                                          OutletX, OutletY)
                 PlotTime += OutputOpts['PlotInt']
         
         # increment time

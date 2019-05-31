@@ -157,18 +157,18 @@ def adjustLineDx(LineX, LineY, MaxDx, *args):
             Property = np.delete(Property, RemoveNode)
     
     # Split segments which are too long
-    TooLong = np.where(SegLen > MaxDx)[0]
-    for SegNo in np.nditer(TooLong):
+    TooLong = np.where(SegLen > MaxDx)[0].tolist()
+    for SegNo in TooLong:
         SplitInto = int(np.ceil(SegLen[SegNo]/DefaultDx))
-        LineX = np.insert(LineX, SegNo, 
-                          LineX[SegNo-1] + (LineX[SegNo] - LineX[SegNo-1]) 
+        LineX = np.insert(LineX, SegNo+1, 
+                          LineX[SegNo] + (LineX[SegNo+1] - LineX[SegNo]) 
                                            * (np.linspace(0,1,SplitInto,False)[1:]))
-        LineY = np.insert(LineY, SegNo, 
-                          LineY[SegNo-1] + (LineY[SegNo] - LineY[SegNo-1]) 
+        LineY = np.insert(LineY, SegNo+1, 
+                          LineY[SegNo] + (LineY[SegNo+1] - LineY[SegNo]) 
                                            * (np.linspace(0,1,SplitInto,False)[1:]))
         for Property in LineProperties:
-            Property = np.insert(Property, SegNo, 
-                                 Property[SegNo-1] + (Property[SegNo] - Property[SegNo-1]) 
+            Property = np.insert(Property, SegNo+1, 
+                                 Property[SegNo] + (Property[SegNo+1] - Property[SegNo]) 
                                                      * (np.linspace(0,1,SplitInto,False)[1:]))
 
     return tuple([LineX, LineY] + LineProperties)
