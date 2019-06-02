@@ -119,6 +119,7 @@ def loadModel(Config):
                 wave height (non-dimensional)
             WaveDataDepth (float): Depth contour of input wave data (m)
             ClosureDepth (float): Closure depth for 1-line shoreline model (m)
+            BeachSlope (float): Beachface slope for runup calculation (m/m)
             RiverSlope (float): Initial condition slope for river upstream of 
                 hapua (m/m)
             GrainSize (float): Sediment size for fluvial sediment transport 
@@ -276,6 +277,7 @@ def loadModel(Config):
                     'GammaRatio': float(Config['PhysicalParameters']['GammaRatio']),
                     'WaveDataDepth': float(Config['PhysicalParameters']['WaveDataDepth']),
                     'ClosureDepth': float(Config['PhysicalParameters']['ClosureDepth']),
+                    'BeachSlope': float(Config['PhysicalParameters']['ClosureDepth']),
                     'RiverSlope': float(Config['PhysicalParameters']['RiverSlope']),
                     'GrainSize': float(Config['PhysicalParameters']['GrainSize']),
                     'UpstreamLength': float(Config['PhysicalParameters']['UpstreamLength']),

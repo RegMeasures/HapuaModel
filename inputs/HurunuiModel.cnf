@@ -56,6 +56,8 @@ GammaRatio = 0.5
 WaveDataDepth = 10.0
 # Closure depth for single line shoreline model [m]
 ClosureDepth = 5.0
+# Beach shoreface slope for runup calculation [m/m]
+BeachSlope = 0.13
 # River bed slope upstream of lagoon [m/m]
 RiverSlope = 0.003
 # Grain size for fluvial sediment transport [m]

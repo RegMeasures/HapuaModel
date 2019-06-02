@@ -97,10 +97,14 @@ def run(ModelConfigFile):
         WavePower = WavesAtT.WavePower[0]
         WavePeriod = WavesAtT.WavePeriod[0]
         Wlen_h = WavesAtT.Wlen_h[0]
+        Hs_offshore = WavesAtT.Hsig_Offshore[0]
         
         LST = coast.longShoreTransport(ShoreY, NumericalPars['Dx'], WavePower, 
                                        WavePeriod, Wlen_h, EDir_h, 
                                        PhysicalPars)
+        
+        # Calculate runup & overtopping potential
+        Runup = coast.runup(WavePeriod, Hs_offshore, PhysicalPars['BeachSlope'])
         
         # Update morphology
         mor.updateMorphology(LST, Bedload, 

@@ -6,17 +6,17 @@ import numpy as np
 def longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, Wlen_h, EDir_h, PhysicalPars):
     """ Calculates longshore transport rate for each shore segment
     
-    Calculation performed for whole model for a single timestep.
-    
-    Parameters:
-        ShoreX
-        Dx
-        WavePower
-        EAngleOffshore
-    
-    Returns:
-        LST (np.ndarray(float64)): Longshore transport rate at each shoreline
-            segment between 2 nodes (m^3/s)
+        Calculation performed for whole model for a single timestep.
+        
+        Parameters:
+            ShoreX
+            Dx
+            WavePower
+            EAngleOffshore
+        
+        Returns:
+            LST (np.ndarray(float64)): Longshore transport rate at each 
+                shoreline segment between 2 nodes (m^3/s)
     """
     
     # Calculate offshore wave angle relative to each shoreline segment
@@ -37,6 +37,21 @@ def longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, Wlen_h, EDir_h, Physic
     
     return LST
 
-def runup(WavePeriod, BeachSlope):
-    """ Calculates wave runup height """
-    print('test')
+def runup(WavePeriod, Hs_offshore, BeachSlope):
+    """ Calculates wave runup height using Poate et al 2016.
+        
+        Parameters:
+            WavePeriod (Tz) = mean wave period [s]
+            Hs_offshore = significant deeep water wave height [m]
+            BeachSlope = beach slope (0 < BeachSlope < 1) [m/m]
+            
+        Returns:
+            Runup = 2% exceedance runup above stillwater level of the sea
+                    (R_2%) [m]
+        
+        Reference:
+            Poate T.G., McCall R.T., Masselink G. (2016) A new parameterisation
+                for runup on gravel beaches. Coast Eng 117:176–190.
+    """
+    Runup = 0.49 * BeachSlope**0.5 * WavePeriod * Hs_offshore
+    return Runup
