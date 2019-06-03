@@ -256,6 +256,23 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
     
 def calcBedload(z, B, h, V, dx, PhysicalPars):
     """ Calculate bedload transport using Bagnold 1980 streampower approach
+        
+        Parameters:
+            z = bed level at each cross-section [m]
+            B = cross-section width at each cross-section [m]
+            h = water depth at each cross-section (m)
+            V = velocity (average) at each cross-section [m/s]
+            dx = distance-to-next at each cross section (note, the array dx is
+                 one smaller than z, B, etc) [m]
+            PhysicalPars = dict of model input parameters
+        
+        Returns:
+            Qs = numpy array of bedload transport at each cross-section 
+                 [m3(bulk including voids)/s]
+        
+        Bagnold R.A. (1980) An empirical correlation of bedload transport rates
+        in flumes and natural rivers. Proc R Soc Lond A Math Phys Sci 
+        372(October):453–473. http://www.jstor.org/stable/2397042
     """
     
     Rho = PhysicalPars['RhoRiv']
