@@ -103,15 +103,20 @@ def updateMorphology(LST, Bedload,
     
     # Update shoreline position
     # TODO add shoreline boundary conditions here (github issue #10)
-    ShoreY[1:-1] += (LST[:-1] - LST[1:]) * Dt.seconds / (PhysicalPars['ClosureDepth'] * Dx)
+    ShoreY[1:-1] += ((LST[:-1] - LST[1:]) * Dt.seconds 
+                     / ((PhysicalPars['ClosureDepth'] + BarrierElev[1:-1]) * Dx))
     
     # Remove LST driven sed supply out of outlet channel and put on outlet channel bank instead
     if LST[OutletRbShoreIx-1]>0:
         # Transport from L to R
-        ShoreY[OutletRbShoreIx] -= LST[OutletRbShoreIx-1] * Dt.seconds / (PhysicalPars['ClosureDepth'] * Dx)
+        ShoreY[OutletRbShoreIx] -= (LST[OutletRbShoreIx-1] * Dt.seconds 
+                                    / ((PhysicalPars['ClosureDepth'] 
+                                        + BarrierElev[OutletRbShoreIx]) * Dx))
         OutletLbEro[-1] -= (LST[OutletRbShoreIx-1] * Dt.seconds)
     else:
-        ShoreY[OutletRbShoreIx-1] += LST[OutletRbShoreIx-1] * Dt.seconds / (PhysicalPars['ClosureDepth'] * Dx)
+        ShoreY[OutletRbShoreIx-1] += (LST[OutletRbShoreIx-1] * Dt.seconds 
+                                      / ((PhysicalPars['ClosureDepth'] 
+                                          + BarrierElev[OutletRbShoreIx-1]) * Dx))
         OutletRbEro[-1] += (LST[OutletRbShoreIx-1] * Dt.seconds)
         
     #%% Cross-shore morphology (overtopping etc)
