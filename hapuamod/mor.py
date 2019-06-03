@@ -113,6 +113,16 @@ def updateMorphology(LST, Bedload,
     else:
         ShoreY[OutletRbShoreIx-1] += LST[OutletRbShoreIx-1] * Dt.seconds / (PhysicalPars['ClosureDepth'] * Dx)
         OutletRbEro[-1] += (LST[OutletRbShoreIx-1] * Dt.seconds)
+        
+    #%% Cross-shore morphology (overtopping etc)
+    
+    # Calculate barrier width of seaward patr of barrier 
+    # (including the influence of the outlet channel)
+    
+    # Calculate volume changes to barrier width and height
+    
+    # Apply volume changes
+    
     
     #%% Update outlet channel width and position
     # TODO use actual barrier height, split L and R bank calculations and account for differences in bank height and movement of channel centerline!
