@@ -12,9 +12,11 @@ SeaLevel = SeaLevel.csv
 Shoreline = HurunuiShoreline.shp
 # point shapefile of location river flows into lagoon
 RiverLocation = RiverInflow.shp
-# polygon shapefile of lagoon including outlet channel
-LagoonOutline = LagoonPolygon.shp
-# Initial outlet position (polyline shapefile)
+# polyline shapefile of barrier backshore (seaward edge of lagoon)
+BarrierBackshore = LagoonPolyline.shp
+# cliff toe line (polyline extending over full model domain, even river!)
+CliffToe = CliffPolyline.shp
+# Initial outlet position (polyline shapefile of outlet centerline)
 OutletLocation = InitialOutlet.shp
 
 [InitialConditions]

@@ -36,35 +36,35 @@ def real2mod(Xreal, Yreal, Origin, ShoreNormalDir):
     Ymod = Dist * np.sin(ShoreNormalDir - Dir + np.pi/2)
     return (Xmod, Ymod)
 
-def intersectPolygon(Polygon, Xcoord):
-    """ Identifies points where a polygon intersects a given x coordinate
+def intersectPolyline(Polyline, Xcoord):
+    """ Identifies points where a polyline intersects a given x coordinate
     
-        YIntersects = intersectPolygon(Polygon, Xcoord)
+        YIntersects = intersectPolyline(Polyline, Xcoord)
         
         Parameters:
-            Polygon (np.ndarry(float)): Two-column numpy array giving X and Y
-                coordinates of points defining a polygon (first and last points
-                are identical)
-            Xcoord (float): X coordinate at which to intersect the polygon
+            Polyline (np.ndarry(float)): Two-column numpy array giving X and Y
+                coordinates of points defining a polyline (or polygon if first
+                and last points are the same).
+            Xcoord (float): X coordinate at which to intersect the polyline
         
         Returns:
             YIntersects (np.ndarray(float)): 1d array listing the Y coordinate 
-                of all the locations the polygon intersects the specified X 
+                of all the locations the polyline intersects the specified X 
                 coordinate.
     """
-    # Find polygon points to left of X coordinate
-    LeftOfX = Polygon[:,0] < Xcoord
+    # Find polyline points to left of X coordinate
+    LeftOfX = Polyline[:,0] < Xcoord
     
-    # Identify points where polygon crosses X coordinate
+    # Identify points where polyline crosses X coordinate
     IntPoints = np.where(LeftOfX[0:-1] != LeftOfX[1:])[0]
     
     # Loop over each crossing and interpolate Y coord of crossing
     YIntersects = np.zeros(IntPoints.size)
     for IntNo in range(IntPoints.size):
-        YIntersects[IntNo] = (Polygon[IntPoints[IntNo],1] +
-                              (Xcoord-Polygon[IntPoints[IntNo],0]) *
-                              (Polygon[IntPoints[IntNo]+1,1] - Polygon[IntPoints[IntNo],1]) / 
-                              (Polygon[IntPoints[IntNo]+1,0] - Polygon[IntPoints[IntNo],0]))
+        YIntersects[IntNo] = (Polyline[IntPoints[IntNo],1] +
+                              (Xcoord-Polyline[IntPoints[IntNo],0]) *
+                              (Polyline[IntPoints[IntNo]+1,1] - Polyline[IntPoints[IntNo],1]) / 
+                              (Polyline[IntPoints[IntNo]+1,0] - Polyline[IntPoints[IntNo],0]))
     
     return YIntersects
 
