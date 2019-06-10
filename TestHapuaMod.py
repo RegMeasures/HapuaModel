@@ -1,4 +1,3 @@
-import logging
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -12,12 +11,12 @@ Config = hm.loadmod.readConfig(ModelConfigFile)
 (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, 
  ShoreX, ShoreY, LagoonElev, BarrierElev, OutletElev, 
  RiverElev, OutletEndX, OutletEndWidth, OutletEndElev,
- TimePars, PhysicalPars, NumericalPars, OutputOpts)  = hm.loadmod.loadModel(Config)
+ TimePars, PhysicalPars, NumericalPars, OutputOpts) = hm.loadmod.loadModel(Config)
 
 #plt.figure()
 #hm.visualise.mapView(ShoreX, ShoreY, Origin, BaseShoreNormDir)    
 
-#hm.visualise.modelView(ShoreX, ShoreY)
+ModelFig = hm.visualise.modelView(ShoreX, ShoreY)
 
 #%% Test longshore transport routine
 EDir_h = WaveTs.EDir_h[0]
@@ -67,12 +66,13 @@ plt.plot(ChanDist, ChanDep+ChanElev, 'r:')
 #%% Morphology updating
 # Bed updating
 OldShoreY = ShoreY.copy()
-hm.mor.updateMorphology(LST, Bedload, 
-                        ChanWidth, ChanDep, OnlineLagoon, RiverElev, 
-                        OutletWidth, OutletElev, OutletX, OutletY, 
-                        ShoreX, ShoreY, LagoonY, LagoonElev, BarrierElev,
-                        NumericalPars['Dx'], TimePars['MorDt'], PhysicalPars)
-plt.plot(ShoreX, (ShoreY-OldShoreY))
+hm.mor.updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
+                        OutletEndX, OutletEndWidth, OutletEndElev, 
+                        RiverElev, PhysicalPars['RiverWidth'], OnlineLagoon, 
+                        OutletChanIx, ChanWidth, ChanDep, ChanDx,
+                        LST, Bedload, NumericalPars['Dx'], TimePars['MorDt'], 
+                        PhysicalPars)
+plt.plot(ShoreX, (ShoreY[:,0]-OldShoreY[:,0]))
 
 #%% Test core timestepping
 ModelConfigFile = 'inputs\HurunuiModel.cnf'

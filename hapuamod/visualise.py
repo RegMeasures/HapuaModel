@@ -85,10 +85,11 @@ def updateModelView(ModelFig, ShoreX, ShoreY):
                                   [ShoreY[np.where(LagoonMask)[0][-1],4]]))
     
     # Update the lines
-    ModelFig[1][0].set_data(ShoreX, ShoreY[:,0])
-    ModelFig[2][0].set_data(PlotLagoonX, PlotLagoonY)
+    ModelFig[2][0].set_data(ShoreX, ShoreY[:,0])
     ModelFig[3][0].set_data(np.tile(ShoreX,[2,1]).flatten(), 
                             ShoreY[:,[1,2]].transpose().flatten())
+    ModelFig[4][0].set_data(PlotLagoonX, PlotLagoonY)
+    ModelFig[5][0].set_data(ShoreX, ShoreY[:,4])
     
     
 def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload):

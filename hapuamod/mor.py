@@ -8,7 +8,6 @@ import numpy as np
 import logging
 
 # import local modules
-from hapuamod import geom
 
 def assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev, 
                     OutletEndX, OutletEndWidth, OutletEndElev, 
@@ -88,9 +87,6 @@ def updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
     #BedArea = ChanDx * ChanWidth[1:] 
     AspectRatio = ChanWidth[1:]/ChanDep[1:]
     TooWide = AspectRatio > PhysicalPars['WidthRatio']
-    OutletDx2 = np.zeros(OutletChanIx.size + 2)
-    OutletDx2[-1] = ChanDx[-1]
-    OutletDx2[0:-1] = (ChanDx[-(OutletChanIx.size+2):-1] + ChanDx[-(OutletChanIx.size+1):-1])/2
     
     # Update channel bed elevation
     NRiv = RiverElev.size-1         # No of river cross-sections for updating
@@ -103,40 +99,47 @@ def updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
     RiverElev[1:] += (BedDep[:NRiv] + BedEro[:NRiv]) / (PhysicalPars['RiverWidth'] * Dx)
     LagoonElev[OnlineLagoon] += ((BedDep[NRiv:-NOut] + BedEro[NRiv:-NOut])
                                  / ((ShoreY[OnlineLagoon, 3] - ShoreY[OnlineLagoon, 4]) * Dx))
-    OutletElev[OutletChanIx] += (BedDep[-NOut:] + BedEro[-NOut:]) / (ChanWidth[-NOut:] * OutletDx2)
+    OutletElev[OutletChanIx] += (BedDep[-NOut+1:-1] + BedEro[-NOut+1:-1]) / (ChanWidth[-NOut+1:-1] * Dx)
+    OutletEndElev += (BedDep[[-NOut,-1]] + BedEro[[-NOut,-1]]) / (OutletEndWidth * ChanDx[[-NOut+1,-1]])
     
-    # Update lagoon bank positions
+    # Update lagoon and outlet channel bank positions
     # Note: River upstream of lagoon has fixed width - all morpho change is on bed
-    LagoonY[OnlineLagoon,0] += (BankEro[NRiv:-NOut]/2) / ((BarrierElev[OnlineLagoon] - LagoonElev[OnlineLagoon]) * Dx)
-    LagoonY[OnlineLagoon,1] += (BankEro[NRiv:-NOut]/2) / ((PhysicalPars['BackshoreElev'] - LagoonElev[OnlineLagoon]) * Dx)
+    # TODO: Account for differences in bank height either side of outlet channel
+    ShoreY[OutletChanIx,1] += (BankEro[-NOut+1:-1]/2) / ((BarrierElev[OutletChanIx] - OutletElev[OutletChanIx]) * Dx)
+    ShoreY[OutletChanIx,2] += (BankEro[-NOut+1:-1]/2) / ((BarrierElev[OutletChanIx] - OutletElev[OutletChanIx]) * Dx)
+    ShoreY[OnlineLagoon,3] += (BankEro[NRiv:-NOut]/2) / ((BarrierElev[OnlineLagoon] - LagoonElev[OnlineLagoon]) * Dx)
+    ShoreY[OnlineLagoon,4] += (BankEro[NRiv:-NOut]/2) / ((PhysicalPars['BackshoreElev'] - LagoonElev[OnlineLagoon]) * Dx)
     
-    # Track sed vol for outlet channel bank adjustment
-    OutletLbEro = BankEro[-NOut:] / 2
-    OutletRbEro = BankEro[-NOut:] / 2
+    OutletEndWidth += BankEro[[-NOut,-1]] / ((BarrierElev[OutletChanIx[[0,-1]]] - OutletEndElev) * ChanDx[[-NOut+1,-1]])
     
     # Put sediment discharged from outlet onto shoreline 
     # TODO improve sediment distribution...
-    ShoreY[OutletRbShoreIx-1:OutletRbShoreIx] += (Bedload[-1] / 2) * Dt.seconds / (PhysicalPars['ClosureDepth'] * Dx)
+    ShoreY[OutletRbShoreIx-1:OutletRbShoreIx,0] += (Bedload[-1] / 2) * Dt.seconds / ((PhysicalPars['ClosureDepth'] + BarrierElev[OutletRbShoreIx-1:OutletRbShoreIx]) * Dx)
     
     #%% 1-Line shoreline model morphology
     
     # Update shoreline position
     # TODO add shoreline boundary conditions here (github issue #10)
-    ShoreY[1:-1] += ((LST[:-1] - LST[1:]) * Dt.seconds 
-                     / ((PhysicalPars['ClosureDepth'] + BarrierElev[1:-1]) * Dx))
+    ShoreY[1:-1,0] += ((LST[:-1] - LST[1:]) * Dt.seconds 
+                       / ((PhysicalPars['ClosureDepth'] + BarrierElev[1:-1]) * Dx))
     
     # Remove LST driven sed supply out of outlet channel and put on outlet channel bank instead
     if LST[OutletRbShoreIx-1]>0:
         # Transport from L to R
-        ShoreY[OutletRbShoreIx] -= (LST[OutletRbShoreIx-1] * Dt.seconds 
-                                    / ((PhysicalPars['ClosureDepth'] 
-                                        + BarrierElev[OutletRbShoreIx]) * Dx))
-        OutletLbEro[-1] -= (LST[OutletRbShoreIx-1] * Dt.seconds)
-    else:
-        ShoreY[OutletRbShoreIx-1] += (LST[OutletRbShoreIx-1] * Dt.seconds 
+        ShoreY[OutletRbShoreIx,0] -= (LST[OutletRbShoreIx-1] * Dt.seconds 
                                       / ((PhysicalPars['ClosureDepth'] 
-                                          + BarrierElev[OutletRbShoreIx-1]) * Dx))
-        OutletRbEro[-1] += (LST[OutletRbShoreIx-1] * Dt.seconds)
+                                          + BarrierElev[OutletRbShoreIx]) * Dx))
+        WidthReduction = (LST[OutletRbShoreIx-1] * Dt.seconds) / ((BarrierElev[OutletChanIx[-1]] - OutletEndElev[1]) * ChanDx[-1])
+        OutletEndWidth[1] -= WidthReduction
+        OutletEndX[1] += WidthReduction/2
+    else:
+        # Transport from R to L
+        ShoreY[OutletRbShoreIx-1,0] += (LST[OutletRbShoreIx-1] * Dt.seconds 
+                                        / ((PhysicalPars['ClosureDepth'] 
+                                            + BarrierElev[OutletRbShoreIx-1]) * Dx))
+        WidthReduction = (-LST[OutletRbShoreIx-1] * Dt.seconds) / ((BarrierElev[OutletChanIx[-1]] - OutletEndElev[1]) * ChanDx[-1])
+        OutletEndWidth[1] -= WidthReduction
+        OutletEndX[1] -= WidthReduction/2
         
     #%% Cross-shore morphology (overtopping etc)
     
@@ -148,16 +151,5 @@ def updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
     # Apply volume changes
     
     
-    #%% Update outlet channel width and position
-    # TODO use actual barrier height, split L and R bank calculations and account for differences in bank height and movement of channel centerline!
-    OutletBankElev = 3.0
-    OutletWidth += (OutletLbEro / ((OutletBankElev-OutletElev) * OutletDx2) 
-                    + OutletRbEro / ((OutletBankElev-OutletElev) * OutletDx2))
-    geom.shiftLineSideways(OutletX, OutletY, (OutletRbEro-OutletLbEro)/2)
-    
-    # trim/extend outlet channel ends as necessary
-    geom.trimLine(OutletX, OutletY, ShoreX, LagoonY[:,1], ShoreY)
-    
-    # adjust outlet channel segmentation as necessary
-    (OutletX, OutletY, OutletElev, OutletWidth) = \
-        geom.adjustLineDx(OutletX, OutletY, Dx, OutletElev, OutletWidth)
+    #%% Check outlet channel end position hasn't crossed a transect line and adjust as necessary...
+    # TODO
