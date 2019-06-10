@@ -10,54 +10,75 @@ import logging
 # import local modules
 from hapuamod import geom
 
-def assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, OutletX, OutletY,
-                    OutletElev, OutletWidth, RiverWidth, Dx):
+def assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev, 
+                    OutletEndX, OutletEndWidth, OutletEndElev, 
+                    RiverElev, RiverWidth, Dx):
     """ Combine river, lagoon and outlet into single channel for hyd-calcs
     
-    (ChanDx, ChanElev, ChanWidth, LagArea) = \
-        riv.assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, OutletDx, 
-                            OutletElev, OutletWidth, OutletX, RiverWidth, Dx)
+    (ChanDx, ChanElev, ChanWidth, LagArea, OnlineLagoon) = \
+        riv.assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev, 
+                            OutletEndX, OutletEndWidth, OutletEndElev, 
+                            RiverElev, RiverWidth, Dx)
     """
-    LagoonWidth = LagoonY[:,1] - LagoonY[:,0]
-    OutletDx = np.sqrt((OutletX[1:]-OutletX[0:-1])**2 + 
-                       (OutletY[1:]-OutletY[0:-1])**2)
+    
+    # Find location and orientation of outlet channel
+    if OutletEndX[0] < OutletEndX[1]:
+        # Outlet angles from L to R
+        OutletChanIx = np.where(np.logical_and(OutletEndX[0] < ShoreX, 
+                                               ShoreX < OutletEndX[1]))[0]
+    else:
+        # Outlet from R to L
+        OutletChanIx = np.flipud(np.where(OutletEndX[1] < ShoreX < OutletEndX[0])[0])
+    OutletWidth = ShoreY[OutletChanIx,1] - ShoreY[OutletChanIx,2]
+    
     # TODO: Account for potentially dry parts of the lagoon when 
     #       calculating ChanArea
     
-    # To identify the 'online' section of lagoon the river flows through we 
-    # first need to know which direction the offset is
-    if OutletX[0] > 0:
+    # Calculate properties for the 'online' section of lagoon
+    LagoonWidth = ShoreY[:,3] - ShoreY[:,4]
+    if OutletEndX[0] > 0:
         # Outlet channel to right of river
-        OnlineLagoon = np.where(np.logical_and(0 <= ShoreX, ShoreX <= OutletX[0]))[0]
+        OnlineLagoon = np.where(np.logical_and(0 <= ShoreX, ShoreX <= OutletEndX[0]))[0]
         StartArea = np.nansum(LagoonWidth[ShoreX < 0] * Dx)
-        EndArea = np.nansum(LagoonWidth[ShoreX > OutletX[0]] * Dx)
+        EndArea = np.nansum(LagoonWidth[ShoreX > OutletEndX[0]] * Dx)
     else:
         # Outlet channel to left of river
-        OnlineLagoon = np.flipud(np.where(np.logical_and(0 >= ShoreX, ShoreX >= OutletX[0]))[0])
+        OnlineLagoon = np.flipud(np.where(np.logical_and(0 >= ShoreX, ShoreX >= OutletEndX[0]))[0])
         StartArea = np.nansum(LagoonWidth[ShoreX > 0] * Dx)
-        EndArea = np.nansum(LagoonWidth[ShoreX < OutletX[0]] * Dx)
+        EndArea = np.nansum(LagoonWidth[ShoreX < OutletEndX[0]] * Dx)
     
-    ChanDx = np.concatenate([np.tile(Dx, RiverElev.size + OnlineLagoon.size),
-                             OutletDx])
-    ChanElev = np.concatenate([RiverElev, LagoonElev[OnlineLagoon], OutletElev])
+    # Assemble the complete channel
+    ChanDx = np.tile(Dx, RiverElev.size + OnlineLagoon.size + OutletChanIx.size + 1)
+    if OutletEndX[0]//Dx == OutletEndX[1]//Dx:
+        ChanDx[-1] += Dx + abs(OutletEndX[1] - OutletEndX[0])
+    elif OutletEndX[0] < OutletEndX[1]:
+        ChanDx[RiverElev.size + OnlineLagoon.size] += Dx - (OutletEndX[0] % Dx)
+        ChanDx[-1] += OutletEndX[1] % Dx
+    else:
+        ChanDx[RiverElev.size + OnlineLagoon.size] += OutletEndX[0] % Dx
+        ChanDx[-1] += Dx - (OutletEndX[1] % Dx)
+    ChanElev = np.concatenate([RiverElev, LagoonElev[OnlineLagoon], 
+                               [OutletEndElev[0]], OutletElev[OutletChanIx], 
+                               [OutletEndElev[1]]])
     ChanWidth = np.concatenate([np.tile(RiverWidth, RiverElev.size), 
-                                LagoonWidth[OnlineLagoon], OutletWidth])
+                                LagoonWidth[OnlineLagoon], [OutletEndWidth[0]],
+                                OutletWidth, [OutletEndWidth[1]]])
     LagArea = np.zeros(ChanElev.size)
     LagArea[RiverElev.size] = StartArea
-    LagArea[-(OutletX.size+1)] = EndArea
+    LagArea[-(OutletChanIx.size+3)] = EndArea
     
-    return (ChanDx, ChanElev, ChanWidth, LagArea, OnlineLagoon)
+    return (ChanDx, ChanElev, ChanWidth, LagArea, OnlineLagoon, OutletChanIx)
 
-def updateMorphology(LST, Bedload, 
-                     ChanWidth, ChanDep, OnlineLagoon, RiverElev, 
-                     OutletWidth, OutletElev, OutletX, OutletY, 
-                     ShoreX, ShoreY, LagoonY, LagoonElev, BarrierElev,
-                     Dx, Dt, PhysicalPars):
+def updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
+                    OutletEndX, OutletEndWidth, OutletEndElev, 
+                    RiverElev, RiverWidth, OnlineLagoon, OutletChanIx, 
+                    ChanWidth, ChanDep, ChanDx,
+                    LST, Bedload, Dx, Dt, PhysicalPars):
     
     #%% Pre-calculate some useful parameters
     
     # Find location outlet channel intersects shoreline
-    OutletRbShoreIx = np.where(OutletX[-1]<ShoreX)[0][0]
+    OutletRbShoreIx = np.where(OutletEndX[1] < ShoreX)[0][0]
     
     #%% 1D River model morphology
     # Change in volume at each cross-section (except the upstream Bdy)
@@ -67,24 +88,22 @@ def updateMorphology(LST, Bedload,
     #BedArea = ChanDx * ChanWidth[1:] 
     AspectRatio = ChanWidth[1:]/ChanDep[1:]
     TooWide = AspectRatio > PhysicalPars['WidthRatio']
-    OutletDx1 = np.sqrt((OutletX[1:]-OutletX[:-1])**2 + 
-                        (OutletY[1:]-OutletY[:-1])**2)
-    OutletDx2 = np.zeros(OutletElev.size)
-    OutletDx2[[0,-1]] = OutletDx1[[0,-1]]
-    OutletDx2[1:-1] = (OutletDx1[1:] + OutletDx1[:-1])/2
+    OutletDx2 = np.zeros(OutletChanIx.size + 2)
+    OutletDx2[-1] = ChanDx[-1]
+    OutletDx2[0:-1] = (ChanDx[-(OutletChanIx.size+2):-1] + ChanDx[-(OutletChanIx.size+1):-1])/2
     
-    # Update river bed elevation
+    # Update channel bed elevation
     NRiv = RiverElev.size-1         # No of river cross-sections for updating
-    NOut = OutletElev.size          # No of outlet channel cross-sections for updating
+    NOut = OutletChanIx.size + 2    # No of outlet channel cross-sections for updating
     EroVol = np.minimum(dVol, 0.0)  # Total erosion volume
     BedEro = EroVol * TooWide       # Bed erosion volume
     BankEro = EroVol * np.logical_not(TooWide) # Bank erosion volume
     BedDep = np.maximum(dVol, 0.0)  # Bed deposition volume (=total)
-    # note that += updates variables in place so no need to explicitly return them!
+    # note that += modifies variables in place so no need to explicitly return them!
     RiverElev[1:] += (BedDep[:NRiv] + BedEro[:NRiv]) / (PhysicalPars['RiverWidth'] * Dx)
     LagoonElev[OnlineLagoon] += ((BedDep[NRiv:-NOut] + BedEro[NRiv:-NOut])
-                                 / ((LagoonY[OnlineLagoon,1] - LagoonY[OnlineLagoon,0]) * Dx))
-    OutletElev += (BedDep[-NOut:] + BedEro[-NOut:]) / (OutletWidth * OutletDx2)
+                                 / ((ShoreY[OnlineLagoon, 3] - ShoreY[OnlineLagoon, 4]) * Dx))
+    OutletElev[OutletChanIx] += (BedDep[-NOut:] + BedEro[-NOut:]) / (ChanWidth[-NOut:] * OutletDx2)
     
     # Update lagoon bank positions
     # Note: River upstream of lagoon has fixed width - all morpho change is on bed

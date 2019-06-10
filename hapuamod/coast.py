@@ -20,7 +20,7 @@ def longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, Wlen_h, EDir_h, Physic
     """
     
     # Calculate offshore wave angle relative to each shoreline segment
-    LocalRelShoreDir = np.arctan((ShoreY[0:-1] - ShoreY[1:])/Dx)
+    LocalRelShoreDir = np.arctan((ShoreY[0:-1,0] - ShoreY[1:,0])/Dx)
     LocalEDir_h = EDir_h - LocalRelShoreDir
     
     # Calculate breaking wave depth

@@ -7,22 +7,22 @@ import numpy as np
 # import local packages
 from hapuamod import geom
 
-def mapView(ShoreX, ShoreY, LagoonY, Origin, ShoreNormalDir):
+def mapView(ShoreX, ShoreY, Origin, ShoreNormalDir):
     """ Map the current model state in real world coordinates
     """
     
-    # Plot the shoreline
-    (ShoreXreal, ShoreYreal) = geom.mod2real(ShoreX, ShoreY, Origin, ShoreNormalDir)
-    plt.plot(ShoreXreal, ShoreYreal, 'g-')
+    # convert the coordinates to real world
+    (ShoreXreal, ShoreYreal) = geom.mod2real(np.transpose(np.tile(ShoreX, [5,1])), 
+                                               ShoreY, Origin, ShoreNormalDir)
+    plt.plot(ShoreXreal[:,0], ShoreYreal[:,0], 'g-')    
+    plt.plot(ShoreXreal[:,1], ShoreYreal[:,1], 'r-')
+    plt.plot(ShoreXreal[:,2], ShoreYreal[:,2], 'r-')
+    plt.plot(ShoreXreal[:,3], ShoreYreal[:,3], 'b-')
+    plt.plot(ShoreXreal[:,4], ShoreYreal[:,4], 'k-')
     
-    # Plot the lagoon
-    LagoonXmodel = np.transpose(np.tile(ShoreX, [2,1]))
-    (LagoonXreal, LagoonYreal) = geom.mod2real(LagoonXmodel, LagoonY, Origin, ShoreNormalDir)
-    plt.plot(LagoonXreal[:,0], LagoonYreal[:,0], 'b-')
-    plt.plot(LagoonXreal[:,1], LagoonYreal[:,1], 'b-')
-    EndTransects = np.where(np.isnan(LagoonY[:,0])==False)[0][[0,-1]]
-    plt.plot(LagoonXreal[EndTransects[0],:], LagoonYreal[EndTransects[0],:], 'b-')
-    plt.plot(LagoonXreal[EndTransects[1],:], LagoonYreal[EndTransects[1],:], 'b-')
+    EndTransects = np.where(np.isnan(ShoreY[:,3])==False)[0][[0,-1]]
+    plt.plot(ShoreXreal[EndTransects[0],[3,4]], ShoreYreal[EndTransects[0],[3,4]], 'b-')
+    plt.plot(ShoreXreal[EndTransects[1],[3,4]], ShoreYreal[EndTransects[1],[3,4]], 'b-')
     
     # plot the origin and baseline
     plt.plot(Origin[0], Origin[1], 'ko')
@@ -32,18 +32,15 @@ def mapView(ShoreX, ShoreY, LagoonY, Origin, ShoreNormalDir):
     # tidy up the plot
     plt.axis('equal')
 
-def modelView(ShoreX, ShoreY, LagoonY, OutletX, OutletY):
+def modelView(ShoreX, ShoreY):
     """ Map the current model state in model coordinates
     
     Parameters:
         ShoreX
         ShoreY
-        LagoonY
-        OutletX
-        OutletY
         
     Returns:
-        ModelFig = (PlanFig, PlanAx, ShoreLine, LagoonLine, OutletLine)
+        ModelFig = (PlanFig, PlanAx, ShoreLine, OutletLine, LagoonLine, CliffLine)
     """
     
     # Create a new figure
@@ -53,40 +50,45 @@ def modelView(ShoreX, ShoreY, LagoonY, OutletX, OutletY):
     PlanAx.set_ylabel('Crossshore distance [m]')
     
     # Plot shoreline
-    ShoreLine = PlanAx.plot(ShoreX, ShoreY, 'k-')
+    ShoreLine = PlanAx.plot(ShoreX, ShoreY[:,0], 'k-')
     
     # Plot lagoon (inc closing ends)
-    LagoonMask = np.isnan(LagoonY[:,1])==False
+    LagoonMask = np.isnan(ShoreY[:,3])==False
     PlotLagoonX = np.concatenate(([ShoreX[np.where(LagoonMask)[0][0]]],
                                   ShoreX[LagoonMask], 
-                                  np.flipud(ShoreX[LagoonMask])))
-    PlotLagoonY = np.concatenate(([LagoonY[np.where(LagoonMask)[0][0],0]],
-                                  LagoonY[:,1][LagoonMask], 
-                                  np.flipud(LagoonY[:,0][LagoonMask])))
-    LagoonLine = plt.plot(PlotLagoonX, PlotLagoonY, 'b-')
+                                  [ShoreX[np.where(LagoonMask)[0][-1]]]))
+    PlotLagoonY = np.concatenate(([ShoreY[np.where(LagoonMask)[0][0],4]],
+                                  ShoreY[:,3][LagoonMask], 
+                                  [ShoreY[np.where(LagoonMask)[0][-1],4]]))
+    LagoonLine = PlanAx.plot(PlotLagoonX, PlotLagoonY, 'b-')
+    
+    # Plot Cliff
+    CliffLine = PlanAx.plot(ShoreX, ShoreY[:,4], 'g-')
     
     # Plot Outlet channel
-    OutletLine = plt.plot(OutletX, OutletY, 'r-x')
+    OutletLine = PlanAx.plot(np.tile(ShoreX,[2,1]).flatten(), 
+                             ShoreY[:,[1,2]].transpose().flatten(), 'r-x')
     
-    ModelFig = (PlanFig, ShoreLine, LagoonLine, OutletLine)
+    ModelFig = (PlanFig, PlanAx, ShoreLine, OutletLine, LagoonLine, CliffLine)
     
     return ModelFig
 
-def updateModelView(ModelFig, ShoreX, ShoreY, LagoonY, OutletX, OutletY):
+def updateModelView(ModelFig, ShoreX, ShoreY):
     
     # Calculate required variables to plot
-    LagoonMask = np.isnan(LagoonY[:,1])==False
+    LagoonMask = np.isnan(ShoreY[:,3])==False
     PlotLagoonX = np.concatenate(([ShoreX[np.where(LagoonMask)[0][0]]],
                                   ShoreX[LagoonMask], 
-                                  np.flipud(ShoreX[LagoonMask])))
-    PlotLagoonY = np.concatenate(([LagoonY[np.where(LagoonMask)[0][0],0]],
-                                  LagoonY[:,1][LagoonMask], 
-                                  np.flipud(LagoonY[:,0][LagoonMask])))
+                                  [ShoreX[np.where(LagoonMask)[0][-1]]]))
+    PlotLagoonY = np.concatenate(([ShoreY[np.where(LagoonMask)[0][0],4]],
+                                  ShoreY[:,3][LagoonMask], 
+                                  [ShoreY[np.where(LagoonMask)[0][-1],4]]))
     
     # Update the lines
-    ModelFig[1][0].set_data(ShoreX, ShoreY)
+    ModelFig[1][0].set_data(ShoreX, ShoreY[:,0])
     ModelFig[2][0].set_data(PlotLagoonX, PlotLagoonY)
-    ModelFig[3][0].set_data(OutletX, OutletY)
+    ModelFig[3][0].set_data(np.tile(ShoreX,[2,1]).flatten(), 
+                            ShoreY[:,[1,2]].transpose().flatten())
     
     
 def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload):
