@@ -162,8 +162,7 @@ def updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
     
     # Apply volume changes
     
-    
-    #%% Check d/s end of outlet channel hasn't migrated across a transect line and adjust as necessary...
+    #%% Check if d/s end of outlet channel has migrated across a transect line and adjust as necessary...
     
     if OutletEndX[0] < OutletEndX[1]:
         # Outlet angles from L to R
@@ -192,4 +191,34 @@ def updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
         ShoreY[ExtendMask,2] = ShoreY[ExtendMask,1] - OutletEndWidth[1]
         OutletElev[ExtendMask] = OutletEndElev[1]
     
+    #%% Check for outlet channel truncation
+    # Note: have to be careful to leave at least 1 transect in outlet channel
+    
+    # Only check for truncation if outlet channel crosses >1 transect
+    if OutletChanIx.size > 1:
+        
+        # Check for truncation of lagoonward end of outlet channel 
+        # (don't check last transect as trucation here would leave 0 transects)
+        if np.any(ShoreY[OutletChanIx[1:],2] <= ShoreY[OutletChanIx[1:],3]):
+            if OutletEndX[0] < OutletEndX[1]:
+                # Outlet angles from L to R
+                TruncationIx = OutletChanIx[ShoreY[OutletChanIx,1] <= ShoreY[OutletChanIx,0]][-1]
+                OutletEndX[1] = ShoreX[TruncationIx] + Dx/2 
+            else:
+                # Outlet angles from R to L
+                TruncationIx = OutletChanIx[ShoreY[OutletChanIx,1] <= ShoreY[OutletChanIx,0]][0]
+                OutletEndX[1] = ShoreX[TruncationIx] - Dx/2 
+        
+        # Check seaward end
+        # (don't allow truncation of both ends in same timestep to avoid confusion!)
+        # (don't check first transect as trucation here would leave 0 transects)
+        elif np.any(ShoreY[OutletChanIx[:-1],1] >= ShoreY[OutletChanIx[:-1],0]):
+            if OutletEndX[0] < OutletEndX[1]:
+                # Outlet angles from L to R
+                TruncationIx = OutletChanIx[ShoreY[OutletChanIx,1] >= ShoreY[OutletChanIx,0]][0]
+                OutletEndX[1] = ShoreX[TruncationIx] - Dx/2 
+            else:
+                # Outlet angles from R to L
+                TruncationIx = OutletChanIx[ShoreY[OutletChanIx,1] >= ShoreY[OutletChanIx,0]][-1]
+                OutletEndX[1] = ShoreX[TruncationIx] + Dx/2 
     
