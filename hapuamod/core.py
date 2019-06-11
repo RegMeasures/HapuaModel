@@ -34,18 +34,19 @@ def run(ModelConfigFile):
     #%% Load the model
     Config = loadmod.readConfig(ModelConfigFile)
     (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, 
-     ShoreX, ShoreY, LagoonY, LagoonElev, BarrierElev, 
-     RiverElev, OutletX, OutletY, OutletElev, OutletWidth, 
+     ShoreX, ShoreY, LagoonElev, BarrierElev, OutletElev, 
+     RiverElev, OutletEndX, OutletEndWidth, OutletEndElev,
      TimePars, PhysicalPars, NumericalPars, OutputOpts) = loadmod.loadModel(Config)
     
     #%% Generate initial conditions for river model
     RivFlow = interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']])).values
     SeaLevel = interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartTime']])).values
     
-    (ChanDx, ChanElev, ChanWidth, LagArea, OnlineLagoon) = \
-        mor.assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, 
-                            OutletX, OutletY, OutletElev, OutletWidth, 
-                            PhysicalPars['RiverWidth'], NumericalPars['Dx'])
+    (ChanDx, ChanElev, ChanWidth, LagArea, OnlineLagoon, OutletChanIx) = \
+        mor.assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
+                            OutletEndX, OutletEndWidth, OutletEndElev, 
+                            RiverElev, PhysicalPars['RiverWidth'], 
+                            NumericalPars['Dx'])
     
     (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
                                          PhysicalPars['Roughness'], 
@@ -62,7 +63,7 @@ def run(ModelConfigFile):
         LsLines = visualise.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, 
                                         np.zeros(ChanElev.size))
         BdyFig = visualise.BdyCndFig(OutputTs)
-        ModelFig = visualise.modelView(ShoreX, ShoreY, LagoonY, OutletX, OutletY)
+        ModelFig = visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx)
     
     #%% Main timestepping loop
     MorTime = TimePars['StartTime']
@@ -107,16 +108,18 @@ def run(ModelConfigFile):
         Runup = coast.runup(WavePeriod, Hs_offshore, PhysicalPars['BeachSlope'])
         
         # Update morphology
-        mor.updateMorphology(LST, Bedload, 
-                             ChanWidth, ChanDep, OnlineLagoon, RiverElev, 
-                             OutletWidth, OutletElev, OutletX, OutletY, 
-                             ShoreX, ShoreY, LagoonY, LagoonElev, BarrierElev,
-                             NumericalPars['Dx'], TimePars['MorDt'], PhysicalPars)
+        mor.updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
+                             OutletEndX, OutletEndWidth, OutletEndElev, 
+                             RiverElev, PhysicalPars['RiverWidth'], OnlineLagoon, 
+                             OutletChanIx, ChanWidth, ChanDep, ChanDx,
+                             LST, Bedload, NumericalPars['Dx'], TimePars['MorDt'], 
+                             PhysicalPars)
         
-        (ChanDx, ChanElev, ChanWidth, LagArea, OnlineLagoon) = \
-            mor.assembleChannel(RiverElev, ShoreX, LagoonY, LagoonElev, 
-                                OutletX, OutletY, OutletElev, OutletWidth, 
-                                PhysicalPars['RiverWidth'], NumericalPars['Dx'])
+        (ChanDx, ChanElev, ChanWidth, LagArea, OnlineLagoon, OutletChanIx) = \
+            mor.assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
+                                OutletEndX, OutletEndWidth, OutletEndElev, 
+                                RiverElev, PhysicalPars['RiverWidth'], 
+                                NumericalPars['Dx'])
         
         # Store outputs
         OutputTs = OutputTs.append(pd.DataFrame(list(zip([RivFlow[-1]],
@@ -137,8 +140,7 @@ def run(ModelConfigFile):
                                             ChanWidth, ChanDep, ChanVel, 
                                             Bedload)
                 visualise.updateBdyCndFig(BdyFig, OutputTs)
-                visualise.updateModelView(ModelFig, ShoreX, ShoreY, LagoonY, 
-                                          OutletX, OutletY)
+                visualise.updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx)
                 PlotTime += OutputOpts['PlotInt']
         
         # increment time

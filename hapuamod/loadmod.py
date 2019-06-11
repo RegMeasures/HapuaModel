@@ -40,8 +40,10 @@ def readConfig(ModelConfigFile):
         os.path.join(ConfigFilePath, Config['SpatialInputs']['Shoreline'])
     Config['SpatialInputs']['RiverLocation'] = \
         os.path.join(ConfigFilePath, Config['SpatialInputs']['RiverLocation'])
-    Config['SpatialInputs']['LagoonOutline'] = \
-        os.path.join(ConfigFilePath, Config['SpatialInputs']['LagoonOutline'])
+    Config['SpatialInputs']['BarrierBackshore'] = \
+        os.path.join(ConfigFilePath, Config['SpatialInputs']['BarrierBackshore'])
+    Config['SpatialInputs']['CliffToe'] = \
+        os.path.join(ConfigFilePath, Config['SpatialInputs']['CliffToe'])
     Config['SpatialInputs']['OutletLocation'] = \
         os.path.join(ConfigFilePath, Config['SpatialInputs']['OutletLocation'])
     
@@ -57,10 +59,10 @@ def loadModel(Config):
     variables. Prior to running loadModel the onfig file should first be parsed
     using the readConfig function.
     
-    (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, ShoreX, 
-     ShoreY, LagoonY, LagoonElev, RiverElev, OutletX, OutletY, 
-     OutletElev, OutletWidth, Dx, Dt, SimTime, 
-     PhysicalPars) = loadModel(Config)
+    (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, 
+     ShoreX, ShoreY, LagoonElev, BarrierElev, OutletElev, 
+     RiverElev, OutletEndX, OutletEndWidth, OutletEndElev,
+     TimePars, PhysicalPars, NumericalPars, OutputOpts) = loadModel(Config)
     
     Parameters:
         Config (Dict): Model config file read into a dict variable by the 
@@ -88,25 +90,31 @@ def loadModel(Config):
             degrees to overall average coast direction. Computed based on a 
             straightline fitted thruogh the initial condition shoreline 
             position (radians).
-        ShoreX, ShoreY (np.ndarray(float64)): positions of discretised 
+        ShoreX (np.ndarray(float64)): positions of discretised 
             shoreline in model coordinate system (m)
-        LagoonY (np.ndarray(float64)): position of seaward and landward sides 
-            of the lagoon in model coordinate system at transects with 
-            x-coordinates given by ShoreX (m)
+        ShoreY (np.ndarray(float64)): position of aspects of cross-shore 
+            profile in model coordinate system at transects with x-coordinates 
+            given by ShoreX (m). The columns of ShorenY represent: 
+                0: Shoreline
+                1: Seaward side of outlet channel (nan if no outlet at profile)
+                2: Lagoonward edge of outlet channel (or nan)
+                3: Seaward edge of lagoon (nan if beyond lagoon extent)
+                4: Cliff toe position
         LagoonElev (np.ndarray(float64)): elevation of lagoon bed at positions 
             given by ShoreX (m)
         BarrierElev (np.ndarray(float64)): elevation of barrier crest at 
             positions given by ShoreX (m)
+        OutletElev
         RiverElev (np.ndarray(float64)): elevation of river bed cross-sections 
             upstream of lagoon (m)
-        OutletX, OutletY (np.ndarray(float64)): coordinates of discretised 
-            outlet channel nodes in model coordinate system (m)
-        OutletElev (np.ndarray(float64)): 
-        OutletWidth (np.ndarray(float64)): 
-        Dx (float): shoreline discretisation interval (m)
-        Dt (pd.Timedelta): timestep
-        SimTime (list): Two element list containing the simulation start
-            and end times (datetime)
+        OutletEndX
+        OutletEndWidth (np.ndarray(float64)): 3
+        OutletEndElev (np.ndarray(float64)): 
+        TimePars (dict): Time parameters including:
+            StartTime: 
+            EndTime: 
+            HydDt: 
+            MorDt: 
         PhysicalPars (dict): Physical parameters including:
             RhoSed (float): Sediment density (kg/m3)
             RhoSea (float): Seawater density (kg/m3)
@@ -136,7 +144,16 @@ def loadModel(Config):
                 of longshore transport rate. K2 = K / (RhoSed - RhoSea) * g * (1 - VoidRatio))
             BreakerCoef (float): Calculated from other inputs for use in 
                 calculation of depth of breaking waves. 
-                BreakerCoef = 8 / (RhoSea * Gravity^1.5 * GammaRatio^2)                        
+                BreakerCoef = 8 / (RhoSea * Gravity^1.5 * GammaRatio^2)
+        NumericalPars (dict):
+            Dx
+            Theta
+            ErrTol
+            MaxIt
+            WarnTol
+        OutputOpts (dict):
+            LogInt
+            PlotInt
     """
     
     #%% Spatial inputs
@@ -160,14 +177,23 @@ def loadModel(Config):
     assert len(RiverShp.shapes())==1, 'multiple points in RiverLocation shapefile. There should only be 1.'
     InflowCoord = np.asarray(RiverShp.shape(0).points[:]).squeeze()
     
-    # Read the lagoon outline polygon
-    logging.info('Reading lagoon outline from from "%s"' %
-                 Config['SpatialInputs']['LagoonOutline'])
-    LagoonShp = shapefile.Reader(Config['SpatialInputs']['LagoonOutline'])
-    # check it is a polygon and there is only one
-    assert LagoonShp.shapeType==5, 'Lagoon outline must be a polygon shapefile'
-    assert len(LagoonShp.shapes())==1, 'multiple polygons in LagoonOutline shapefile. There should only be 1.'
+    # Read the barrier backshore
+    logging.info('Reading barrier backshore position from from "%s"' %
+                 Config['SpatialInputs']['BarrierBackshore'])
+    LagoonShp = shapefile.Reader(Config['SpatialInputs']['BarrierBackshore'])
+    # check it is a polyline and there is only one
+    assert LagoonShp.shapeType==3, 'BarrierBackshore must be a polyline shapefile'
+    assert len(LagoonShp.shapes())==1, 'multiple polygons in BarrierBackshore shapefile. There should only be 1.'
     LagoonCoords = np.asarray(LagoonShp.shape(0).points[:])
+    
+    # Read the cliff toe position
+    logging.info('Reading cliff toe position from from "%s"' %
+                 Config['SpatialInputs']['CliffToe'])
+    CliffShp = shapefile.Reader(Config['SpatialInputs']['CliffToe'])
+    # check it is a polyline and there is only one
+    assert CliffShp.shapeType==3, 'CliffToe must be a polyline shapefile'
+    assert len(CliffShp.shapes())==1, 'multiple polygons in CliffToe shapefile. There should only be 1.'
+    CliffCoords = np.asarray(CliffShp.shape(0).points[:])
     
     # Read the initial outlet position polyline
     logging.info('Reading lagoon outline from from "%s"' %
@@ -318,30 +344,88 @@ def loadModel(Config):
     # Discretise shoreline at fixed intervals in model coordinate system
     ShoreX = np.arange(math.ceil(IniShoreCoords2[0,0]/Dx)*Dx, 
                        IniShoreCoords2[-1,0], Dx)
-    ShoreY = np.interp(ShoreX, IniShoreCoords2[:,0], IniShoreCoords2[:,1])
+    ShoreY = np.full([ShoreX.size, 5], np.nan)
+    ShoreY[:,0] = np.interp(ShoreX, IniShoreCoords2[:,0], IniShoreCoords2[:,1])
     
-    #%% Initialise lagoon variables
+    #%% Initialise lagoon and outlet channel variables
     
-    # Convert lagoon outline into model coordinate system
+    # Convert input spatial data into model coordinate system
     LagoonCoords2 = np.empty(LagoonCoords.shape)
     (LagoonCoords2[:,0], LagoonCoords2[:,1]) = geom.real2mod(LagoonCoords[:,0], LagoonCoords[:,1], Origin, BaseShoreNormDir)
+    CliffCoords2 = np.empty(CliffCoords.shape)
+    (CliffCoords2[:,0], CliffCoords2[:,1]) = geom.real2mod(CliffCoords[:,0], CliffCoords[:,1], Origin, BaseShoreNormDir)
+    OutletCoords2 = np.empty(OutletCoords.shape)
+    (OutletCoords2[:,0], OutletCoords2[:,1]) = geom.real2mod(OutletCoords[:,0], OutletCoords[:,1], Origin, BaseShoreNormDir)
     
     # Check lagoon extent is within limits of shoreline
     LagoonExtent = [np.amin(LagoonCoords2[:,0]), np.amax(LagoonCoords2[:,0])]
     assert LagoonExtent[1] < ShoreX[-1] and LagoonExtent[0] > ShoreX[0], 'Lagoon exdends beyond shoreline extent. Extend shoreline shapefile to cover full extent of lagoon.'
     
-    # Discretise lagoon
-    LagoonY = np.full([ShoreX.size,2], np.nan)
+    OutletExtent = [np.amin(OutletCoords2[:,0]), np.amax(OutletCoords2[:,0])]
+    
+    # Check outlet coords ordered from lagoon to sea
+    if OutletCoords2[0,1] > OutletCoords2[-1,1]:
+        OutletCoords2 = np.flipud(OutletCoords2)
+    
+    # Discretise lagoon and outlet channel
     for ii in range(ShoreX.size):
+        # find cliff position on transect
+        YIntersects = geom.intersectPolyline(CliffCoords2, ShoreX[ii])
+        ShoreY[ii,4] = np.amax(YIntersects)
+        
+        # find seaward edge of lagoon (if there is some lagoon at current transect)
         if LagoonExtent[0] < ShoreX[ii] < LagoonExtent[1]:
-            # identify inersections of lagoon polygon and relevant shore normal transect
-            YIntersects = geom.intersectPolygon(LagoonCoords2, ShoreX[ii])
-            LagoonY[ii,0] = np.amin(YIntersects)
-            LagoonY[ii,1] = np.amax(YIntersects)
+            YIntersects = geom.intersectPolyline(LagoonCoords2, ShoreX[ii])
+            ShoreY[ii,3] = np.amax(YIntersects)
+            
+        # find outlet channel (if there is outlet channel at current transect)    
+        if OutletExtent[0] < ShoreX[ii] < OutletExtent[1]:
+            YIntersects = geom.intersectPolyline(OutletCoords2, ShoreX[ii])
+            # check there is no crazy recurved outlet channel!
+            assert YIntersects.size == 1, 'Check/simplify outlet channel - possible weird recurvature?'
+            # only insert outlet channel if it fits within barrier
+            if ((np.isnan(ShoreY[ii,3]) or 
+                ((YIntersects[0] - IniCond['OutletWidth']/2) > ShoreY[ii,3])) and
+               ((YIntersects[0] + IniCond['OutletWidth']/2) < ShoreY[ii,0])):
+                ShoreY[ii,2] = YIntersects[0] - IniCond['OutletWidth']/2
+                ShoreY[ii,1] = YIntersects[0] + IniCond['OutletWidth']/2
+    
+    # Get outlet angle direction
+    OutletToR = OutletCoords2[0,0] < OutletCoords2[-1,0]
+    OutletMask = np.logical_not(np.isnan(ShoreY[:,1]))
+    
+    # Set outlet end coordinates (neatly in-between transects to start with!)
+    OutletEndX = np.empty([2])
+    if np.all(np.logical_not(OutletMask)):
+        # Handle special case that outlet is straight out (or super wide) and didn't intersect any transects
+        OutletEndX[0] = np.mean(OutletCoords2[:,1])
+        OutletEndX[1] = OutletEndX[0]
+        OutletIx = np.where(np.logical_and(OutletEndX[1]-Dx < ShoreX,
+                                           ShoreX < OutletEndX[0]))[0][0]
+        ShoreY[OutletIx,1] = (ShoreY[OutletIx,0] + ShoreY[OutletIx,3])/2 + IniCond['OutletWidth']/2
+        ShoreY[OutletIx,2] = ShoreY[OutletIx,1] - IniCond['OutletWidth']
+    else:
+        OutletEndX[0] = np.max(ShoreX[OutletMask]) + Dx/2
+        OutletEndX[1] = np.min(ShoreX[OutletMask]) - Dx/2
+        if OutletToR:
+            print('flipping')
+            OutletEndX = np.flipud(OutletEndX)
+            
+    # Set outlet end width
+    OutletEndWidth = np.full(2, IniCond['OutletWidth'])
     
     # Initialise lagoon bed elevation
     LagoonElev = np.full(ShoreX.size, IniCond['LagoonBed'])
-    LagoonElev[np.isnan(LagoonY[:,1])] = np.nan
+    LagoonElev[np.isnan(ShoreY[:,3])] = np.nan
+    
+    # Initialise outlet channel bed elevation
+    OutletElev = np.full(ShoreX.size, np.nan)
+    BedLevel = np.linspace(IniCond['LagoonBed'], IniCond['OutletBed'], np.sum(OutletMask)+2)
+    if OutletToR:
+        OutletElev[OutletMask] = BedLevel[1:-1]
+    else:
+        OutletElev[OutletMask] = np.flipud(BedLevel[1:-1])
+    OutletEndElev = BedLevel[[0,-1]]
     
     # Initialise barrier crest elevation
     BarrierElev = np.full(ShoreX.size, IniCond['BarrierElev'])
@@ -352,27 +436,6 @@ def loadModel(Config):
                                     + PhysicalPars['RiverSlope']
                                     * PhysicalPars['UpstreamLength'],
                                     PhysicalPars['RiverSlope'] * Dx))
-    
-    # Convert outlet channel into model coordinate system
-    OutletCoords2 = np.empty(OutletCoords.shape)
-    (OutletCoords2[:,0], OutletCoords2[:,1]) = geom.real2mod(OutletCoords[:,0], OutletCoords[:,1], Origin, BaseShoreNormDir)
-    
-    # Check outlet coords ordered from lagoon to sea
-    if OutletCoords2[0,1] > OutletCoords2[-1,1]:
-        OutletCoords2 = np.flipud(OutletCoords2)
-    
-    # Trim outlet channel to shoreline and sea
-    OutletX = OutletCoords2[:,0]
-    OutletY = OutletCoords2[:,1]
-    geom.trimLine(OutletX, OutletY, ShoreX, LagoonY[:,1], ShoreY)
-    
-    # Divide outlet channel into appropriate segments
-    (OutletX, OutletY) = geom.adjustLineDx(OutletX, OutletY, Dx)
-    
-    # Create outlet channel variables
-    OutletElev = np.linspace(IniCond['LagoonBed'], IniCond['OutletBed'],
-                             OutletX.size)
-    OutletWidth = np.tile(IniCond['OutletWidth'], OutletX.size)
       
     # Produce a map showing the spatial inputs
 #    (ShoreXreal, ShoreYreal) = geom.mod2real(ShoreX, ShoreY, Origin, BaseShoreNormDir)
@@ -383,6 +446,7 @@ def loadModel(Config):
 #    plt.plot(Origin[0], Origin[1], 'go')
 #    plt.axis('equal')
     
-    return (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, ShoreX, 
-            ShoreY, LagoonY, LagoonElev, BarrierElev, RiverElev, OutletX, OutletY, 
-            OutletElev, OutletWidth, TimePars, PhysicalPars, NumericalPars, OutputOpts)
+    return (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, 
+            ShoreX, ShoreY, LagoonElev, BarrierElev, OutletElev, 
+            RiverElev, OutletEndX, OutletEndWidth, OutletEndElev,
+            TimePars, PhysicalPars, NumericalPars, OutputOpts)
