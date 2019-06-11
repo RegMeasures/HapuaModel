@@ -64,15 +64,6 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx):
 
 def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx):
     
-    # Calculate lagoon plotting position
-    LagoonMask = np.isnan(ShoreY[:,3])==False
-    LagoonX = np.concatenate(([ShoreX[np.where(LagoonMask)[0][0]]],
-                              ShoreX[LagoonMask], 
-                              [ShoreX[np.where(LagoonMask)[0][-1]]]))
-    LagoonY = np.concatenate(([ShoreY[np.where(LagoonMask)[0][0],4]],
-                              ShoreY[:,3][LagoonMask], 
-                              [ShoreY[np.where(LagoonMask)[0][-1],4]]))
-    
     # Calculate outlet plotting position
     OutletX = np.tile(ShoreX,[2,1]).flatten()
     OutletY = ShoreY[:,[1,2]].transpose().flatten()
@@ -91,7 +82,7 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx):
     # Update the lines
     ModelFig[2][0].set_data(ShoreX, ShoreY[:,0])
     ModelFig[3][0].set_data(OutletX, OutletY)
-    ModelFig[4][0].set_data(LagoonX, LagoonY)
+    ModelFig[4][0].set_data(ShoreX, ShoreY[:,3])
     ModelFig[5][0].set_data(ShoreX, ShoreY[:,4])
     
     

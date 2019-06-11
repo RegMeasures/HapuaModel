@@ -167,7 +167,7 @@ def updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
     if OutletEndX[0] < OutletEndX[1]:
         # Outlet angles from L to R
         if ShoreX[OutletChanIx[-1]+1] <= OutletEndX[1]:
-            logging.debug('Outlet channel elongated rightwards across transect line')
+            logging.info('Outlet channel elongated rightwards across transect line')
             Extend = True
             ExtendMask = np.logical_and(ShoreX[OutletChanIx[-1]] < ShoreX,
                                         ShoreX <= OutletEndX[1])
@@ -176,7 +176,7 @@ def updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
     else:
         # Outlet angles from R to L
         if ShoreX[OutletChanIx[-1]-1] >= OutletEndX[1]:
-            logging.debug('Outlet channel elongated leftwards across transect line')
+            logging.info('Outlet channel elongated leftwards across transect line')
             Extend = True
             ExtendMask = np.logical_and(ShoreX[OutletChanIx[-1]] > ShoreX,
                                         ShoreX >= OutletEndX[1])
@@ -194,31 +194,97 @@ def updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
     #%% Check for outlet channel truncation
     # Note: have to be careful to leave at least 1 transect in outlet channel
     
-    # Only check for truncation if outlet channel crosses >1 transect
+    # Check for truncation of online outlet channel and move ends of channel if required
+    # (Only check for truncation if outlet channel crosses >1 transect)
     if OutletChanIx.size > 1:
         
         # Check for truncation of lagoonward end of outlet channel 
         # (don't check last transect as trucation here would leave 0 transects)
         if np.any(ShoreY[OutletChanIx[1:],2] <= ShoreY[OutletChanIx[1:],3]):
+            logging.info('Truncating lagoon end of outlet channel')
+            TruncationIx = OutletChanIx[ShoreY[OutletChanIx,1] <= ShoreY[OutletChanIx,0]]
             if OutletEndX[0] < OutletEndX[1]:
                 # Outlet angles from L to R
-                TruncationIx = OutletChanIx[ShoreY[OutletChanIx,1] <= ShoreY[OutletChanIx,0]][-1]
-                OutletEndX[1] = ShoreX[TruncationIx] + Dx/2 
+                OutletEndX[0] = ShoreX[TruncationIx[-1]] + Dx/2
+                if ShoreY[TruncationIx[-1], 3] <= ShoreY[TruncationIx[-1], 4]:
+                    logging.info('Extending R end of lagoon via outletchannel to cliffline collision.')
+                    Extend = True
+                    CurLagEndIx = np.where(ShoreY[:,3] > ShoreY[:,4])[0][-1]
+                    LagExtension = np.arange(CurLagEndIx+1, TruncationIx[-1])
+                else:
+                    Extend = False
             else:
                 # Outlet angles from R to L
-                TruncationIx = OutletChanIx[ShoreY[OutletChanIx,1] <= ShoreY[OutletChanIx,0]][0]
-                OutletEndX[1] = ShoreX[TruncationIx] - Dx/2 
+                OutletEndX[0] = ShoreX[TruncationIx[0]] - Dx/2 
+                if ShoreY[TruncationIx[0], 3] <= ShoreY[TruncationIx[0], 4]:
+                    logging.info('Extending L end of lagoon via outletchannel to cliffline collision.')
+                    Extend = True
+                    CurLagEndIx = np.where(ShoreY[:,3] > ShoreY[:,4])[0][0]
+                    LagExtension = np.arange(TruncationIx[0], CurLagEndIx-1)
+                else:
+                    Extend = False
+            
+            if Extend:
+                logging.info('Schematisation requires removal of any remaining gravel between new lagoon and cliff-toe as part of extension')
+                # Convert outlet channel to lagoon
+                ShoreY[LagExtension,3] = ShoreY[LagExtension,1]
+                LagoonElev[LagExtension] = OutletElev[LagExtension]
+                # Remove outlet channel
+                ShoreY[LagExtension,1] = np.nan
+                ShoreY[LagExtension,2] = np.nan
+                OutletElev[LagExtension] = np.nan
         
         # Check seaward end
-        # (don't allow truncation of both ends in same timestep to avoid confusion!)
+        # Not sure what happens if truncation of both ends happens in same timestep???
         # (don't check first transect as trucation here would leave 0 transects)
-        elif np.any(ShoreY[OutletChanIx[:-1],1] >= ShoreY[OutletChanIx[:-1],0]):
+        if np.any(ShoreY[OutletChanIx[:-1],1] >= ShoreY[OutletChanIx[:-1],0]):
+            logging.info('Truncating seaward end of outlet channel')
+            TruncationIx = OutletChanIx[ShoreY[OutletChanIx,1] >= ShoreY[OutletChanIx,0]]
             if OutletEndX[0] < OutletEndX[1]:
                 # Outlet angles from L to R
-                TruncationIx = OutletChanIx[ShoreY[OutletChanIx,1] >= ShoreY[OutletChanIx,0]][0]
-                OutletEndX[1] = ShoreX[TruncationIx] - Dx/2 
+                OutletEndX[1] = ShoreX[TruncationIx[0]] - Dx/2 
             else:
                 # Outlet angles from R to L
-                TruncationIx = OutletChanIx[ShoreY[OutletChanIx,1] >= ShoreY[OutletChanIx,0]][-1]
-                OutletEndX[1] = ShoreX[TruncationIx] + Dx/2 
+                OutletEndX[1] = ShoreX[TruncationIx[-1]] + Dx/2 
+    
+    # if outlet has only 1 transect then adjust shoreline/lagoonline to preserve it's width when we adjust ShoreY in the next step
+    if abs(OutletEndX[0]//Dx - OutletEndX[1]//Dx) <= 1:
+        if OutletEndX[0]//Dx == OutletEndX[1]//Dx:
+            if OutletEndX[0] < OutletEndX[1]:
+                OutletChanIx = np.where(np.logical_and(OutletEndX[0] < ShoreX, 
+                                                       ShoreX < OutletEndX[1]+Dx))[0]
+            else:
+                OutletChanIx = np.where(np.logical_and(OutletEndX[1]-Dx < ShoreX,
+                                                       ShoreX < OutletEndX[0]))[0]
+        else:
+            OutletChanIx = np.where(np.logical_and(np.min(OutletEndX) < ShoreX,
+                                                   ShoreX < np.max(OutletEndX[0])))[0]
+        # Preserve channel width by extending into lagoon as required 
+        # (not extending into sea as this would mess with LST)
+        if ShoreY[OutletChanIx,1] > ShoreY[OutletChanIx,0]:
+            ShoreY[OutletChanIx,2] -= ShoreY[OutletChanIx,1] - ShoreY[OutletChanIx,0]
+            ShoreY[OutletChanIx,1] = ShoreY[OutletChanIx,0]
+        ShoreY[OutletChanIx,3] = min(ShoreY[OutletChanIx,3], ShoreY[OutletChanIx,2])
+            
+    
+    # Adjust ShoreY where outlet banks intersects coast or lagoon
+    # Note this can include offline/disconnected bits of outlet as well as online bits
+    OutletExists = ~np.isnan(ShoreY[:,1])
+    ShoreIntersect = np.less(ShoreY[:,0], ShoreY[:,1], 
+                             out = OutletExists, where=OutletExists)
+    if np.any(ShoreIntersect):
+        ShoreY[ShoreIntersect, 0] -= ((ShoreY[ShoreIntersect, 1] - ShoreY[ShoreIntersect, 2]) 
+                                      * (BarrierElev[ShoreIntersect] - OutletElev[ShoreIntersect]) 
+                                      / (BarrierElev[ShoreIntersect] + PhysicalPars['ClosureDepth']))
+        ShoreY[ShoreIntersect, 1] = np.nan
+        ShoreY[ShoreIntersect, 2] = np.nan
+        OutletElev[ShoreIntersect] = np.nan
+    
+    LagoonIntersect = np.less(ShoreY[:,2], ShoreY[:,3], 
+                              out = OutletExists, where=OutletExists)
+    if np.any(LagoonIntersect):
+        ShoreY[LagoonIntersect, 3] = ShoreY[LagoonIntersect, 1]
+        ShoreY[LagoonIntersect, 1] = np.nan
+        ShoreY[LagoonIntersect, 2] = np.nan
+        OutletElev[LagoonIntersect] = np.nan
     

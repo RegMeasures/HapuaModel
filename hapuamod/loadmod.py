@@ -373,10 +373,14 @@ def loadModel(Config):
         YIntersects = geom.intersectPolyline(CliffCoords2, ShoreX[ii])
         ShoreY[ii,4] = np.amax(YIntersects)
         
-        # find seaward edge of lagoon (if there is some lagoon at current transect)
+        # find seaward edge of lagoon
         if LagoonExtent[0] < ShoreX[ii] < LagoonExtent[1]:
+            #  There is some lagoon at current transect
             YIntersects = geom.intersectPolyline(LagoonCoords2, ShoreX[ii])
             ShoreY[ii,3] = np.amax(YIntersects)
+        else:
+            # No lagoon so seaward edge of lagoon = cliff-line
+            ShoreY[ii,3] = ShoreY[ii,4]
             
         # find outlet channel (if there is outlet channel at current transect)    
         if OutletExtent[0] < ShoreX[ii] < OutletExtent[1]:
@@ -408,7 +412,6 @@ def loadModel(Config):
         OutletEndX[0] = np.max(ShoreX[OutletMask]) + Dx/2
         OutletEndX[1] = np.min(ShoreX[OutletMask]) - Dx/2
         if OutletToR:
-            print('flipping')
             OutletEndX = np.flipud(OutletEndX)
             
     # Set outlet end width
