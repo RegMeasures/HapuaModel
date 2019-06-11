@@ -32,7 +32,7 @@ def mapView(ShoreX, ShoreY, Origin, ShoreNormalDir):
     # tidy up the plot
     plt.axis('equal')
 
-def modelView(ShoreX, ShoreY):
+def modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx):
     """ Map the current model state in model coordinates
     
     Parameters:
@@ -49,46 +49,49 @@ def modelView(ShoreX, ShoreY):
     PlanAx.set_xlabel('Alongshore distance [m]')
     PlanAx.set_ylabel('Crossshore distance [m]')
     
-    # Plot shoreline
-    ShoreLine = PlanAx.plot(ShoreX, ShoreY[:,0], 'k-')
-    
-    # Plot lagoon (inc closing ends)
-    LagoonMask = np.isnan(ShoreY[:,3])==False
-    PlotLagoonX = np.concatenate(([ShoreX[np.where(LagoonMask)[0][0]]],
-                                  ShoreX[LagoonMask], 
-                                  [ShoreX[np.where(LagoonMask)[0][-1]]]))
-    PlotLagoonY = np.concatenate(([ShoreY[np.where(LagoonMask)[0][0],4]],
-                                  ShoreY[:,3][LagoonMask], 
-                                  [ShoreY[np.where(LagoonMask)[0][-1],4]]))
-    LagoonLine = PlanAx.plot(PlotLagoonX, PlotLagoonY, 'b-')
-    
-    # Plot Cliff
-    CliffLine = PlanAx.plot(ShoreX, ShoreY[:,4], 'g-')
-    
-    # Plot Outlet channel
-    OutletLine = PlanAx.plot(np.tile(ShoreX,[2,1]).flatten(), 
-                             ShoreY[:,[1,2]].transpose().flatten(), 'r-x')
+    # Create dummy lines
+    ShoreLine  = PlanAx.plot(ShoreX, ShoreY[:,0], 'k-')
+    OutletLine = PlanAx.plot(ShoreX, ShoreY[:,1], 'r-')
+    LagoonLine = PlanAx.plot(ShoreX, ShoreY[:,3], 'b-')
+    CliffLine  = PlanAx.plot(ShoreX, ShoreY[:,4], 'g-')
     
     ModelFig = (PlanFig, PlanAx, ShoreLine, OutletLine, LagoonLine, CliffLine)
     
+    # Replace with correct lines
+    updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx)
+    
     return ModelFig
 
-def updateModelView(ModelFig, ShoreX, ShoreY):
+def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx):
     
-    # Calculate required variables to plot
+    # Calculate lagoon plotting position
     LagoonMask = np.isnan(ShoreY[:,3])==False
-    PlotLagoonX = np.concatenate(([ShoreX[np.where(LagoonMask)[0][0]]],
-                                  ShoreX[LagoonMask], 
-                                  [ShoreX[np.where(LagoonMask)[0][-1]]]))
-    PlotLagoonY = np.concatenate(([ShoreY[np.where(LagoonMask)[0][0],4]],
-                                  ShoreY[:,3][LagoonMask], 
-                                  [ShoreY[np.where(LagoonMask)[0][-1],4]]))
+    LagoonX = np.concatenate(([ShoreX[np.where(LagoonMask)[0][0]]],
+                              ShoreX[LagoonMask], 
+                              [ShoreX[np.where(LagoonMask)[0][-1]]]))
+    LagoonY = np.concatenate(([ShoreY[np.where(LagoonMask)[0][0],4]],
+                              ShoreY[:,3][LagoonMask], 
+                              [ShoreY[np.where(LagoonMask)[0][-1],4]]))
+    
+    # Calculate outlet plotting position
+    OutletX = np.tile(ShoreX,[2,1]).flatten()
+    OutletY = ShoreY[:,[1,2]].transpose().flatten()
+    # Join the end of the (online) outlet channel to the shore/lagoon line
+    OutletX = np.append(OutletX,
+                        [np.nan, 
+                         ShoreX[OutletChanIx[0]], OutletEndX[0], ShoreX[OutletChanIx[0]],
+                         np.nan,
+                         ShoreX[OutletChanIx[-1]], OutletEndX[1], ShoreX[OutletChanIx[-1]]])
+    OutletY = np.append(OutletY,
+                        [np.nan, 
+                         ShoreY[OutletChanIx[0],1], np.interp(OutletEndX[0],ShoreX,ShoreY[:,3]), ShoreY[OutletChanIx[0],2],
+                         np.nan,
+                         ShoreY[OutletChanIx[-1],1], np.interp(OutletEndX[1],ShoreX,ShoreY[:,0]), ShoreY[OutletChanIx[-1],2]])
     
     # Update the lines
     ModelFig[2][0].set_data(ShoreX, ShoreY[:,0])
-    ModelFig[3][0].set_data(np.tile(ShoreX,[2,1]).flatten(), 
-                            ShoreY[:,[1,2]].transpose().flatten())
-    ModelFig[4][0].set_data(PlotLagoonX, PlotLagoonY)
+    ModelFig[3][0].set_data(OutletX, OutletY)
+    ModelFig[4][0].set_data(LagoonX, LagoonY)
     ModelFig[5][0].set_data(ShoreX, ShoreY[:,4])
     
     

@@ -21,13 +21,22 @@ def assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
     """
     
     # Find location and orientation of outlet channel
-    if OutletEndX[0] < OutletEndX[1]:
+    if OutletEndX[0]//Dx == OutletEndX[1]//Dx:
+        # Outlet doesn't cross any transects
+        if OutletEndX[0] < OutletEndX[1]:
+            OutletChanIx = np.where(np.logical_and(OutletEndX[0] < ShoreX, 
+                                                   ShoreX < OutletEndX[1]+Dx))[0]
+        else:
+            OutletChanIx = np.where(np.logical_and(OutletEndX[1]-Dx < ShoreX,
+                                                   ShoreX < OutletEndX[0]))[0]
+    elif OutletEndX[0] < OutletEndX[1]:
         # Outlet angles from L to R
         OutletChanIx = np.where(np.logical_and(OutletEndX[0] < ShoreX, 
                                                ShoreX < OutletEndX[1]))[0]
     else:
         # Outlet from R to L
-        OutletChanIx = np.flipud(np.where(OutletEndX[1] < ShoreX < OutletEndX[0])[0])
+        OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] < ShoreX,
+                                                         ShoreX < OutletEndX[0]))[0])
     OutletWidth = ShoreY[OutletChanIx,1] - ShoreY[OutletChanIx,2]
     
     # TODO: Account for potentially dry parts of the lagoon when 
@@ -49,11 +58,14 @@ def assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
     # Assemble the complete channel
     ChanDx = np.tile(Dx, RiverElev.size + OnlineLagoon.size + OutletChanIx.size + 1)
     if OutletEndX[0]//Dx == OutletEndX[1]//Dx:
-        ChanDx[-1] += Dx + abs(OutletEndX[1] - OutletEndX[0])
+        # Outlet is straight (i.e. doesn't cross any transects)
+        ChanDx[-2] += abs(OutletEndX[1] - OutletEndX[0])
     elif OutletEndX[0] < OutletEndX[1]:
+        # Outlet angles from L to R
         ChanDx[RiverElev.size + OnlineLagoon.size] += Dx - (OutletEndX[0] % Dx)
         ChanDx[-1] += OutletEndX[1] % Dx
     else:
+        # Outlet from R to L
         ChanDx[RiverElev.size + OnlineLagoon.size] += OutletEndX[0] % Dx
         ChanDx[-1] += Dx - (OutletEndX[1] % Dx)
     ChanElev = np.concatenate([RiverElev, LagoonElev[OnlineLagoon], 
@@ -151,5 +163,33 @@ def updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
     # Apply volume changes
     
     
-    #%% Check outlet channel end position hasn't crossed a transect line and adjust as necessary...
-    # TODO
+    #%% Check d/s end of outlet channel hasn't migrated across a transect line and adjust as necessary...
+    
+    if OutletEndX[0] < OutletEndX[1]:
+        # Outlet angles from L to R
+        if ShoreX[OutletChanIx[-1]+1] <= OutletEndX[1]:
+            logging.debug('Outlet channel elongated rightwards across transect line')
+            Extend = True
+            ExtendMask = np.logical_and(ShoreX[OutletChanIx[-1]] < ShoreX,
+                                        ShoreX <= OutletEndX[1])
+        else:
+            Extend = False    
+    else:
+        # Outlet angles from R to L
+        if ShoreX[OutletChanIx[-1]-1] >= OutletEndX[1]:
+            logging.debug('Outlet channel elongated leftwards across transect line')
+            Extend = True
+            ExtendMask = np.logical_and(ShoreX[OutletChanIx[-1]] > ShoreX,
+                                        ShoreX >= OutletEndX[1])
+        else:
+            Extend = False
+    
+    if Extend:
+        # Width of new outlet section = end width
+        # Bed level of new outlet section  = end bed level
+        # Dist from new outlet section to shoreline = 1/2 distance of last outlet section
+        ShoreY[ExtendMask,1] = ShoreY[ExtendMask,0] - (ShoreY[OutletChanIx[-1],0] - ShoreY[OutletChanIx[-1],1])/2
+        ShoreY[ExtendMask,2] = ShoreY[ExtendMask,1] - OutletEndWidth[1]
+        OutletElev[ExtendMask] = OutletEndElev[1]
+    
+    

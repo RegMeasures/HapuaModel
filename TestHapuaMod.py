@@ -13,10 +13,8 @@ Config = hm.loadmod.readConfig(ModelConfigFile)
  RiverElev, OutletEndX, OutletEndWidth, OutletEndElev,
  TimePars, PhysicalPars, NumericalPars, OutputOpts) = hm.loadmod.loadModel(Config)
 
-#plt.figure()
-#hm.visualise.mapView(ShoreX, ShoreY, Origin, BaseShoreNormDir)    
-
-ModelFig = hm.visualise.modelView(ShoreX, ShoreY)
+plt.figure()
+hm.visualise.mapView(ShoreX, ShoreY, Origin, BaseShoreNormDir)
 
 #%% Test longshore transport routine
 EDir_h = WaveTs.EDir_h[0]
@@ -40,6 +38,7 @@ plt.plot((ShoreX[0:-1]+ShoreX[1:])/2, LST)
                            OutletEndX, OutletEndWidth, OutletEndElev, 
                            RiverElev, PhysicalPars['RiverWidth'], 
                            NumericalPars['Dx'])
+hm.visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx)
     
 # Steady state hydraulics
 RivFlow = hm.core.interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']])).values

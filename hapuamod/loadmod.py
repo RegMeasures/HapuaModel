@@ -372,12 +372,14 @@ def loadModel(Config):
         # find cliff position on transect
         YIntersects = geom.intersectPolyline(CliffCoords2, ShoreX[ii])
         ShoreY[ii,4] = np.amax(YIntersects)
+        
+        # find seaward edge of lagoon (if there is some lagoon at current transect)
         if LagoonExtent[0] < ShoreX[ii] < LagoonExtent[1]:
-            # find seaward edge of lagoon on transect
             YIntersects = geom.intersectPolyline(LagoonCoords2, ShoreX[ii])
             ShoreY[ii,3] = np.amax(YIntersects)
+            
+        # find outlet channel (if there is outlet channel at current transect)    
         if OutletExtent[0] < ShoreX[ii] < OutletExtent[1]:
-            # identify intersections of outlet channel polyline and shore normal transects
             YIntersects = geom.intersectPolyline(OutletCoords2, ShoreX[ii])
             # check there is no crazy recurved outlet channel!
             assert YIntersects.size == 1, 'Check/simplify outlet channel - possible weird recurvature?'
@@ -395,13 +397,18 @@ def loadModel(Config):
     # Set outlet end coordinates (neatly in-between transects to start with!)
     OutletEndX = np.empty([2])
     if np.all(np.logical_not(OutletMask)):
-        # Outlet straight out (or super wide) and didn't intersect any transects
-        # TODO deal with this situation
-        logging.fatal('outlet too straight/wide for pre-processor - fix code here!')
+        # Handle special case that outlet is straight out (or super wide) and didn't intersect any transects
+        OutletEndX[0] = np.mean(OutletCoords2[:,1])
+        OutletEndX[1] = OutletEndX[0]
+        OutletIx = np.where(np.logical_and(OutletEndX[1]-Dx < ShoreX,
+                                           ShoreX < OutletEndX[0]))[0][0]
+        ShoreY[OutletIx,1] = (ShoreY[OutletIx,0] + ShoreY[OutletIx,3])/2 + IniCond['OutletWidth']/2
+        ShoreY[OutletIx,2] = ShoreY[OutletIx,1] - IniCond['OutletWidth']
     else:
-        OutletEndX[0] = np.min(ShoreX[OutletMask]) - Dx/2
-        OutletEndX[1] = np.max(ShoreX[OutletMask]) + Dx/2
+        OutletEndX[0] = np.max(ShoreX[OutletMask]) + Dx/2
+        OutletEndX[1] = np.min(ShoreX[OutletMask]) - Dx/2
         if OutletToR:
+            print('flipping')
             OutletEndX = np.flipud(OutletEndX)
             
     # Set outlet end width
