@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 # import standard packages
-import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import math
@@ -218,10 +217,10 @@ def loadModel(Config):
     Origin[1] = Origin[0] * Baseline[0] + Baseline[1]
     if ((InflowCoord[0] * Baseline[0] + Baseline[1])>0):
         # land is to north of baseline
-        BaseShoreNormDir = math.atan2(Baseline[0],-1)
+        ShoreNormDir = math.atan2(Baseline[0],-1)
     else:
         # land is to south of baseline
-        BaseShoreNormDir = math.atan2(-Baseline[0],1)
+        ShoreNormDir = math.atan2(-Baseline[0],1)
     
     #%% Read the boundary condition timeseries
     to_datetime = lambda d: pd.datetime.strptime(d, '%d/%m/%Y %H:%M')
@@ -239,7 +238,7 @@ def loadModel(Config):
                          index_col=0, parse_dates=[0],
                          date_parser=to_datetime)
     # Convert wave directions into radians in model coordinate system
-    WaveTs.EDir_h = np.deg2rad(WaveTs.EDir_h) - (BaseShoreNormDir)
+    WaveTs.EDir_h = np.deg2rad(WaveTs.EDir_h) - (ShoreNormDir)
     # Make sure all wave angles are in the range -pi to +pi
     WaveTs.EDir_h = np.mod(WaveTs.EDir_h + np.pi, 2.0 * np.pi) - np.pi 
     
@@ -336,7 +335,7 @@ def loadModel(Config):
     
     # Convert shoreline into model coordinate system
     IniShoreCoords2 = np.empty(IniShoreCoords.shape)
-    (IniShoreCoords2[:,0], IniShoreCoords2[:,1]) = geom.real2mod(IniShoreCoords[:,0], IniShoreCoords[:,1], Origin, BaseShoreNormDir)
+    (IniShoreCoords2[:,0], IniShoreCoords2[:,1]) = geom.real2mod(IniShoreCoords[:,0], IniShoreCoords[:,1], Origin, ShoreNormDir)
     if IniShoreCoords2[0,0] > IniShoreCoords2[-1,0]:
         IniShoreCoords2 = IniShoreCoords2 = np.flipud(IniShoreCoords2)
     assert np.all(np.diff(IniShoreCoords2[:,0]) > 0), 'Shoreline includes recurvature???'
@@ -351,11 +350,11 @@ def loadModel(Config):
     
     # Convert input spatial data into model coordinate system
     LagoonCoords2 = np.empty(LagoonCoords.shape)
-    (LagoonCoords2[:,0], LagoonCoords2[:,1]) = geom.real2mod(LagoonCoords[:,0], LagoonCoords[:,1], Origin, BaseShoreNormDir)
+    (LagoonCoords2[:,0], LagoonCoords2[:,1]) = geom.real2mod(LagoonCoords[:,0], LagoonCoords[:,1], Origin, ShoreNormDir)
     CliffCoords2 = np.empty(CliffCoords.shape)
-    (CliffCoords2[:,0], CliffCoords2[:,1]) = geom.real2mod(CliffCoords[:,0], CliffCoords[:,1], Origin, BaseShoreNormDir)
+    (CliffCoords2[:,0], CliffCoords2[:,1]) = geom.real2mod(CliffCoords[:,0], CliffCoords[:,1], Origin, ShoreNormDir)
     OutletCoords2 = np.empty(OutletCoords.shape)
-    (OutletCoords2[:,0], OutletCoords2[:,1]) = geom.real2mod(OutletCoords[:,0], OutletCoords[:,1], Origin, BaseShoreNormDir)
+    (OutletCoords2[:,0], OutletCoords2[:,1]) = geom.real2mod(OutletCoords[:,0], OutletCoords[:,1], Origin, ShoreNormDir)
     
     # Check lagoon extent is within limits of shoreline
     LagoonExtent = [np.amin(LagoonCoords2[:,0]), np.amax(LagoonCoords2[:,0])]
@@ -449,7 +448,7 @@ def loadModel(Config):
 #    plt.plot(Origin[0], Origin[1], 'go')
 #    plt.axis('equal')
     
-    return (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, 
+    return (FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, 
             ShoreX, ShoreY, LagoonElev, BarrierElev, OutletElev, 
             RiverElev, OutletEndX, OutletEndWidth, OutletEndElev,
             TimePars, PhysicalPars, NumericalPars, OutputOpts)

@@ -8,13 +8,13 @@ import hapuamod as hm
 #%% Test model load (particularly geometry processing)
 ModelConfigFile = 'inputs\HurunuiModel.cnf'
 Config = hm.loadmod.readConfig(ModelConfigFile)
-(FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, 
+(FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, 
  ShoreX, ShoreY, LagoonElev, BarrierElev, OutletElev, 
  RiverElev, OutletEndX, OutletEndWidth, OutletEndElev,
  TimePars, PhysicalPars, NumericalPars, OutputOpts) = hm.loadmod.loadModel(Config)
 
 plt.figure()
-hm.visualise.mapView(ShoreX, ShoreY, Origin, BaseShoreNormDir)
+hm.visualise.mapView(ShoreX, ShoreY, Origin, ShoreNormDir)
 
 #%% Test longshore transport routine
 EDir_h = WaveTs.EDir_h[0]

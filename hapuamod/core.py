@@ -33,7 +33,7 @@ def run(ModelConfigFile):
     
     #%% Load the model
     Config = loadmod.readConfig(ModelConfigFile)
-    (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, 
+    (FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, 
      ShoreX, ShoreY, LagoonElev, BarrierElev, OutletElev, 
      RiverElev, OutletEndX, OutletEndWidth, OutletEndElev,
      TimePars, PhysicalPars, NumericalPars, OutputOpts) = loadmod.loadModel(Config)

@@ -7,27 +7,54 @@ import numpy as np
 # import local packages
 from hapuamod import geom
 
-def mapView(ShoreX, ShoreY, Origin, ShoreNormalDir):
+def mapView(ShoreX, ShoreY, Origin, ShoreNormDir):
     """ Map the current model state in real world coordinates
     """
     
     # convert the coordinates to real world
     (ShoreXreal, ShoreYreal) = geom.mod2real(np.transpose(np.tile(ShoreX, [5,1])), 
-                                               ShoreY, Origin, ShoreNormalDir)
-    plt.plot(ShoreXreal[:,0], ShoreYreal[:,0], 'g-')    
-    plt.plot(ShoreXreal[:,1], ShoreYreal[:,1], 'r-')
+                                               ShoreY, Origin, ShoreNormDir)
+    
+    # calculate the (idealised) river location
+    RiverX = np.asarray([0,0])
+    RiverY = np.asarray([np.min(ShoreY[:,4])*3,
+                         geom.intersectPolyline(np.stack([ShoreX, ShoreY[:,4]], axis=1), 0)[0]])
+    (RiverXreal, RiverYreal) = geom.mod2real(RiverX, RiverY, Origin, ShoreNormDir)
+    
+    # draw the main features
+    plt.plot(ShoreXreal[:,0], ShoreYreal[:,0], 'g-', label='Shore')    
+    #plt.plot(ShoreXreal[:,1], ShoreYreal[:,1], 'r-', label='Outlet')
     plt.plot(ShoreXreal[:,2], ShoreYreal[:,2], 'r-')
-    plt.plot(ShoreXreal[:,3], ShoreYreal[:,3], 'b-')
-    plt.plot(ShoreXreal[:,4], ShoreYreal[:,4], 'k-')
+    plt.plot(ShoreXreal[:,3], ShoreYreal[:,3], 'c-', label='Lagoon')
+    plt.plot(ShoreXreal[:,4], ShoreYreal[:,4], 'k-', label='Cliff')
+    plt.plot(RiverXreal, RiverYreal, 'b-', label='River')
     
     EndTransects = np.where(np.isnan(ShoreY[:,3])==False)[0][[0,-1]]
     plt.plot(ShoreXreal[EndTransects[0],[3,4]], ShoreYreal[EndTransects[0],[3,4]], 'b-')
     plt.plot(ShoreXreal[EndTransects[1],[3,4]], ShoreYreal[EndTransects[1],[3,4]], 'b-')
     
-    # plot the origin and baseline
-    plt.plot(Origin[0], Origin[1], 'ko')
-    (BaseXreal, BaseYreal) = geom.mod2real(ShoreX[[1,-1]], np.array([0,0]), Origin, ShoreNormalDir)
-    plt.plot(BaseXreal, BaseYreal, 'k--')
+    # plot the origin and axes
+    plt.plot(Origin[0], Origin[1], 'ko', label='Origin', zorder=99)
+    (BaseXreal, BaseYreal) = geom.mod2real(np.array([ShoreX[0],0,ShoreX[-1]]), 
+                                           np.array([0,0,0]), 
+                                           Origin, ShoreNormDir)
+    ArrowX = (BaseXreal[-1]-BaseXreal[0])/20
+    ArrowY = (BaseYreal[-1]-BaseYreal[0])/20
+    plt.arrow(BaseXreal[1], BaseYreal[1], ArrowX, ArrowY, 
+              width=30, zorder=98, facecolor='white')
+    plt.arrow(BaseXreal[1], BaseYreal[1], -ArrowY, ArrowX, 
+              width=30, zorder=97, facecolor='white')
+    XLab = plt.annotate('X', (BaseXreal[1] + ArrowX*2.4, BaseYreal[1] + ArrowY*2.4), 
+                        horizontalalignment='center', verticalalignment='center')
+    YLab = plt.annotate('Y', (BaseXreal[1] - ArrowY*2.4, BaseYreal[1] + ArrowX*2.4), 
+                        horizontalalignment='center', verticalalignment='center')
+    XLab.set_bbox(dict(facecolor='white', edgecolor='none', boxstyle='Square, pad=0.1'))
+    YLab.set_bbox(dict(facecolor='white', edgecolor='none', boxstyle='Square, pad=0.1'))
+    
+    # add labels
+    plt.legend()
+    plt.xlabel('Easting (m)')
+    plt.ylabel('Northing (m)')
     
     # tidy up the plot
     plt.axis('equal')
@@ -44,18 +71,25 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx):
     """
     
     # Create a new figure
-    PlanFig, PlanAx = plt.subplots()
+    PlanFig, PlanAx = plt.subplots(figsize=[10,5])
     PlanAx.axis('equal')
     PlanAx.set_xlabel('Alongshore distance [m]')
     PlanAx.set_ylabel('Crossshore distance [m]')
     
     # Create dummy lines
-    ShoreLine  = PlanAx.plot(ShoreX, ShoreY[:,0], 'k-')
-    OutletLine = PlanAx.plot(ShoreX, ShoreY[:,1], 'r-')
-    LagoonLine = PlanAx.plot(ShoreX, ShoreY[:,3], 'b-')
-    CliffLine  = PlanAx.plot(ShoreX, ShoreY[:,4], 'g-')
+    ShoreLine  = PlanAx.plot(ShoreX, ShoreY[:,0], 'g-', label='Shore')
+    OutletLine = PlanAx.plot(ShoreX, ShoreY[:,1], 'r-', label='Outlet')
+    LagoonLine = PlanAx.plot(ShoreX, ShoreY[:,3], 'c-', label='Lagoon')
+    CliffLine  = PlanAx.plot(ShoreX, ShoreY[:,4], 'k-', label='Cliff')
+    RiverLine  = PlanAx.plot([0,0], [-100,-300], 'b-', label='River')
     
-    ModelFig = (PlanFig, PlanAx, ShoreLine, OutletLine, LagoonLine, CliffLine)
+    # Add some labels
+    plt.legend()
+    plt.xlabel('Model X-coordinate (m)')
+    plt.ylabel('Model Y-coordinate (m)')
+    
+    ModelFig = (PlanFig, PlanAx, ShoreLine, OutletLine, LagoonLine, CliffLine, 
+                RiverLine)
     
     # Replace with correct lines
     updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx)
@@ -79,11 +113,15 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx):
                          np.nan,
                          ShoreY[OutletChanIx[-1],1], np.interp(OutletEndX[1],ShoreX,ShoreY[:,0]), ShoreY[OutletChanIx[-1],2]])
     
+    # Calculate river plotting position
+    RiverY = ShoreY[ShoreX==0,4]
+    
     # Update the lines
     ModelFig[2][0].set_data(ShoreX, ShoreY[:,0])
     ModelFig[3][0].set_data(OutletX, OutletY)
     ModelFig[4][0].set_data(ShoreX, ShoreY[:,3])
     ModelFig[5][0].set_data(ShoreX, ShoreY[:,4])
+    ModelFig[6][0].set_data([0,0], [RiverY, RiverY-300])
     
     
 def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload):
