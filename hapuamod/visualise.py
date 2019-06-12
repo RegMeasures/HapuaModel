@@ -124,7 +124,7 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx):
     ModelFig[6][0].set_data([0,0], [RiverY, RiverY-300])
     
     
-def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload):
+def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None):
     """ Create a long section of the river to the lagoon outlet
     
     LongSecFig = longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, 
@@ -136,7 +136,7 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload):
         ChanWidth
         ChanDep
         ChanVel
-        Bedload
+        Bedload (optional)
     
     Returns:
         LongSecFig = (RivFig, BedLine, WaterLine, EnergyLine, WidthLine, 
@@ -147,14 +147,21 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload):
     WL = ChanElev + ChanDep
     Energy = WL + ChanVel**2 / (2*g)
     Fr = ChanVel/np.sqrt(g*ChanDep)
+    Q = ChanVel * ChanDep * ChanWidth
     
     # Create new figure with sub plots
     RivFig = plt.figure(figsize=(9,9))
-    ElevAx = RivFig.add_subplot(4,1,1)
-    WidthAx = RivFig.add_subplot(4,1,2)
-    VelAx = RivFig.add_subplot(4,1,3, sharex=ElevAx)
+    if Bedload is None:
+        NoOfPlots = 3
+    else:
+        NoOfPlots = 4
+    ElevAx = RivFig.add_subplot(NoOfPlots,1,1)
+    WidthAx = RivFig.add_subplot(NoOfPlots,1,2)
+    FlowAx = WidthAx.twinx()
+    VelAx = RivFig.add_subplot(NoOfPlots,1,3, sharex=ElevAx)
     FrAx = VelAx.twinx()
-    QsAx = RivFig.add_subplot(4,1,4, sharex=ElevAx)
+    if not Bedload is None:
+        QsAx = RivFig.add_subplot(4,1,4, sharex=ElevAx)
     
     # Plot the river bed level, water surface and energy line
     BedLine = ElevAx.plot(Dist, ChanElev, 'k-')
@@ -162,10 +169,14 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload):
     EnergyLine = ElevAx.plot(Dist, Energy, 'b:')
     ElevAx.set_ylabel('Elevation [m]')
     
-    # Plot the river width
+    # Plot the river width and flow
     WidthLine = WidthAx.plot(Dist, ChanWidth, 'k-')
     WidthAx.set_ylabel('Width [m]')
     WidthAx.set_ylim([0,np.amax(ChanWidth)+10])
+    
+    FlowLine = FlowAx.plot(Dist, Q, 'c-')
+    FlowAx.set_ylabel('Flow [$\mathrm{m^3/s}$]')
+    FlowAx.autoscale_view(tight = False)
     
     # Plot velocity and Froude number
     VelLine = VelAx.plot(Dist, ChanVel, 'r-')
@@ -179,18 +190,24 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload):
     FrAx.set_ylim([0,1.3])
     
     # Plot bedload
-    QsLine = QsAx.plot(Dist, Bedload*3600, 'k-')
-    QsAx.set_ylabel(r'Bedload [$\mathrm{m^3/hr}$]')
-    QsAx.set_xlabel('Distance downstream [m]')
-    QsAx.set_ylim([0,10])
+    if not Bedload is None:
+        QsLine = QsAx.plot(Dist, Bedload*3600, 'k-')
+        QsAx.set_ylabel(r'Bedload [$\mathrm{m^3/hr}$]')
+        QsAx.set_xlabel('Distance downstream [m]')
+        QsAx.set_ylim([0,10])
     
-    LongSecFig = (RivFig, BedLine, WaterLine, EnergyLine, WidthLine, 
-                  VelLine, FrLine, QsLine)
+    # Compile outputs
+    if Bedload is None:
+        LongSecFig = (RivFig, BedLine, WaterLine, EnergyLine, WidthLine, 
+                      FlowAx, FlowLine, VelLine, FrLine)
+    else:
+        LongSecFig = (RivFig, BedLine, WaterLine, EnergyLine, WidthLine, 
+                      FlowAx, FlowLine, VelLine, FrLine, QsLine)
     
     return(LongSecFig)
 
 def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep, 
-                      ChanVel, Bedload):
+                      ChanVel, Bedload=None):
     
     # Calculate required variables to plot
     g = 9.81
@@ -198,15 +215,22 @@ def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep,
     WL = ChanElev + ChanDep
     Energy = WL + ChanVel**2 / (2*g)
     Fr = ChanVel/np.sqrt(g*ChanDep)
+    Q = ChanVel * ChanDep * ChanWidth
     
     # Update the lines
     LongSecFig[1][0].set_data(Dist, ChanElev)
     LongSecFig[2][0].set_data(Dist, WL)
     LongSecFig[3][0].set_data(Dist, Energy)
     LongSecFig[4][0].set_data(Dist, ChanWidth)
-    LongSecFig[5][0].set_data(Dist, ChanVel)
-    LongSecFig[6][0].set_data(Dist, Fr)
-    LongSecFig[7][0].set_data(Dist, Bedload*3600)
+    LongSecFig[6][0].set_data(Dist, Q)
+    LongSecFig[7][0].set_data(Dist, ChanVel)
+    LongSecFig[8][0].set_data(Dist, Fr)
+    if not Bedload is None:
+        LongSecFig[9][0].set_data(Dist, Bedload*3600)
+    
+    # Update flow axis scaling
+    LongSecFig[5].relim()
+    LongSecFig[5].autoscale_view(tight = False)
     
     # Redraw
     LongSecFig[0].canvas.draw()

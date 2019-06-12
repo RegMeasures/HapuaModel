@@ -73,8 +73,7 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
         Uses a newton raphson solution to the preissmann discretisation of the 
         Saint-Venant equations.
         
-        (h, V) = solveFullPreissmann(z, B, h, V, dx, dt, n, Q, DsWl, 
-                                     Theta, Tol, MaxIt)
+        solveFullPreissmann(z, B, h, V, dx, dt, n, Q, DsWl, Theta, Tol, MaxIt)
         
         Parameters:
             z (np.ndarray(float64)): Bed elevation at each node (m)
@@ -98,7 +97,7 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
             MaxIt (integer): maximum number of iterations to find solution
             g (float): 
         
-        Returns:
+        Modifies in place:
             h
             V
         
@@ -251,8 +250,6 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
             ItCount += 1
         
         assert ItCount < MaxIt, 'Max iterations exceeded.'
-    
-    return(h, V)
     
 def calcBedload(z, B, h, V, dx, PhysicalPars):
     """ Calculate bedload transport using Bagnold 1980 streampower approach

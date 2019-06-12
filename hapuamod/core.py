@@ -80,12 +80,10 @@ def run(ModelConfigFile):
         RivFlow = interpolate_at(FlowTs, HydTimes).values
         SeaLevel = interpolate_at(SeaLevelTs, HydTimes).values
         
-        (ChanDep, ChanVel) = riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, 
-                                                     ChanDep, ChanVel, ChanDx, 
-                                                     TimePars['HydDt'], 
-                                                     PhysicalPars['Roughness'], 
-                                                     RivFlow, SeaLevel, 
-                                                     NumericalPars)
+        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, 
+                                ChanDep, ChanVel, ChanDx, 
+                                TimePars['HydDt'], PhysicalPars['Roughness'], 
+                                RivFlow, SeaLevel, NumericalPars)
         
         # Calculate bedload transport
         Bedload = riv.calcBedload(ChanElev, ChanWidth, ChanDep, ChanVel, 
