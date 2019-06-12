@@ -32,7 +32,7 @@ logging.info('Test 1: steady flow through very simple channel with no offline st
 
 # Setup
 ChanDx = np.full(50, 20.0)
-ChanElev = np.linspace(0.003*np.sum(ChanDx), 0, ChanDx.size+1)
+ChanElev = np.linspace(0.003*np.sum(ChanDx) - 2, -2, ChanDx.size+1)
 ChanWidth = np.full(ChanDx.size+1, 100.0)
 LagArea = np.full(ChanDx.size+1, 0.0)
 
@@ -51,7 +51,7 @@ HydDt = pd.Timedelta(seconds=5)
 
 Qin = 45
 Q_Ts = np.full(100, Qin)
-DsWL = 1.5
+DsWL = 0.0
 DsWl_Ts = np.full(100, DsWL)
 
 # Steady solution
@@ -98,6 +98,98 @@ DepErr = ChanDep - SteadyDep
 VelErr = ChanVel - SteadyVel
 vis.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel)
 logging.info('Maximum difference between steady and unsteady solutions is: Depth %f m and velocity %f m/s' % (np.max(np.abs(DepErr)), np.max(np.abs(VelErr))))
+
+#%% Test 3
+logging.info('-----------------------------------------------------------------------')
+logging.info('Test 3: unsteady d/s boundary')
+
+# Setup
+DsWl_Ts = np.concatenate([np.linspace(DsWL, DsWL+1, 500),
+                          np.linspace(DsWL+1, DsWL-1, 1000)])
+Q_Ts = np.full(DsWl_Ts.size, Qin)
+OutputTs3 = pd.DataFrame(list(zip([Qin],[Qin],[DsWL])),
+                         columns=['Qin','Qout','SeaLevel'],
+                         index=[0])
+
+# Unsteady solution without lagoon storage
+ChanDep = SteadyDep.copy()
+ChanVel = SteadyVel.copy()
+#LongSecFig = vis.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel)
+#LongSecFig[0].suptitle('Test 3: Unsteady downstream boundary')
+StepSize = 20 
+for ii in range(0, DsWl_Ts.size, StepSize):
+    TimesToRun = np.arange(ii, min(ii+StepSize-1, DsWl_Ts.size))
+    riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, ChanDx, 
+                            HydDt, Roughness, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
+                            NumericalPars)
+    OutputTs3 = OutputTs3.append(pd.DataFrame(list(zip([ChanDep[0]*ChanVel[0]*ChanWidth[0]],
+                                                       [ChanDep[-1]*ChanVel[-1]*ChanWidth[-1]],
+                                                       [ChanDep[-1]+ChanElev[-1]])),
+                                              columns=['Qin','Qout','SeaLevel'],
+                                              index=[TimesToRun[-1]]))
+#    vis.updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel)
+BdyFig = vis.BdyCndFig(OutputTs3)
+BdyFig[0].suptitle('Test 3: Unsteady downstream boundary')
+
+#%% Test 4
+logging.info('-----------------------------------------------------------------------')
+logging.info('Test 4: Lagoon storage')
+
+# Setup
+LagArea[40] = 10000
+OutputTs4 = pd.DataFrame(list(zip([Qin],[Qin],[DsWL])),
+                         columns=['Qin','Qout','SeaLevel'],
+                         index=[0])
+
+# Unsteady solution with lagoon storage
+ChanDep = SteadyDep.copy()
+ChanVel = SteadyVel.copy()
+#LongSecFig = vis.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel)
+#LongSecFig[0].suptitle('Test 4: Lagoon storage')
+StepSize = 20 
+for ii in range(0, DsWl_Ts.size, StepSize):
+    TimesToRun = np.arange(ii, min(ii+StepSize-1, DsWl_Ts.size))
+    riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, ChanDx, 
+                            HydDt, Roughness, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
+                            NumericalPars)
+    OutputTs4 = OutputTs4.append(pd.DataFrame(list(zip([ChanDep[0]*ChanVel[0]*ChanWidth[0]],
+                                                       [ChanDep[-1]*ChanVel[-1]*ChanWidth[-1]],
+                                                       [ChanDep[-1]+ChanElev[-1]])),
+                                              columns=['Qin','Qout','SeaLevel'],
+                                              index=[TimesToRun[-1]]))
+#    vis.updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel)
+BdyFig = vis.BdyCndFig(OutputTs4)
+BdyFig[0].suptitle('Test 4: Lagoon Storage')
+    
+#%% Test 5
+logging.info('-----------------------------------------------------------------------')
+logging.info('Test 5: Reverse flow')
+
+# Setup
+LagArea[40] = 50000
+OutputTs5 = pd.DataFrame(list(zip([Qin],[Qin],[DsWL])),
+                         columns=['Qin','Qout','SeaLevel'],
+                         index=[0])
+
+# Unsteady solution with lagoon storage
+ChanDep = SteadyDep.copy()
+ChanVel = SteadyVel.copy()
+#LongSecFig = vis.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel)
+#LongSecFig[0].suptitle('Test 5: Reverse flow')
+StepSize = 20 
+for ii in range(0, DsWl_Ts.size, StepSize):
+    TimesToRun = np.arange(ii, min(ii+StepSize-1, DsWl_Ts.size))
+    riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, ChanDx, 
+                            HydDt, Roughness, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
+                            NumericalPars)
+    OutputTs5 = OutputTs5.append(pd.DataFrame(list(zip([ChanDep[0]*ChanVel[0]*ChanWidth[0]],
+                                                       [ChanDep[-1]*ChanVel[-1]*ChanWidth[-1]],
+                                                       [ChanDep[-1]+ChanElev[-1]])),
+                                              columns=['Qin','Qout','SeaLevel'],
+                                              index=[TimesToRun[-1]]))
+#    vis.updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel)
+BdyFig = vis.BdyCndFig(OutputTs5)
+BdyFig[0].suptitle('Test 5: Reverse flow')
 
 #%% If needed
 dx = ChanDx

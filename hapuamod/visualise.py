@@ -77,11 +77,11 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx):
     PlanAx.set_ylabel('Crossshore distance [m]')
     
     # Create dummy lines
-    ShoreLine  = PlanAx.plot(ShoreX, ShoreY[:,0], 'g-', label='Shore')
-    OutletLine = PlanAx.plot(ShoreX, ShoreY[:,1], 'r-', label='Outlet')
-    LagoonLine = PlanAx.plot(ShoreX, ShoreY[:,3], 'c-', label='Lagoon')
-    CliffLine  = PlanAx.plot(ShoreX, ShoreY[:,4], 'k-', label='Cliff')
-    RiverLine  = PlanAx.plot([0,0], [-100,-300], 'b-', label='River')
+    ShoreLine,  = PlanAx.plot(ShoreX, ShoreY[:,0], 'g-', label='Shore')
+    OutletLine, = PlanAx.plot(ShoreX, ShoreY[:,1], 'r-', label='Outlet')
+    LagoonLine, = PlanAx.plot(ShoreX, ShoreY[:,3], 'c-', label='Lagoon')
+    CliffLine,  = PlanAx.plot(ShoreX, ShoreY[:,4], 'k-', label='Cliff')
+    RiverLine,  = PlanAx.plot([0,0], [-100,-300], 'b-', label='River')
     
     # Add some labels
     plt.legend()
@@ -117,11 +117,11 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx):
     RiverY = ShoreY[ShoreX==0,4]
     
     # Update the lines
-    ModelFig[2][0].set_data(ShoreX, ShoreY[:,0])
-    ModelFig[3][0].set_data(OutletX, OutletY)
-    ModelFig[4][0].set_data(ShoreX, ShoreY[:,3])
-    ModelFig[5][0].set_data(ShoreX, ShoreY[:,4])
-    ModelFig[6][0].set_data([0,0], [RiverY, RiverY-300])
+    ModelFig[2].set_data(ShoreX, ShoreY[:,0])
+    ModelFig[3].set_data(OutletX, OutletY)
+    ModelFig[4].set_data(ShoreX, ShoreY[:,3])
+    ModelFig[5].set_data(ShoreX, ShoreY[:,4])
+    ModelFig[6].set_data([0,0], [RiverY, RiverY-300])
     
     
 def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None):
@@ -164,34 +164,34 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None):
         QsAx = RivFig.add_subplot(4,1,4, sharex=ElevAx)
     
     # Plot the river bed level, water surface and energy line
-    BedLine = ElevAx.plot(Dist, ChanElev, 'k-')
-    WaterLine = ElevAx.plot(Dist, WL, 'b-')
-    EnergyLine = ElevAx.plot(Dist, Energy, 'b:')
+    BedLine, = ElevAx.plot(Dist, ChanElev, 'k-')
+    WaterLine, = ElevAx.plot(Dist, WL, 'b-')
+    EnergyLine, = ElevAx.plot(Dist, Energy, 'b:')
     ElevAx.set_ylabel('Elevation [m]')
     
     # Plot the river width and flow
-    WidthLine = WidthAx.plot(Dist, ChanWidth, 'k-')
+    WidthLine, = WidthAx.plot(Dist, ChanWidth, 'k-')
     WidthAx.set_ylabel('Width [m]')
     WidthAx.set_ylim([0,np.amax(ChanWidth)+10])
     
-    FlowLine = FlowAx.plot(Dist, Q, 'c-')
+    FlowLine, = FlowAx.plot(Dist, Q, 'c-')
     FlowAx.set_ylabel('Flow [$\mathrm{m^3/s}$]')
     FlowAx.autoscale_view(tight = False)
     
     # Plot velocity and Froude number
-    VelLine = VelAx.plot(Dist, ChanVel, 'r-')
+    VelLine, = VelAx.plot(Dist, ChanVel, 'r-')
     VelAx.set_ylabel('Velocity [m/s]', color='red')
     VelAx.tick_params(axis='y', colors='red')
     VelAx.set_ylim([0,2])
     
-    FrLine = FrAx.plot(Dist, Fr, 'g-')
+    FrLine, = FrAx.plot(Dist, Fr, 'g-')
     FrAx.set_ylabel('Froude No.', color='green')
     FrAx.tick_params(axis='y', colors='green')
     FrAx.set_ylim([0,1.3])
     
     # Plot bedload
     if not Bedload is None:
-        QsLine = QsAx.plot(Dist, Bedload*3600, 'k-')
+        QsLine, = QsAx.plot(Dist, Bedload*3600, 'k-')
         QsAx.set_ylabel(r'Bedload [$\mathrm{m^3/hr}$]')
         QsAx.set_xlabel('Distance downstream [m]')
         QsAx.set_ylim([0,10])
@@ -218,15 +218,15 @@ def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep,
     Q = ChanVel * ChanDep * ChanWidth
     
     # Update the lines
-    LongSecFig[1][0].set_data(Dist, ChanElev)
-    LongSecFig[2][0].set_data(Dist, WL)
-    LongSecFig[3][0].set_data(Dist, Energy)
-    LongSecFig[4][0].set_data(Dist, ChanWidth)
-    LongSecFig[6][0].set_data(Dist, Q)
-    LongSecFig[7][0].set_data(Dist, ChanVel)
-    LongSecFig[8][0].set_data(Dist, Fr)
+    LongSecFig[1].set_data(Dist, ChanElev)
+    LongSecFig[2].set_data(Dist, WL)
+    LongSecFig[3].set_data(Dist, Energy)
+    LongSecFig[4].set_data(Dist, ChanWidth)
+    LongSecFig[6].set_data(Dist, Q)
+    LongSecFig[7].set_data(Dist, ChanVel)
+    LongSecFig[8].set_data(Dist, Fr)
     if not Bedload is None:
-        LongSecFig[9][0].set_data(Dist, Bedload*3600)
+        LongSecFig[9].set_data(Dist, Bedload*3600)
     
     # Update flow axis scaling
     LongSecFig[5].relim()
@@ -241,23 +241,29 @@ def BdyCndFig(OutputTs):
     
     # Flow plots
     QAx = Fig.subplots()
-    QInLine = QAx.plot(OutputTs.index, OutputTs.Qin, 'b-')
-    QOutLine = QAx.plot(OutputTs.index, OutputTs.Qout, 'r-')
+    QInLine, = QAx.plot(OutputTs.index, OutputTs.Qin, 'b-')
+    QOutLine, = QAx.plot(OutputTs.index, OutputTs.Qout, 'r-')
     QAx.set_ylim([0,200])
+    QAx.set_ylabel('Flow [$\mathrm{m^3/s}$]')
     
     # Sea level plot
     WlAx = QAx.twinx()
-    DsWlLine = WlAx.plot(OutputTs.index, OutputTs.SeaLevel, 'g-')
+    DsWlLine, = WlAx.plot(OutputTs.index, OutputTs.SeaLevel, 'g-')
     WlAx.set_ylim([-1,3])
+    WlAx.set_ylabel('Water level [m]')
+    
+    # Add legend
+    QAx.legend([QInLine, QOutLine, DsWlLine], 
+               ['Inflow', 'Outflow', 'Downstream WL'], loc=0)
     
     BdyFig = (Fig, QAx, WlAx, QInLine, QOutLine, DsWlLine)
     return BdyFig
 
 def updateBdyCndFig(BdyFig, OutputTs):
     # update lines
-    BdyFig[3][0].set_data(OutputTs.index, OutputTs.Qin)
-    BdyFig[4][0].set_data(OutputTs.index, OutputTs.Qout)
-    BdyFig[5][0].set_data(OutputTs.index, OutputTs.SeaLevel)
+    BdyFig[3].set_data(OutputTs.index, OutputTs.Qin)
+    BdyFig[4].set_data(OutputTs.index, OutputTs.Qout)
+    BdyFig[5].set_data(OutputTs.index, OutputTs.SeaLevel)
     
     # extend x-axis
     BdyFig[1].set_xlim(OutputTs.index[[0,-1]])
