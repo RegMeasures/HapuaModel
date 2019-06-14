@@ -146,7 +146,7 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None):
     Dist = np.insert(np.cumsum(ChanDx),0,0)
     WL = ChanElev + ChanDep
     Energy = WL + ChanVel**2 / (2*g)
-    Fr = ChanVel/np.sqrt(g*ChanDep)
+    Fr = abs(ChanVel)/np.sqrt(g*ChanDep)
     Q = ChanVel * ChanDep * ChanWidth
     
     # Create new figure with sub plots
@@ -214,7 +214,7 @@ def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep,
     Dist = np.insert(np.cumsum(ChanDx),0,0)
     WL = ChanElev + ChanDep
     Energy = WL + ChanVel**2 / (2*g)
-    Fr = ChanVel/np.sqrt(g*ChanDep)
+    Fr = abs(ChanVel)/np.sqrt(g*ChanDep)
     Q = ChanVel * ChanDep * ChanWidth
     
     # Update the lines
@@ -243,7 +243,7 @@ def BdyCndFig(OutputTs):
     QAx = Fig.subplots()
     QInLine, = QAx.plot(OutputTs.index, OutputTs.Qin, 'b-')
     QOutLine, = QAx.plot(OutputTs.index, OutputTs.Qout, 'r-')
-    QAx.set_ylim([0,200])
+    QAx.autoscale_view(tight = False)
     QAx.set_ylabel('Flow [$\mathrm{m^3/s}$]')
     
     # Sea level plot
@@ -267,6 +267,10 @@ def updateBdyCndFig(BdyFig, OutputTs):
     
     # extend x-axis
     BdyFig[1].set_xlim(OutputTs.index[[0,-1]])
+    
+    # rescale flow axis
+    BdyFig[1].relim()
+    BdyFig[1].autoscale_view(tight = False)
     
     # Redraw
     BdyFig[0].canvas.draw()
