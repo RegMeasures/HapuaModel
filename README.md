@@ -4,4 +4,4 @@ HapuaMod is a morphodynamic model of hāpua evolution. The model is driven by ti
 
 HapuaMod is being developed by Richard Measures, as part of PhD research funded by NIWA's Environmental Flows research program.
 
-For information about the model, how it works, how to use it, and how to contribute to its development, see the [wiki](wiki)
+For information about the model, how it works, how to use it, and how to contribute to its development, see the [wiki](../../wiki)
