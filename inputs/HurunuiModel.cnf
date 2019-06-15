@@ -78,6 +78,8 @@ BackshoreElev = 30
 [NumericalParameters]
 # Alongshore discretisation resolution (transect spacing) [m]
 AlongShoreDx = 20
+# Momentum (Boussinesq) coefficient (generally in the range 1 to 1.05) but can be set to zero to ignore the convective acceleration term of the momentum equation if desired!
+Beta = 1.05
 # Temporal weighting factor for implicit Preissmann scheme 
 Theta = 0.7
 # Error tolerance for implicit solution to unsteady river hydraulics [m and m/s]

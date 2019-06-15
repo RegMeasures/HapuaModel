@@ -45,6 +45,7 @@ RivFlow = hm.core.interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']
 SeaLevel = hm.core.interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartTime']])).values
 (ChanDep, ChanVel) = hm.riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
                                         PhysicalPars['Roughness'], 
+                                        NumericalPars['Beta'], 
                                         RivFlow, SeaLevel)
 
 # Bedload

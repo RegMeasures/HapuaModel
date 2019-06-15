@@ -146,6 +146,7 @@ def loadModel(Config):
                 BreakerCoef = 8 / (RhoSea * Gravity^1.5 * GammaRatio^2)
         NumericalPars (dict):
             Dx
+            Beta
             Theta
             ErrTol
             MaxIt
@@ -322,6 +323,7 @@ def loadModel(Config):
     #%% Read numerical parameters
     Dx = float(Config['NumericalParameters']['AlongShoreDx'])
     NumericalPars = {'Dx': Dx,
+                     'Beta': float(Config['NumericalParameters']['Beta']),
                      'Theta': float(Config['NumericalParameters']['Theta']),
                      'ErrTol': float(Config['NumericalParameters']['ErrTol']),
                      'MaxIt': float(Config['NumericalParameters']['MaxIt']),

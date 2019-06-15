@@ -44,7 +44,8 @@ PhysicalPars = {'RiverSlope': 0.003,
                 'VoidRatio': 0.4,
                 'RhoRiv': 1000.0,
                 'RhoSed': 2650.0}
-NumericalPars = {'Theta':0.7,
+NumericalPars = {'Beta':1.1,
+                 'Theta':0.7,
                  'ErrTol':0.001,
                  'MaxIt':20,
                  'WarnTol':0.1}
@@ -57,11 +58,11 @@ DsWl_Ts = np.full(100, DsWL)
 
 # Steady solution
 (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
-                                     Roughness, Qin, DsWL)
+                                     Roughness, NumericalPars['Beta'], Qin, DsWL)
 SteadyDep = ChanDep.copy()
 SteadyVel = ChanVel.copy()
 
-SteadyTime = timeit.timeit(stmt='riv.solveSteady(ChanDx, ChanElev, ChanWidth, Roughness, Qin, DsWL)', 
+SteadyTime = timeit.timeit(stmt='riv.solveSteady(ChanDx, ChanElev, ChanWidth, Roughness, NumericalPars["Beta"], Qin, DsWL)', 
                            globals=globals(), number=20)
 logging.info('Steady solution took %f s' % SteadyTime)
 
