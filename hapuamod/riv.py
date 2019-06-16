@@ -68,34 +68,40 @@ def solveSteady(ChanDx, ChanElev, ChanWidth, Roughness, Beta, Qin, DsWL):
     
     return ChanDep, ChanVel
 
-def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
+def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, 
+                        NumericalPars):
     """ Solve full S-V eqns for a rectangular channel using preissmann scheme.
         Uses a newton raphson solution to the preissmann discretisation of the 
         Saint-Venant equations.
         
-        solveFullPreissmann(z, B, h, V, dx, dt, n, Q, DsWl, Theta, Tol, MaxIt)
+        solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, 
+                            NumericalPars)
         
         Parameters:
             z (np.ndarray(float64)): Bed elevation at each node (m)
             B (np.ndarray(float64)): Channel width at each node (m)
-            LagArea
+            LagArea (np.ndarray(float64)): Offline lagoon area connected to 
+                each node (m^2)
             h (np.ndarray(float64)): Depth at each node at the last timestep (m)
             V (np.ndarray(float64)): Mean velocity at each node at the last timestep (m)
             dx (np.ndarray(float64)): Length of each reach between nodes (m)
                 note the dx array should be one shorter than for z, B, etc
             dt (pd.timedelta): timestep
             n (float): mannings 'n' roughness
-            Qin (np.ndarray(float64)): List (as np.array) of inflows at 
+            Q_Ts (np.ndarray(float64)): List (as np.array) of inflows at 
                 upstream end of channel corresponding to each timestep. 
                 Function will loop over each inflow in turn (m^3/s)
-            DsWl (np.ndarray(float64)): List (as np.array) of downstream 
+            DsWl_Ts (np.ndarray(float64)): List (as np.array) of downstream 
                 boundary water levels at upstream end of channel corresponding 
                 to each timestep. Function will loop over each inflow in turn 
                 (m^3/s)
-            Theta (float): temporal weighting coefficient for preissmann scheme
-            Tol (float): error tolerance (both m and m/s)
-            MaxIt (integer): maximum number of iterations to find solution
-            g (float): 
+            NumericalPars (dict): Numerical parameters including:
+                Theta
+                Beta
+                ErrTol
+                MaxIt
+                FrRelax1
+                FrRelax2
         
         Modifies in place:
             h
@@ -103,6 +109,7 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
         
     """
     g = 9.81                    # gravity [m/s^2]
+    sqrt_g = np.sqrt(g)
     
     Theta = NumericalPars['Theta']
     Beta = NumericalPars['Beta']
@@ -124,6 +131,17 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
     # Pre-compute some variables required within the loop
     A = h*B                     # area of flow at each XS [m^2]
     Sf = V*np.abs(V) * n**2 / h**(4/3) # friction slope at each XS [m/m]
+    Fr = V / (np.sqrt(g*h)) # Froude No. at each node
+    FrR = (Fr[1:] + Fr[:-1])/2
+    
+    M2 = 2*Beta*dt/dx
+    M4 = 1/(2*(FrMax - FrMin)*sqrt_g)
+    M6 = -2*FrMin/sqrt_g
+    M7 = g*dt/dx
+    M10 = -g*dt*Theta
+    
+    i0 = np.arange(0,N-1)
+    i1 = np.arange(1,N)
     
     # Main timestepping loop
     for StepNo in range(Q_Ts.shape[0]):
@@ -142,38 +160,54 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
                                        - V_old[:-1]*A_old[:-1]))
         
         # For momentum equation
-        C2 = (V_old[:-1]*A_old[:-1]
-              + V_old[1:]*A_old[1:]
-              -2*Beta*(dt/dx)*(1-Theta) * (V_old[1:]**2*A_old[1:]
-                                           - V_old[:-1]**2*A_old[:-1])
-              + g*dt*(1-Theta) * (A_old[1:]*(S_0 - Sf_old[1:]) 
-                                  + A_old[:-1]*(S_0 - Sf_old[:-1])))
-              
+        M1 = (V_old[1:]*A_old[1:] + V_old[:-1]*A_old[:-1] 
+              + g*dt*(1-Theta)(A_old[1:]*(S_0[1:]-Sf_old[1:]) 
+                               + A_old[:-1]*(S_0[:-1]-Sf_old[:-1])))
+        M3 = -(1-Theta) * (V_old[1:]**2*A_old[1:] - V_old[:-1]**2*A_old[:-1])
+        M5 = (1-Theta) * (V_old[1:]/np.sqrt(h_old[1:]) 
+                          + V_old[:-1]/np.sqrt(h_old[:-1]))
+        M8 = (1-Theta) * (A_old[1:] + A_old[:-1])
+        M9 = (1-Theta) * (h_old[1:] + h_old[:-1])
         
         # Iterative solution
         ItCount = 0
         Err = np.zeros(2*N)
+        ConIx = np.arange(1,2*N-1,2)
+        MomIx = np.arange(2,2*N-1,2)
         while ItCount < MaxIt:
             
             # Error in Us Bdy
             Err[0] = A[0]*V[0]-Q
             
             # Error in continuity equation
-            Err[np.arange(1,2*N-1,2)] = (h[:-1]*Be[:-1] + h[1:]*Be[1:]
+            Err[ConIx] = (h[:-1]*Be[:-1] + h[1:]*Be[1:]
                                          + 2*(dt/dx)*Theta * (V[1:]*A[1:] - V[:-1]*A[:-1])) - C1
             
-            # Error in momentum equation
-            Err[np.arange(2,2*N-1,2)] = (V[:-1]*A[:-1] + V[1:]*A[1:]
-                                         + 2*Beta*(dt/dx)*Theta * (V[1:]**2*A[1:]
-                                                                   - V[:-1]**2*A[:-1])
-                                         + g*(dt/dx)*(Theta*(A[1:]+A[:-1])+(1-Theta)*(A_old[1:]+A_old[:-1]))
-                                                    *(Theta*(h[1:]-h[:-1])+(1-Theta)*(h_old[1:]-h_old[:-1]))
-                                         - g*dt*Theta * (A[1:]*(S_0-Sf[1:]) + A[:-1]*(S_0-Sf[:-1]))
-                                        ) - C2
+            # Error in momentum equation (Selected approach depends on froude no)
+            Sub = FrR <= FrMin
+            Trans = np.logical_and(FrMin < FrR, FrR < FrMax)
+            Super = FrR >= FrMax
+            Err[MomIx[Sub]] = (V[i1[Sub]]*A[i1[Sub]] + V[i0[Sub]]*A[i0[Sub]]
+                               + M2[Sub] * Theta*(V[i1[Sub]]**2*A[i1[Sub]] - V[i0[Sub]]**2*A[i0[Sub]])
+                               + M7[Sub] * (Theta*(A[i1[Sub]]+A[i0[Sub]]) + M8[Sub]) 
+                                 * (Theta*(h[i1[Sub]]-h[i0[Sub]]) + M9[Sub])
+                               + M10 * (A[i1[Sub]]*(S_0-Sf[i1[Sub]]) + A[i0[Sub]]*(S_0-Sf[i0[Sub]]))
+                              ) - M1[Sub] + M2[Sub]*M3[Sub]
+            Err[MomIx[Trans]] = (V[i1[Trans]]*A[i1[Trans]] + V[i0[Trans]]*A[i0[Trans]]
+                                 + M2[Trans]*M4*(Theta*(V[i1[Trans]]/np.sqrt(h[i1[Trans]]) + V[i0[Trans]]/np.sqrt(h[i0[Trans]])) + M5[Trans] + M6)
+                                   *(Theta*(V[i1[Trans]]**2*A[i1[Trans]] - V[i0[Trans]]**2*A[i0[Trans]]) + M3[Trans])
+                                 + M7[Trans]*(Theta*(A[i1[Trans]]+A[i0[Trans]]) + M8[Trans])
+                                   * (Theta*(h[i1[Trans]]-h[i0[Trans]]) + M9[Trans])
+                                 + M10*(A[i1[Trans]]*(S_0-Sf[i1[Trans]]) + A[i0[Trans]]*(S_0-Sf[i0[Trans]]))
+                                ) - M1[Trans]
+            Err[MomIx[Super]] = (V[i1[Super]]*A[i1[Super]] + V[i0[Super]]*A[i0[Super]]
+                               + M7[Super] * (Theta*(A[i1[Super]]+A[i0[Super]]) + M8[Super]) 
+                                 * (Theta*(h[i1[Super]]-h[i0[Super]]) + M9[Super])
+                               + M10 * (A[i1[Super]]*(S_0-Sf[i1[Super]]) + A[i0[Super]]*(S_0-Sf[i0[Super]]))
+                              ) - M1[Super]
             
             # Error in Ds Bdy
-            Err[2*N-1] = z[N-1] + h[N-1] - DsWl
-            #Err[2*N-1] = z[N-1] + h[N-1] + V[N-1]**2/(2*g) - DsWl
+            Err[2*N-1] = z[-1] + h[-1] - DsWl
             
             # Solve errors using Newton Raphson
             # a Delta = Err
