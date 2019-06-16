@@ -325,6 +325,8 @@ def loadModel(Config):
     NumericalPars = {'Dx': Dx,
                      'Beta': float(Config['NumericalParameters']['Beta']),
                      'Theta': float(Config['NumericalParameters']['Theta']),
+                     'FrRelax1': float(Config['NumericalParameters']['FrRelax1']),
+                     'FrRelax2': float(Config['NumericalParameters']['FrRelax2']),
                      'ErrTol': float(Config['NumericalParameters']['ErrTol']),
                      'MaxIt': float(Config['NumericalParameters']['MaxIt']),
                      'WarnTol': float(Config['NumericalParameters']['WarnTol'])}

@@ -15,7 +15,6 @@ def solveSteady(ChanDx, ChanElev, ChanWidth, Roughness, Beta, Qin, DsWL):
     Grav = 9.81
     Tol = 0.0005
     MaxIter = 10
-    Beta
     
     # Find critical depth
     # Fr = Vel/sqrt(Grav*Dep) = 1 i.e. Vel^2 = Grav*Dep
@@ -109,6 +108,8 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
     Beta = NumericalPars['Beta']
     Tol = NumericalPars['ErrTol']
     MaxIt = NumericalPars['MaxIt']
+    FrMin = NumericalPars['FrRelax1']
+    FrMax = NumericalPars['FrRelax2']
     dt = dt.seconds             # timestep for hydraulics [s]
     N = z.size                  # number of cross-sections
     S_0 = (z[:-1]-z[1:])/dx     # bed slope in each reach between XS [m/m]

@@ -145,7 +145,7 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None):
     g = 9.81
     Dist = np.insert(np.cumsum(ChanDx),0,0)
     WL = ChanElev + ChanDep
-    Energy = WL + ChanVel**2 / (2*g)
+    Energy = WL + (ChanVel**2) / (2*g)
     Fr = abs(ChanVel)/np.sqrt(g*ChanDep)
     Q = ChanVel * ChanDep * ChanWidth
     
@@ -198,11 +198,13 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None):
     
     # Compile outputs
     if Bedload is None:
-        LongSecFig = (RivFig, BedLine, WaterLine, EnergyLine, WidthLine, 
-                      FlowAx, FlowLine, VelLine, FrLine)
+        LongSecFig = (RivFig, ElevAx, WidthAx, FlowAx, VelAx, FrAx, 
+                      BedLine, WaterLine, EnergyLine, WidthLine, 
+                      FlowLine, VelLine, FrLine)
     else:
-        LongSecFig = (RivFig, BedLine, WaterLine, EnergyLine, WidthLine, 
-                      FlowAx, FlowLine, VelLine, FrLine, QsLine)
+        LongSecFig = (RivFig, ElevAx, WidthAx, FlowAx, VelAx, FrAx, 
+                      BedLine, WaterLine, EnergyLine, WidthLine, 
+                      FlowLine, VelLine, FrLine, QsLine)
     
     return(LongSecFig)
 
@@ -213,24 +215,24 @@ def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep,
     g = 9.81
     Dist = np.insert(np.cumsum(ChanDx),0,0)
     WL = ChanElev + ChanDep
-    Energy = WL + ChanVel**2 / (2*g)
+    Energy = WL + (ChanVel**2) / (2*g)
     Fr = abs(ChanVel)/np.sqrt(g*ChanDep)
     Q = ChanVel * ChanDep * ChanWidth
     
     # Update the lines
-    LongSecFig[1].set_data(Dist, ChanElev)
-    LongSecFig[2].set_data(Dist, WL)
-    LongSecFig[3].set_data(Dist, Energy)
-    LongSecFig[4].set_data(Dist, ChanWidth)
-    LongSecFig[6].set_data(Dist, Q)
-    LongSecFig[7].set_data(Dist, ChanVel)
-    LongSecFig[8].set_data(Dist, Fr)
+    LongSecFig[6].set_data(Dist, ChanElev)
+    LongSecFig[7].set_data(Dist, WL)
+    LongSecFig[8].set_data(Dist, Energy)
+    LongSecFig[9].set_data(Dist, ChanWidth)
+    LongSecFig[10].set_data(Dist, Q)
+    LongSecFig[11].set_data(Dist, ChanVel)
+    LongSecFig[12].set_data(Dist, Fr)
     if not Bedload is None:
-        LongSecFig[9].set_data(Dist, Bedload*3600)
+        LongSecFig[13].set_data(Dist, Bedload*3600)
     
     # Update flow axis scaling
-    LongSecFig[5].relim()
-    LongSecFig[5].autoscale_view(tight = False)
+    LongSecFig[3].relim()
+    LongSecFig[3].autoscale_view(tight = False)
     
     # Redraw
     LongSecFig[0].canvas.draw()

@@ -82,6 +82,10 @@ AlongShoreDx = 20
 Beta = 1.05
 # Temporal weighting factor for implicit Preissmann scheme 
 Theta = 0.7
+# Lower bound froude number to start relaxing the dA/dx  part of the convective momentum term in the momentum equation
+FrRelax1 = 0.75
+# Upper bound froude number to eliminate the dA/dx part of the convective momentum term in the momentum equation
+FrRelax2 = 0.9
 # Error tolerance for implicit solution to unsteady river hydraulics [m and m/s]
 ErrTol = 0.001
 # Maximum iterations for implicit solution to unsteady river hydraulics
