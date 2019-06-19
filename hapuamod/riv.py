@@ -115,8 +115,9 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts,
     Beta = NumericalPars['Beta']
     Tol = NumericalPars['ErrTol']
     MaxIt = NumericalPars['MaxIt']
-    FrMin = NumericalPars['FrRelax1']
     FrMax = NumericalPars['FrRelax2']
+    FrMin = NumericalPars['FrRelax1']
+    FrRng = FrMax - FrMin
     dt = dt.seconds             # timestep for hydraulics [s]
     N = z.size                  # number of cross-sections
     S_0 = (z[:-1]-z[1:])/dx     # bed slope in each reach between XS [m/m]
@@ -132,13 +133,7 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts,
     A = h*B                     # area of flow at each XS [m^2]
     Sf = V*np.abs(V) * n**2 / h**(4/3) # friction slope at each XS [m/m]
     Fr = V / (np.sqrt(g*h)) # Froude No. at each node
-    FrR = (Fr[1:] + Fr[:-1])/2
-    
-    M2 = 2*Beta*dt/dx
-    M4 = 1/(2*(FrMax - FrMin)*sqrt_g)
-    M6 = -2*FrMin/sqrt_g
-    M7 = g*dt/dx
-    M10 = -g*dt*Theta
+    R = np.zeros(Fr.size)#(FrMax-Fr)/(FrRng)
     
     i0 = np.arange(0,N-1)
     i1 = np.arange(1,N)
@@ -152,6 +147,8 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts,
         h_old = h
         Sf_old = Sf
         A_old = A
+        R_old = R
+        Fr_old = Fr
         
         # Constant parts of the S-V Equations which can be computed outside the loop
         # For continuity equation
@@ -161,13 +158,13 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts,
         
         # For momentum equation
         M1 = (V_old[1:]*A_old[1:] + V_old[:-1]*A_old[:-1] 
-              + g*dt*(1-Theta)(A_old[1:]*(S_0[1:]-Sf_old[1:]) 
-                               + A_old[:-1]*(S_0[:-1]-Sf_old[:-1])))
-        M3 = -(1-Theta) * (V_old[1:]**2*A_old[1:] - V_old[:-1]**2*A_old[:-1])
-        M5 = (1-Theta) * (V_old[1:]/np.sqrt(h_old[1:]) 
-                          + V_old[:-1]/np.sqrt(h_old[:-1]))
-        M8 = (1-Theta) * (A_old[1:] + A_old[:-1])
-        M9 = (1-Theta) * (h_old[1:] + h_old[:-1])
+              - Beta*(1-Theta)*(dt/dx)*((R_old[1:]*A_old[1:]*V_old[1:] + R_old[:-1]*A_old[:-1]*V_old[:-1])
+                                        * (V_old[1:] - V_old[:-1])
+                                        + (V_old[1:] + V_old[:-1])
+                                        * (A_old[1:]*V_old[1:]-A_old[:-1]*V_old[:-1]))
+              - g*Theta*(dt/dx)*(A_old[1:]+A_old[:-1])*(h_old[1:]-h_old[:-1])
+              - g*(1-Theta)*dt*((A_old[1:]*Sf_old[1:]+A_old[:-1]*Sf_old[:-1])
+                                - S_0*(A_old[1:]+A_old[:-1])))
         
         # Iterative solution
         ItCount = 0
@@ -183,28 +180,15 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts,
             Err[ConIx] = (h[:-1]*Be[:-1] + h[1:]*Be[1:]
                                          + 2*(dt/dx)*Theta * (V[1:]*A[1:] - V[:-1]*A[:-1])) - C1
             
-            # Error in momentum equation (Selected approach depends on froude no)
-            Sub = FrR <= FrMin
-            Trans = np.logical_and(FrMin < FrR, FrR < FrMax)
-            Super = FrR >= FrMax
-            Err[MomIx[Sub]] = (V[i1[Sub]]*A[i1[Sub]] + V[i0[Sub]]*A[i0[Sub]]
-                               + M2[Sub] * Theta*(V[i1[Sub]]**2*A[i1[Sub]] - V[i0[Sub]]**2*A[i0[Sub]])
-                               + M7[Sub] * (Theta*(A[i1[Sub]]+A[i0[Sub]]) + M8[Sub]) 
-                                 * (Theta*(h[i1[Sub]]-h[i0[Sub]]) + M9[Sub])
-                               + M10 * (A[i1[Sub]]*(S_0-Sf[i1[Sub]]) + A[i0[Sub]]*(S_0-Sf[i0[Sub]]))
-                              ) - M1[Sub] + M2[Sub]*M3[Sub]
-            Err[MomIx[Trans]] = (V[i1[Trans]]*A[i1[Trans]] + V[i0[Trans]]*A[i0[Trans]]
-                                 + M2[Trans]*M4*(Theta*(V[i1[Trans]]/np.sqrt(h[i1[Trans]]) + V[i0[Trans]]/np.sqrt(h[i0[Trans]])) + M5[Trans] + M6)
-                                   *(Theta*(V[i1[Trans]]**2*A[i1[Trans]] - V[i0[Trans]]**2*A[i0[Trans]]) + M3[Trans])
-                                 + M7[Trans]*(Theta*(A[i1[Trans]]+A[i0[Trans]]) + M8[Trans])
-                                   * (Theta*(h[i1[Trans]]-h[i0[Trans]]) + M9[Trans])
-                                 + M10*(A[i1[Trans]]*(S_0-Sf[i1[Trans]]) + A[i0[Trans]]*(S_0-Sf[i0[Trans]]))
-                                ) - M1[Trans]
-            Err[MomIx[Super]] = (V[i1[Super]]*A[i1[Super]] + V[i0[Super]]*A[i0[Super]]
-                               + M7[Super] * (Theta*(A[i1[Super]]+A[i0[Super]]) + M8[Super]) 
-                                 * (Theta*(h[i1[Super]]-h[i0[Super]]) + M9[Super])
-                               + M10 * (A[i1[Super]]*(S_0-Sf[i1[Super]]) + A[i0[Super]]*(S_0-Sf[i0[Super]]))
-                              ) - M1[Super]
+            # Error in momentum equation
+            Err[MomIx] = (A[1:]*V[1:] + A[:-1]*V[:-1]
+                          + Beta*Theta*(dt/dx)*((R[1:]*A[1:]*V[1:] + R[:-1]*A[:-1]*V[:-1])
+                                                * (V[1:] - V[:-1])
+                                                + (V[1:] + V[:-1])
+                                                * (A[1:]*V[1:]-A[:-1]*V[:-1]))
+                          + g*Theta*(dt/dx)*(A[1:]+A[:-1])*(h[1:]-h[:-1])
+                          + g*Theta*dt*((A[1:]*Sf[1:]+A[:-1]*Sf[:-1])
+                                        - S_0*(A[1:]+A[:-1]))) - M1
             
             # Error in Ds Bdy
             Err[2*N-1] = z[-1] + h[-1] - DsWl
@@ -221,37 +205,66 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts,
             
             # Continuity equation derivatives
             # d/dh[0]
-            a_banded[3,np.arange(0,2*(N)-2,2)] = Be[:-1] - 2*dt/dx*Theta*V[:-1]*B[:-1]
+            a_banded[3,ConIx-1] = Be[:-1] - 2*dt/dx*Theta*V[:-1]*B[:-1]
             # d/dV[0]
-            a_banded[2,np.arange(1,2*(N)-2,2)] = -2*dt/dx*Theta*A[:-1]
+            a_banded[2,ConIx] = -2*dt/dx*Theta*A[:-1]
             # d/dh[1]
-            a_banded[1,np.arange(2,2*(N),2)] = Be[1:] + 2*dt/dx*Theta*V[1:]*B[1:]
+            a_banded[1,ConIx+1] = Be[1:] + 2*dt/dx*Theta*V[1:]*B[1:]
             # d/dV[1]
-            a_banded[0,np.arange(3,2*(N),2)] = 2*dt/dx*Theta*A[1:]
+            a_banded[0,ConIx+2] = 2*dt/dx*Theta*A[1:]
             
-            # Momentum equation derivatives
+            # Momentum equation derivatives - dependant on Fr
+            Fr2 = (Theta*(Fr[1:]+Fr[-1:]) + (1-Theta)*(Fr_old[1:]+Fr_old[:-1]))/2
+            
+            # Base part retained at all Fr
             # d/dh[0]
-            a_banded[4,np.arange(0,2*(N)-2,2)] = (V[:-1]*B[:-1] 
-                                                  - 2*Beta*(dt/dx)*Theta*V[:-1]**2*B[:-1]
-                                                  + g*(dt/dx)*Theta*(-2*Theta*A[:-1]
-                                                                     +B[:-1]*(Theta*h[1:]+(1-Theta)*(h_old[1:]-h_old[:-1]))
-                                                                     -(Theta*A[1:]+(1-Theta)*(A_old[1:]+A_old[:-1])))
-                                                  - g*dt*Theta*B[:-1]*(S_0+(1/3)*Sf[:-1]))
+            a_banded[4,MomIx-2] = (B[:-1]*V[:-1]
+                                   + Beta*(dt/dx)*Theta * B[:-1]*V[:-1]*(V[1:]-V[:-1])
+                                   + g*Theta*(dt/dx)*(-2*B[:-1]*h[:-1] + B[:-1]*h[1:] - B[1:]*h[1:])
+                                   - g*Theta*dt*B[:-1]*(Sf[:-1]/3 - S_0))
             # d/dV[0]
-            a_banded[3,np.arange(1,2*(N)-2,2)] = (A[:-1] 
-                                                  - 4*Beta*(dt/dx)*Theta*V[:-1]*A[:-1] 
-                                                  + g*dt*Theta*A[:-1]*Sf[:-1]/V[:-1])
+            a_banded[3,MomIx-1] = (A[:-1]
+                                   + Beta*(dt/dx)*Theta * (V[1:]*(A[:-1]-A[1:]) - 2*A[:-1]*V[:-1])
+                                   - 2*g*Theta*dt*A[:-1]*Sf[:-1]/V[-1])
             # d/dh[1]
-            a_banded[2,np.arange(2,2*(N),2)] = (V[1:]*B[1:] 
-                                                + 2*Beta*(dt/dx)*Theta*V[1:]**2*B[1:]
-                                                + g*(dt/dx)*Theta*(2*Theta*A[1:]
-                                                                   +B[1:]*(-Theta*h[:-1]+(1-Theta)*(h_old[1:]-h_old[:-1]))
-                                                                   +(Theta*A[:-1]+(1-Theta)*(A_old[1:]+A_old[:-1])))
-                                                - g*dt*Theta*B[1:]*(S_0+(1/3)*Sf[1:]))
+            a_banded[2,MomIx] = (B[1:]*V[1:]
+                                 + Beta*(dt/dx)*Theta * B[1:]*V[1:]*(V[1:]-V[:-1])
+                                 + g*Theta*(dt/dx)*(2*B[1:]*h[1:] + B[1:]*h[:-1] - B[:-1]*h[:-1])
+                                 - g*Theta*dt*B[1:]*(Sf[1:]/3 - S_0))
             # d/dV[1]
-            a_banded[1,np.arange(3,2*(N),2)] = (A[1:] 
-                                                + 4*Beta*dt/dx*Theta*V[1:]*A[1:] 
-                                                + g*dt*Theta*A[1:]*Sf[1:]/V[1:])
+            a_banded[1,MomIx+1] = (A[1:]
+                                   + Beta*(dt/dx)*Theta * (V[:-1]*(A[:-1]-A[1:]) + 2*A[1:]*V[1:])
+                                   - 2*g*Theta*dt*A[1:]*Sf[1:]/V[1:])
+            
+#            # Fr <= FrMin --> Full St Venant, no relaxation
+#            Sub = Fr2 <= FrMin
+#            
+#            # d/dh[0]
+#            a_banded[4,MomIx[Sub]-2] += Beta*(dt/dx[Sub])*Theta * B[i0[Sub]]*V[i0[Sub]]*(V[i1[Sub]]-V[i0[Sub]])
+#            # d/dV[0]
+#            a_banded[3,MomIx[Sub]-1] += Beta*(dt/dx[Sub])*Theta * (V[i1[Sub]]*(A[i0[Sub]]-A[i1[Sub]]) - 2*A[i0[Sub]]*V[i0[Sub]])
+#            # d/dh[1]
+#            a_banded[2,MomIx[Sub]] += Beta*(dt/dx[Sub])*Theta * B[i1[Sub]]*V[i1[Sub]]*(V[i1[Sub]]-V[i0[Sub]])
+#            # d/dV[1]
+#            a_banded[1,MomIx[Sub]+1] += Beta*(dt/dx[Sub])*Theta * (V[i0[Sub]]*(A[i0[Sub]]-A[i1[Sub]]) + 2*A[i1[Sub]]*V[i1[Sub]])
+#            
+#            # FrMin < Fr < FrMax --> Partial relaxation
+#            Tra = np.logical_and(~Sub, Fr2<FrMax)
+#            
+#            # d/dh[0]
+#            a_banded[4,MomIx[Tra]-2] += Beta*(dt/dx[Tra])*Theta * (A[i0[Tra]]*(V[i0[Tra]]**2)/(2*sqrt_g*FrRng*(h[i0[Tra]]**1.5))) * (V[i1[Tra]]-V[i0[Tra]])
+#            # d/dV[0]
+#            a_banded[3,MomIx[Tra]-1] += Beta*(dt/dx[Tra])*Theta * ((A[i1[Tra]]*V[i1[Tra]]*(V[i1[Tra]]*(h[i1[Tra]]**-0.5) - sqrt_g*FrMax)
+#                                                                    + A[i0[Tra]]*V[i1[Tra]]*(sqrt_g*FrMax - 2*V[i0[Tra]]*(h[i0[Tra]]**-0.5))
+#                                                                    + A[i0[Tra]]*V[i0[Tra]]*(3*V[i0[Tra]]*(h[i0[Tra]]**-0.5) - 2*sqrt_g*FrMax)) 
+#                                                                   / (sqrt_g * FrRng))
+#            # d/dh[1]
+#            a_banded[2,MomIx[Tra]] += Beta*(dt/dx[Tra])*Theta * (A[i1[Tra]]*V[i1[Tra]]**2/(2*sqrt_g*FrRng*(h[i1[Tra]]**1.5))) * (V[i1[Tra]]-V[i0[Tra]])
+#            # d/dV[1]
+#            a_banded[1,MomIx[Tra]+1] += Beta*(dt/dx[Tra])*Theta * ((A[i1[Tra]]*V[i1[Tra]]*(2*sqrt_g*FrMax - 3*V[i1[Tra]]*(h[i1[Tra]]**-0.5))
+#                                                                    + A[i1[Tra]]*V[i0[Tra]]*(2*V[i1[Tra]]*(h[i1[Tra]]**-0.5) - sqrt_g*FrMax)
+#                                                                    + A[i0[Tra]]*V[i0[Tra]]*(sqrt_g*FrMax - V[i0[Tra]]*(h[i0[Tra]]**-0.5))) 
+#                                                                   / (sqrt_g * FrRng))
             
             # Ds Bdy condition derivatives
             a_banded[2,2*N-1] = 0
@@ -265,15 +278,15 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts,
             h -= Delta[np.arange(0,2*N,2)]
             V -= Delta[np.arange(1,2*N,2)]
             
-            # Update Sf and A
-            Sf = V*np.abs(V) * n**2 / h**(4/3)
-            A = h*B
-            
             # Check if solution is within tolerance
-    #        if np.sum(np.abs(Delta)) < Tol:
-    #            break
             if np.all(np.abs(Delta) < Tol):
                 break
+            
+            # Update Sf, A, Fr and R
+            Sf = V*np.abs(V) * n**2 / h**(4/3)
+            A = h*B
+            Fr = V / (np.sqrt(g*h)) # Froude No. at each node
+            R = (FrMax-Fr)/(FrRng)
             
             # Stability warnings
             if np.amax(Delta)>NumericalPars['WarnTol']:
