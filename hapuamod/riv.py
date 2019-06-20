@@ -133,7 +133,7 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts,
     A = h*B                     # area of flow at each XS [m^2]
     Sf = V*np.abs(V) * n**2 / h**(4/3) # friction slope at each XS [m/m]
     Fr = V / (np.sqrt(g*h)) # Froude No. at each node
-    R = np.zeros(Fr.size)#(FrMax-Fr)/(FrRng)
+    R = (FrMax-Fr)/(FrRng) #np.ones(Fr.size)
     
     i0 = np.arange(0,N-1)
     i1 = np.arange(1,N)
@@ -143,12 +143,12 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts,
         Q = Q_Ts[StepNo]
         DsWl = DsWl_Ts[StepNo]
         
-        V_old = V
-        h_old = h
-        Sf_old = Sf
-        A_old = A
-        R_old = R
-        Fr_old = Fr
+        V_old = V.copy()
+        h_old = h.copy()
+        Sf_old = Sf.copy()
+        A_old = A.copy()
+        R_old = R.copy()
+        Fr_old = Fr.copy()
         
         # Constant parts of the S-V Equations which can be computed outside the loop
         # For continuity equation
@@ -159,12 +159,12 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts,
         # For momentum equation
         M1 = (V_old[1:]*A_old[1:] + V_old[:-1]*A_old[:-1] 
               - Beta*(1-Theta)*(dt/dx)*((R_old[1:]*A_old[1:]*V_old[1:] + R_old[:-1]*A_old[:-1]*V_old[:-1])
-                                        * (V_old[1:] - V_old[:-1])
+                                            * (V_old[1:] - V_old[:-1])
                                         + (V_old[1:] + V_old[:-1])
-                                        * (A_old[1:]*V_old[1:]-A_old[:-1]*V_old[:-1]))
-              - g*Theta*(dt/dx)*(A_old[1:]+A_old[:-1])*(h_old[1:]-h_old[:-1])
-              - g*(1-Theta)*dt*((A_old[1:]*Sf_old[1:]+A_old[:-1]*Sf_old[:-1])
-                                - S_0*(A_old[1:]+A_old[:-1])))
+                                            * (A_old[1:]*V_old[1:]-A_old[:-1]*V_old[:-1]))
+              - g*(1-Theta)*(dt/dx)*(A_old[1:]+A_old[:-1])*(h_old[1:]-h_old[:-1])
+              - g*(1-Theta)*dt*(A_old[1:]*(Sf_old[1:]-S_0)
+                                 +A_old[:-1]*(Sf_old[:-1]-S_0)))
         
         # Iterative solution
         ItCount = 0
@@ -182,13 +182,11 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts,
             
             # Error in momentum equation
             Err[MomIx] = (A[1:]*V[1:] + A[:-1]*V[:-1]
-                          + Beta*Theta*(dt/dx)*((R[1:]*A[1:]*V[1:] + R[:-1]*A[:-1]*V[:-1])
-                                                * (V[1:] - V[:-1])
-                                                + (V[1:] + V[:-1])
-                                                * (A[1:]*V[1:]-A[:-1]*V[:-1]))
+                          + Beta*Theta*(dt/dx)*((R[1:]*A[1:]*V[1:] + R[:-1]*A[:-1]*V[:-1]) * (V[1:] - V[:-1])
+                                                + (V[1:] + V[:-1]) * (A[1:]*V[1:]-A[:-1]*V[:-1]))
                           + g*Theta*(dt/dx)*(A[1:]+A[:-1])*(h[1:]-h[:-1])
-                          + g*Theta*dt*((A[1:]*Sf[1:]+A[:-1]*Sf[:-1])
-                                        - S_0*(A[1:]+A[:-1]))) - M1
+                          + g*Theta*dt*(A[1:]*(Sf[1:]-S_0)
+                                        +A[:-1]*(Sf[:-1]-S_0))) - M1
             
             # Error in Ds Bdy
             Err[2*N-1] = z[-1] + h[-1] - DsWl
@@ -219,52 +217,52 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts,
             # Base part retained at all Fr
             # d/dh[0]
             a_banded[4,MomIx-2] = (B[:-1]*V[:-1]
-                                   + Beta*(dt/dx)*Theta * B[:-1]*V[:-1]*(V[1:]-V[:-1])
-                                   + g*Theta*(dt/dx)*(-2*B[:-1]*h[:-1] + B[:-1]*h[1:] - B[1:]*h[1:])
-                                   - g*Theta*dt*B[:-1]*(Sf[:-1]/3 - S_0))
+                                   - Beta*Theta*(dt/dx) * B[:-1]*V[:-1]*(V[1:]+V[:-1])
+                                   + g*Theta*(dt/dx)*(-2*A[:-1] + B[:-1]*h[1:] - A[1:])
+                                   - g*Theta*dt*B[:-1]*(Sf[:-1]/3 + S_0))
             # d/dV[0]
             a_banded[3,MomIx-1] = (A[:-1]
-                                   + Beta*(dt/dx)*Theta * (V[1:]*(A[:-1]-A[1:]) - 2*A[:-1]*V[:-1])
-                                   - 2*g*Theta*dt*A[:-1]*Sf[:-1]/V[-1])
+                                   + Beta*Theta*(dt/dx) * (V[1:]*(A[1:]-A[:-1]) - 2*A[:-1]*V[:-1])
+                                   + 2*g*Theta*dt*A[:-1]*Sf[:-1]/np.abs(V[-1]))
             # d/dh[1]
             a_banded[2,MomIx] = (B[1:]*V[1:]
-                                 + Beta*(dt/dx)*Theta * B[1:]*V[1:]*(V[1:]-V[:-1])
-                                 + g*Theta*(dt/dx)*(2*B[1:]*h[1:] + B[1:]*h[:-1] - B[:-1]*h[:-1])
-                                 - g*Theta*dt*B[1:]*(Sf[1:]/3 - S_0))
+                                 + Beta*Theta*(dt/dx) * B[1:]*V[1:]*(V[1:]+V[:-1])
+                                 + g*Theta*(dt/dx)*(2*A[1:] - B[1:]*h[:-1] + A[:-1])
+                                 - g*Theta*dt*B[1:]*(Sf[1:]/3 + S_0))
             # d/dV[1]
             a_banded[1,MomIx+1] = (A[1:]
-                                   + Beta*(dt/dx)*Theta * (V[:-1]*(A[:-1]-A[1:]) + 2*A[1:]*V[1:])
-                                   - 2*g*Theta*dt*A[1:]*Sf[1:]/V[1:])
+                                   + Beta*(dt/dx)*Theta * (V[:-1]*(A[1:]-A[:-1]) + 2*A[1:]*V[1:])
+                                   + 2*g*Theta*dt*A[1:]*Sf[1:]/np.abs(V[1:]))
             
-#            # Fr <= FrMin --> Full St Venant, no relaxation
-#            Sub = Fr2 <= FrMin
-#            
-#            # d/dh[0]
-#            a_banded[4,MomIx[Sub]-2] += Beta*(dt/dx[Sub])*Theta * B[i0[Sub]]*V[i0[Sub]]*(V[i1[Sub]]-V[i0[Sub]])
-#            # d/dV[0]
-#            a_banded[3,MomIx[Sub]-1] += Beta*(dt/dx[Sub])*Theta * (V[i1[Sub]]*(A[i0[Sub]]-A[i1[Sub]]) - 2*A[i0[Sub]]*V[i0[Sub]])
-#            # d/dh[1]
-#            a_banded[2,MomIx[Sub]] += Beta*(dt/dx[Sub])*Theta * B[i1[Sub]]*V[i1[Sub]]*(V[i1[Sub]]-V[i0[Sub]])
-#            # d/dV[1]
-#            a_banded[1,MomIx[Sub]+1] += Beta*(dt/dx[Sub])*Theta * (V[i0[Sub]]*(A[i0[Sub]]-A[i1[Sub]]) + 2*A[i1[Sub]]*V[i1[Sub]])
-#            
-#            # FrMin < Fr < FrMax --> Partial relaxation
-#            Tra = np.logical_and(~Sub, Fr2<FrMax)
-#            
-#            # d/dh[0]
-#            a_banded[4,MomIx[Tra]-2] += Beta*(dt/dx[Tra])*Theta * (A[i0[Tra]]*(V[i0[Tra]]**2)/(2*sqrt_g*FrRng*(h[i0[Tra]]**1.5))) * (V[i1[Tra]]-V[i0[Tra]])
-#            # d/dV[0]
-#            a_banded[3,MomIx[Tra]-1] += Beta*(dt/dx[Tra])*Theta * ((A[i1[Tra]]*V[i1[Tra]]*(V[i1[Tra]]*(h[i1[Tra]]**-0.5) - sqrt_g*FrMax)
-#                                                                    + A[i0[Tra]]*V[i1[Tra]]*(sqrt_g*FrMax - 2*V[i0[Tra]]*(h[i0[Tra]]**-0.5))
-#                                                                    + A[i0[Tra]]*V[i0[Tra]]*(3*V[i0[Tra]]*(h[i0[Tra]]**-0.5) - 2*sqrt_g*FrMax)) 
-#                                                                   / (sqrt_g * FrRng))
-#            # d/dh[1]
-#            a_banded[2,MomIx[Tra]] += Beta*(dt/dx[Tra])*Theta * (A[i1[Tra]]*V[i1[Tra]]**2/(2*sqrt_g*FrRng*(h[i1[Tra]]**1.5))) * (V[i1[Tra]]-V[i0[Tra]])
-#            # d/dV[1]
-#            a_banded[1,MomIx[Tra]+1] += Beta*(dt/dx[Tra])*Theta * ((A[i1[Tra]]*V[i1[Tra]]*(2*sqrt_g*FrMax - 3*V[i1[Tra]]*(h[i1[Tra]]**-0.5))
-#                                                                    + A[i1[Tra]]*V[i0[Tra]]*(2*V[i1[Tra]]*(h[i1[Tra]]**-0.5) - sqrt_g*FrMax)
-#                                                                    + A[i0[Tra]]*V[i0[Tra]]*(sqrt_g*FrMax - V[i0[Tra]]*(h[i0[Tra]]**-0.5))) 
-#                                                                   / (sqrt_g * FrRng))
+            # Fr <= FrMin --> Full St Venant, no relaxation
+            Sub = Fr2 <= FrMin
+            
+            # d/dh[0]
+            a_banded[4,MomIx[Sub]-2] += Beta*(dt/dx[Sub])*Theta * B[i0[Sub]]*V[i0[Sub]]*(V[i1[Sub]]-V[i0[Sub]])
+            # d/dV[0]
+            a_banded[3,MomIx[Sub]-1] += Beta*(dt/dx[Sub])*Theta * (V[i1[Sub]]*(A[i0[Sub]]-A[i1[Sub]]) - 2*A[i0[Sub]]*V[i0[Sub]])
+            # d/dh[1]
+            a_banded[2,MomIx[Sub]] += Beta*(dt/dx[Sub])*Theta * B[i1[Sub]]*V[i1[Sub]]*(V[i1[Sub]]-V[i0[Sub]])
+            # d/dV[1]
+            a_banded[1,MomIx[Sub]+1] += Beta*(dt/dx[Sub])*Theta * (V[i0[Sub]]*(A[i0[Sub]]-A[i1[Sub]]) + 2*A[i1[Sub]]*V[i1[Sub]])
+            
+            # FrMin < Fr < FrMax --> Partial relaxation
+            Tra = np.logical_and(~Sub, Fr2<FrMax)
+            
+            # d/dh[0]
+            a_banded[4,MomIx[Tra]-2] += Beta*(dt/dx[Tra])*Theta * (A[i0[Tra]]*(V[i0[Tra]]**2)/(2*sqrt_g*FrRng*(h[i0[Tra]]**1.5))) * (V[i1[Tra]]-V[i0[Tra]])
+            # d/dV[0]
+            a_banded[3,MomIx[Tra]-1] += Beta*(dt/dx[Tra])*Theta * ((A[i1[Tra]]*V[i1[Tra]]*(V[i1[Tra]]*(h[i1[Tra]]**-0.5) - sqrt_g*FrMax)
+                                                                    + A[i0[Tra]]*V[i1[Tra]]*(sqrt_g*FrMax - 2*V[i0[Tra]]*(h[i0[Tra]]**-0.5))
+                                                                    + A[i0[Tra]]*V[i0[Tra]]*(3*V[i0[Tra]]*(h[i0[Tra]]**-0.5) - 2*sqrt_g*FrMax)) 
+                                                                   / (sqrt_g * FrRng))
+            # d/dh[1]
+            a_banded[2,MomIx[Tra]] += Beta*(dt/dx[Tra])*Theta * (A[i1[Tra]]*V[i1[Tra]]**2/(2*sqrt_g*FrRng*(h[i1[Tra]]**1.5))) * (V[i1[Tra]]-V[i0[Tra]])
+            # d/dV[1]
+            a_banded[1,MomIx[Tra]+1] += Beta*(dt/dx[Tra])*Theta * ((A[i1[Tra]]*V[i1[Tra]]*(2*sqrt_g*FrMax - 3*V[i1[Tra]]*(h[i1[Tra]]**-0.5))
+                                                                    + A[i1[Tra]]*V[i0[Tra]]*(2*V[i1[Tra]]*(h[i1[Tra]]**-0.5) - sqrt_g*FrMax)
+                                                                    + A[i0[Tra]]*V[i0[Tra]]*(sqrt_g*FrMax - V[i0[Tra]]*(h[i0[Tra]]**-0.5))) 
+                                                                   / (sqrt_g * FrRng))
             
             # Ds Bdy condition derivatives
             a_banded[2,2*N-1] = 0
