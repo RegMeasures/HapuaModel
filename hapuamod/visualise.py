@@ -123,6 +123,9 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx):
     ModelFig[5].set_data(ShoreX, ShoreY[:,4])
     ModelFig[6].set_data([0,0], [RiverY, RiverY-300])
     
+    # Redraw
+    ModelFig[0].canvas.draw()
+    ModelFig[0].canvas.flush_events()
     
 def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None):
     """ Create a long section of the river to the lagoon outlet

@@ -108,8 +108,6 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
     Beta = NumericalPars['Beta']
     Tol = NumericalPars['ErrTol']
     MaxIt = NumericalPars['MaxIt']
-    FrMin = NumericalPars['FrRelax1']
-    FrMax = NumericalPars['FrRelax2']
     dt = dt.seconds             # timestep for hydraulics [s]
     N = z.size                  # number of cross-sections
     S_0 = (z[:-1]-z[1:])/dx     # bed slope in each reach between XS [m/m]
@@ -146,6 +144,7 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
               + V_old[1:]*A_old[1:]
               -2*Beta*(dt/dx)*(1-Theta) * (V_old[1:]*np.abs(V_old[1:])*A_old[1:]
                                            - V_old[:-1]*np.abs(V_old[:-1])*A_old[:-1])
+              - g*(dt/dx)*(1-Theta) * (A_old[1:] + A_old[:-1]) * (h_old[1:]-h_old[:-1])
               + g*dt*(1-Theta) * (A_old[1:]*(S_0 - Sf_old[1:]) 
                                   + A_old[:-1]*(S_0 - Sf_old[:-1])))
               
@@ -166,8 +165,7 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
             Err[np.arange(2,2*N-1,2)] = (V[:-1]*A[:-1] + V[1:]*A[1:]
                                          + 2*Beta*(dt/dx)*Theta * (V[1:]*np.abs(V[1:])*A[1:]
                                                                    - V[:-1]*np.abs(V[:-1])*A[:-1])
-                                         + g*(dt/dx)*(Theta*(A[1:]+A[:-1])+(1-Theta)*(A_old[1:]+A_old[:-1]))
-                                                    *(Theta*(h[1:]-h[:-1])+(1-Theta)*(h_old[1:]-h_old[:-1]))
+                                         + g*(dt/dx)*Theta * (A[1:] + A[:-1]) * (h[1:]-h[:-1])
                                          - g*dt*Theta * (A[1:]*(S_0-Sf[1:]) + A[:-1]*(S_0-Sf[:-1]))
                                         ) - C2
             
@@ -199,9 +197,7 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
             # d/dh[0]
             a_banded[4,np.arange(0,2*(N)-2,2)] = (V[:-1]*B[:-1] 
                                                   - 2*Beta*(dt/dx)*Theta*V[:-1]**2*B[:-1]
-                                                  + g*(dt/dx)*Theta*(-2*Theta*A[:-1]
-                                                                     +B[:-1]*(Theta*h[1:]+(1-Theta)*(h_old[1:]-h_old[:-1]))
-                                                                     -(Theta*A[1:]+(1-Theta)*(A_old[1:]+A_old[:-1])))
+                                                  + g*Theta*(dt/dx)*(-2*A[:-1] + B[:-1]*h[1:] - A[1:])
                                                   - g*dt*Theta*B[:-1]*(S_0+(1/3)*Sf[:-1]))
             # d/dV[0]
             a_banded[3,np.arange(1,2*(N)-2,2)] = (A[:-1] 
@@ -210,9 +206,7 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
             # d/dh[1]
             a_banded[2,np.arange(2,2*(N),2)] = (V[1:]*B[1:] 
                                                 + 2*Beta*(dt/dx)*Theta*V[1:]**2*B[1:]
-                                                + g*(dt/dx)*Theta*(2*Theta*A[1:]
-                                                                   +B[1:]*(-Theta*h[:-1]+(1-Theta)*(h_old[1:]-h_old[:-1]))
-                                                                   +(Theta*A[:-1]+(1-Theta)*(A_old[1:]+A_old[:-1])))
+                                                + g*Theta*(dt/dx)*(2*A[1:] - B[1:]*h[:-1] + A[:-1])
                                                 - g*dt*Theta*B[1:]*(S_0+(1/3)*Sf[1:]))
             # d/dV[1]
             a_banded[1,np.arange(3,2*(N),2)] = (A[1:] 
