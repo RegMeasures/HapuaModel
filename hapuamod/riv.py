@@ -144,8 +144,8 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
         # For momentum equation
         C2 = (V_old[:-1]*A_old[:-1]
               + V_old[1:]*A_old[1:]
-              -2*Beta*(dt/dx)*(1-Theta) * (V_old[1:]**2*A_old[1:]
-                                           - V_old[:-1]**2*A_old[:-1])
+              -2*Beta*(dt/dx)*(1-Theta) * (V_old[1:]*np.abs(V_old[1:])*A_old[1:]
+                                           - V_old[:-1]*np.abs(V_old[:-1])*A_old[:-1])
               + g*dt*(1-Theta) * (A_old[1:]*(S_0 - Sf_old[1:]) 
                                   + A_old[:-1]*(S_0 - Sf_old[:-1])))
               
@@ -164,8 +164,8 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
             
             # Error in momentum equation
             Err[np.arange(2,2*N-1,2)] = (V[:-1]*A[:-1] + V[1:]*A[1:]
-                                         + 2*Beta*(dt/dx)*Theta * (V[1:]**2*A[1:]
-                                                                   - V[:-1]**2*A[:-1])
+                                         + 2*Beta*(dt/dx)*Theta * (V[1:]*np.abs(V[1:])*A[1:]
+                                                                   - V[:-1]*np.abs(V[:-1])*A[:-1])
                                          + g*(dt/dx)*(Theta*(A[1:]+A[:-1])+(1-Theta)*(A_old[1:]+A_old[:-1]))
                                                     *(Theta*(h[1:]-h[:-1])+(1-Theta)*(h_old[1:]-h_old[:-1]))
                                          - g*dt*Theta * (A[1:]*(S_0-Sf[1:]) + A[:-1]*(S_0-Sf[:-1]))
@@ -206,7 +206,7 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
             # d/dV[0]
             a_banded[3,np.arange(1,2*(N)-2,2)] = (A[:-1] 
                                                   - 4*Beta*(dt/dx)*Theta*V[:-1]*A[:-1] 
-                                                  + g*dt*Theta*A[:-1]*Sf[:-1]/V[:-1])
+                                                  + 2*g*dt*Theta*A[:-1]*Sf[:-1]/V[:-1])
             # d/dh[1]
             a_banded[2,np.arange(2,2*(N),2)] = (V[1:]*B[1:] 
                                                 + 2*Beta*(dt/dx)*Theta*V[1:]**2*B[1:]
@@ -217,7 +217,7 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
             # d/dV[1]
             a_banded[1,np.arange(3,2*(N),2)] = (A[1:] 
                                                 + 4*Beta*dt/dx*Theta*V[1:]*A[1:] 
-                                                + g*dt*Theta*A[1:]*Sf[1:]/V[1:])
+                                                + 2*g*dt*Theta*A[1:]*Sf[1:]/V[1:])
             
             # Ds Bdy condition derivatives
             a_banded[2,2*N-1] = 0
