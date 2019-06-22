@@ -50,8 +50,7 @@ def run(ModelConfigFile):
     
     (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
                                          PhysicalPars['Roughness'], 
-                                         NumericalPars['Beta'], 
-                                         RivFlow, SeaLevel)
+                                         RivFlow, SeaLevel, NumericalPars)
     
     #%% Set up variables to hold output timeseries
     OutputTs = pd.DataFrame(list(zip([RivFlow],[RivFlow],[SeaLevel])),

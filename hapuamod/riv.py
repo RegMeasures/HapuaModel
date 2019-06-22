@@ -6,15 +6,17 @@ import numpy as np
 from scipy import linalg
 import logging
 
-def solveSteady(ChanDx, ChanElev, ChanWidth, Roughness, Beta, Qin, DsWL):
+def solveSteady(ChanDx, ChanElev, ChanWidth, Roughness, Qin, DsWL, 
+                NumericalPars):
     """ Solve steady state river hydraulics for a rectangular channel
     
     (ChanDep, ChanVel) = solveSteady(ChanDx, ChanElev, ChanWidth, 
-                                     Roughness, Qin, DsWL)
+                                     Roughness, Qin, DsWL, NumericalPars)
     """
     Grav = 9.81
-    Tol = 0.0005
-    MaxIter = 10
+    Beta = NumericalPars['Beta']
+    Tol = NumericalPars['ErrTol']
+    MaxIt = NumericalPars['MaxIt']
     
     # Find critical depth
     # Fr = Vel/sqrt(Grav*Dep) = 1 i.e. Vel^2 = Grav*Dep
@@ -56,7 +58,7 @@ def solveSteady(ChanDx, ChanElev, ChanWidth, Roughness, Beta, Qin, DsWL):
             ChanDep[XS] -= DepErr / Gradient
             DepErr = ChanDep[XS] + Acoef*ChanDep[XS]**(-2) - Bcoef*ChanDep[XS]**(-10/3) + Cconst
             CheckCount += 1
-            assert CheckCount < MaxIter, 'Maximum iterations exceeded solving steady state water level'
+            assert CheckCount < MaxIt, 'Maximum iterations exceeded solving steady state water level'
         
         # Check for supercritical
         if ChanDep[XS] < CritDep[XS]:
@@ -112,6 +114,10 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
     N = z.size                  # number of cross-sections
     S_0 = (z[:-1]-z[1:])/dx     # bed slope in each reach between XS [m/m]
     
+    # Prevent unexpected errors
+    h[h<=0] = 0.0001 # Prevent negative depths
+    V[V==0] = 0.0001 # Prevent zero velocities
+    
     # Calculate effective width for volume change i.e. total planform area/reach length. 
     dx2 = np.zeros(z.size)
     dx2[0] = dx[0]
@@ -121,7 +127,7 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
     
     # Pre-compute some variables required within the loop
     A = h*B                     # area of flow at each XS [m^2]
-    Sf = V*np.abs(V) * n**2 / h**(4/3) # friction slope at each XS [m/m]
+    Sf = V*np.abs(V) * (n**2) / (h**(4/3)) # friction slope at each XS [m/m]
     
     # Main timestepping loop
     for StepNo in range(Q_Ts.shape[0]):
@@ -136,18 +142,15 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
         # Constant parts of the S-V Equations which can be computed outside the loop
         # For continuity equation
         C1 = (h_old[:-1]*Be[:-1] + h_old[1:]*Be[1:] 
-              - 2*(dt/dx)*(1-Theta) * (V_old[1:]*A_old[1:] 
-                                       - V_old[:-1]*A_old[:-1]))
+              - 2*(dt/dx)*(1-Theta) * (V_old[1:]*A_old[1:] - V_old[:-1]*A_old[:-1]))
         
         # For momentum equation
-        C2 = (V_old[:-1]*A_old[:-1]
-              + V_old[1:]*A_old[1:]
+        C2 = (V_old[:-1]*A_old[:-1] + V_old[1:]*A_old[1:]
               -2*Beta*(dt/dx)*(1-Theta) * (V_old[1:]*np.abs(V_old[1:])*A_old[1:]
                                            - V_old[:-1]*np.abs(V_old[:-1])*A_old[:-1])
               - g*(dt/dx)*(1-Theta) * (A_old[1:] + A_old[:-1]) * (h_old[1:]-h_old[:-1])
               + g*dt*(1-Theta) * (A_old[1:]*(S_0 - Sf_old[1:]) 
                                   + A_old[:-1]*(S_0 - Sf_old[:-1])))
-              
         
         # Iterative solution
         ItCount = 0
@@ -225,8 +228,12 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
             h -= Delta[np.arange(0,2*N,2)]
             V -= Delta[np.arange(1,2*N,2)]
             
+            # Prevent unexpected errors
+            h[h<=0] = 0.0001 # Prevent negative depths
+            V[V==0] = 0.0001 # Prevent zero velocities
+            
             # Update Sf and A
-            Sf = V*np.abs(V) * n**2 / h**(4/3)
+            Sf = V*np.abs(V) * (n**2) / (h**(4/3))
             A = h*B
             
             # Check if solution is within tolerance
@@ -275,11 +282,8 @@ def calcBedload(z, B, h, V, dx, PhysicalPars):
     D = PhysicalPars['GrainSize']
     VoidRatio = PhysicalPars['VoidRatio']
     
-    # Slope at each XS assumed to equal energy slope in reach upstream of XS
-    TotHead = z + h + V**2/(2*g)
-    S = np.empty(z.size)
-    S[0] = PhysicalPars['RiverSlope']
-    S[1:] = (TotHead[:-1]-TotHead[1:])/dx
+    # Use friction slope rather than actual energy or water surface slope as it is more reliable
+    S = V**2 * PhysicalPars['Roughness']**2 / h**(4/3)
     
     # Threshold streampower per unit width [kg/m/s]
     omega_0 = 5.75*(0.04*(RhoS - Rho))**(3/2) * (g/Rho)**(1/2) * D**(3/2) * np.log10(12*h/D)
@@ -291,6 +295,7 @@ def calcBedload(z, B, h, V, dx, PhysicalPars):
     # bedload transport rate (bulk volume accounting for voids) [m^3/s]
     Qs = RhoS/(RhoS-Rho) * 0.01 * (np.maximum(omega-omega_0,0.0)/0.5)**(3/2) * (h/0.1)**(-2/3) * (D/0.0011)**(-1/2) * B / (RhoS*(1-VoidRatio)) 
     # TODO move constant part of above line into loadmod (i.e. out of loop)
+    Qs[V<0] *= -1
     
     return(Qs)
     

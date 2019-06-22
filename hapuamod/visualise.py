@@ -147,8 +147,11 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None):
     """
     g = 9.81
     Dist = np.insert(np.cumsum(ChanDx),0,0)
+    D2 = (Dist[:-1]+Dist[1:])/2
     WL = ChanElev + ChanDep
-    Energy = WL + (ChanVel**2) / (2*g)
+    WL2 = (WL[:-1]+WL[1:])/2
+    Vel2 = (ChanVel[:-1]+ChanVel[1:])/2
+    Energy = WL2 + (Vel2**2) / (2*g)
     Fr = abs(ChanVel)/np.sqrt(g*ChanDep)
     Q = ChanVel * ChanDep * ChanWidth
     
@@ -169,7 +172,7 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None):
     # Plot the river bed level, water surface and energy line
     BedLine, = ElevAx.plot(Dist, ChanElev, 'k-')
     WaterLine, = ElevAx.plot(Dist, WL, 'b-')
-    EnergyLine, = ElevAx.plot(Dist, Energy, 'b:')
+    EnergyLine, = ElevAx.plot(D2, Energy, 'b:')
     ElevAx.set_ylabel('Elevation [m]')
     
     # Plot the river width and flow
@@ -217,15 +220,18 @@ def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep,
     # Calculate required variables to plot
     g = 9.81
     Dist = np.insert(np.cumsum(ChanDx),0,0)
+    D2 = (Dist[:-1]+Dist[1:])/2
     WL = ChanElev + ChanDep
-    Energy = WL + (ChanVel**2) / (2*g)
+    WL2 = (WL[:-1]+WL[1:])/2
+    Vel2 = (ChanVel[:-1]+ChanVel[1:])/2
+    Energy = WL2 + (Vel2**2) / (2*g)
     Fr = abs(ChanVel)/np.sqrt(g*ChanDep)
     Q = ChanVel * ChanDep * ChanWidth
     
     # Update the lines
     LongSecFig[6].set_data(Dist, ChanElev)
     LongSecFig[7].set_data(Dist, WL)
-    LongSecFig[8].set_data(Dist, Energy)
+    LongSecFig[8].set_data(D2, Energy)
     LongSecFig[9].set_data(Dist, ChanWidth)
     LongSecFig[10].set_data(Dist, Q)
     LongSecFig[11].set_data(Dist, ChanVel)
