@@ -222,7 +222,11 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
             a_banded[3,2*N-2] = 1
             
             # Solve the banded matrix
-            Delta = linalg.solve_banded([2,2],a_banded,Err)
+            try:
+                Delta = linalg.solve_banded([2,2],a_banded,Err)
+            except linalg.LinAlgError as ErrMsg:
+                logging.warning('LinAlgError %s - adding some noise to see if this fixes it...' % ErrMsg)
+                a_banded += np.random.random(a_banded.shape) * 1e-7 - 5e-8
             
             # Update h & V
             h -= Delta[np.arange(0,2*N,2)]
