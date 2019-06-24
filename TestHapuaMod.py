@@ -33,7 +33,7 @@ plt.plot((ShoreX[0:-1]+ShoreX[1:])/2, LST)
 
 #%% Test river routines
 # Join river and outlet through lagoon
-(ChanDx, ChanElev, ChanWidth, LagArea, OnlineLagoon, OutletChanIx) = \
+(ChanDx, ChanElev, ChanWidth, LagArea, OnlineLagoon, OutletChanIx, ChanFlag) = \
     hm.mor.assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
                            OutletEndX, OutletEndWidth, OutletEndElev, 
                            RiverElev, PhysicalPars['RiverWidth'], 

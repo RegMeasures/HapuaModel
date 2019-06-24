@@ -42,7 +42,7 @@ def run(ModelConfigFile):
     RivFlow = interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']])).values
     SeaLevel = interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartTime']])).values
     
-    (ChanDx, ChanElev, ChanWidth, LagArea, OnlineLagoon, OutletChanIx) = \
+    (ChanDx, ChanElev, ChanWidth, LagArea, OnlineLagoon, OutletChanIx, ChanFlag) = \
         mor.assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
                             OutletEndX, OutletEndWidth, OutletEndElev, 
                             RiverElev, PhysicalPars['RiverWidth'], 
@@ -113,7 +113,7 @@ def run(ModelConfigFile):
                              LST, Bedload, NumericalPars['Dx'], TimePars['MorDt'], 
                              PhysicalPars)
         
-        (ChanDx, ChanElev, ChanWidth, LagArea, OnlineLagoon, OutletChanIx) = \
+        (ChanDx, ChanElev, ChanWidth, LagArea, OnlineLagoon, OutletChanIx, ChanFlag) = \
             mor.assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
                                 OutletEndX, OutletEndWidth, OutletEndElev, 
                                 RiverElev, PhysicalPars['RiverWidth'], 
