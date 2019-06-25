@@ -67,7 +67,8 @@ def run(ModelConfigFile):
         LsLines = visualise.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, 
                                         np.zeros(ChanElev.size))
         BdyFig = visualise.BdyCndFig(OutputTs)
-        ModelFig = visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx)
+        ModelFig = visualise.modelView(ShoreX, ShoreY, OutletEndX, 
+                                       OutletChanIx, np.zeros(ShoreX.size-1))
     
     #%% Main timestepping loop
     MorTime = TimePars['StartTime']
@@ -118,6 +119,7 @@ def run(ModelConfigFile):
         LST = coast.longShoreTransport(ShoreY, NumericalPars['Dx'], WavePower, 
                                        WavePeriod, Wlen_h, EDir_h, 
                                        PhysicalPars)
+        print('MaxLST=%f' % np.max(LST))
         
         # Calculate runup & overtopping potential
         Runup = coast.runup(WavePeriod, Hs_offshore, PhysicalPars['BeachSlope'])
@@ -159,7 +161,8 @@ def run(ModelConfigFile):
                                             ChanWidth, ChanDep, ChanVel, 
                                             Bedload)
                 visualise.updateBdyCndFig(BdyFig, OutputTs)
-                visualise.updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx)
+                visualise.updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, 
+                                          OutletChanIx, LST)
                 PlotTime += OutputOpts['PlotInt']
         
         # increment time
