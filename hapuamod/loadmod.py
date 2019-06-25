@@ -58,7 +58,7 @@ def loadModel(Config):
     variables. Prior to running loadModel the onfig file should first be parsed
     using the readConfig function.
     
-    (FlowTs, WaveTs, SeaLevelTs, Origin, BaseShoreNormDir, 
+    (FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, 
      ShoreX, ShoreY, LagoonElev, BarrierElev, OutletElev, 
      RiverElev, OutletEndX, OutletEndWidth, OutletEndElev,
      TimePars, PhysicalPars, NumericalPars, OutputOpts) = loadModel(Config)
@@ -72,20 +72,20 @@ def loadModel(Config):
             datetime index. River flow given in column "Flow" (m^3/s)
         WaveTs (DataFrame): Wave timeseries DataFrame with datetime index. 
             Columns are:
-                - HsOffshore (float64): Offshiore significant wave height (m)
-                - WavePeriod (float64): Wave period (s)
-                - WavePower (float64): Wave power (W/m wave crest length)
-                - Wlen_h (float64): Wavelength (m)
-                - EAngle_h (float64): Net direction of wave energy at depth h 
-                      (where h is given as PhysicalParameter WaveDataDepth). 
-                      EAngle_h is read as a bearing in degrees, but is 
-                      converted to a direction relative to BaseShoreNormDir in 
-                      radians as part of the pre-processing (radians)
+                WavePeriod (float64): Wave period (s)
+                Wlen_h (float64): Wavelength (m)
+                WavePower (float64): Wave power (W/m wave crest length)
+                EDir_h (float64): Net direction of wave energy at depth h 
+                    (where h is given as PhysicalParameter WaveDataDepth). 
+                    EAngle_h is read as a bearing in degrees, but is 
+                    converted to a direction relative to BaseShoreNormDir in 
+                    radians as part of the pre-processing (radians)
+                Hsig_Offshore (float64): Offshiore significant wave height (m)
         SeaLevelTs (DataFrame): Sea level timeseries as single column DataFrame
-            with datetime index. Column name is SeaLevel (m)
+            with datetime index. Column name is "SeaLevel" (m)
         Origin (np.ndarray(float64)): Real world X and Y coordinates of the
             origin of the model coordinate system (m)
-        BaseShoreNormDir (float): Direction of offshore pointing line at 90 
+        ShoreNormDir (float): Direction of offshore pointing line at 90 
             degrees to overall average coast direction. Computed based on a 
             straightline fitted thruogh the initial condition shoreline 
             position (radians).
@@ -93,7 +93,7 @@ def loadModel(Config):
             shoreline in model coordinate system (m)
         ShoreY (np.ndarray(float64)): position of aspects of cross-shore 
             profile in model coordinate system at transects with x-coordinates 
-            given by ShoreX (m). The columns of ShorenY represent: 
+            given by ShoreX (m). The columns of ShoreY represent: 
                 0: Shoreline
                 1: Seaward side of outlet channel (nan if no outlet at profile)
                 2: Lagoonward edge of outlet channel (or nan)
@@ -103,17 +103,21 @@ def loadModel(Config):
             given by ShoreX (m)
         BarrierElev (np.ndarray(float64)): elevation of barrier crest at 
             positions given by ShoreX (m)
-        OutletElev
+        OutletElev (np.ndarray(float64)): elevation of outlet channel bed at 
+            positions given by ShoreX (nan where no outlet channel, m)
         RiverElev (np.ndarray(float64)): elevation of river bed cross-sections 
             upstream of lagoon (m)
-        OutletEndX
-        OutletEndWidth (np.ndarray(float64)): 3
-        OutletEndElev (np.ndarray(float64)): 
+        OutletEndX (np.ndarray(float64)): X-coordinate of upstream and 
+            downstream ends of the outlet channel (m) 
+        OutletEndWidth (np.ndarray(float64)): Width of the upstream and 
+            downstream ends of the outlet channel (m)
+        OutletEndElev (np.ndarray(float64)): Bed level of the upstream and 
+            downstream ends of the outlet channel (m)
         TimePars (dict): Time parameters including:
-            StartTime: 
-            EndTime: 
-            HydDt: 
-            MorDt: 
+            StartTime (pd.datetime): Start date/time of simulation
+            EndTime (pd.datetime): End date/time of simulation period
+            HydDt (pd.Timedelta): Hydrodynamic timestep
+            MorDt (pd.Timedelta): Morphological timestep
         PhysicalPars (dict): Physical parameters including:
             RhoSed (float): Sediment density (kg/m3)
             RhoSea (float): Seawater density (kg/m3)
@@ -145,15 +149,20 @@ def loadModel(Config):
                 calculation of depth of breaking waves. 
                 BreakerCoef = 8 / (RhoSea * Gravity^1.5 * GammaRatio^2)
         NumericalPars (dict):
-            Dx
-            Beta
-            Theta
-            ErrTol
-            MaxIt
-            WarnTol
+            Dx (float): Discretisation interval for shoreline and river (m)
+            Beta (float): Momentum (Boussinesq) coefficient
+            Theta (float): Temporal weighting factor for implicit Preissmann 
+                scheme 
+            ErrTol (float): Error tolerance for depth and velocity in implicit 
+                solution to unsteady river hydraulics (m and m/s)
+            MaxIt (int): Maximum iterations for implicit solution to unsteady 
+                river hydraulics
+            WarnTol (float): Warning tolerance for change in water level/
+                velocity within a single iteration of the hydrodynamic 
+                solution (m and m/s)
         OutputOpts (dict):
-            LogInt
-            PlotInt
+            LogInt (pd.Timedelta): 
+            PlotInt (pd.Timedelta): 
     """
     
     #%% Spatial inputs
@@ -328,7 +337,7 @@ def loadModel(Config):
                      'FrRelax1': float(Config['NumericalParameters']['FrRelax1']),
                      'FrRelax2': float(Config['NumericalParameters']['FrRelax2']),
                      'ErrTol': float(Config['NumericalParameters']['ErrTol']),
-                     'MaxIt': float(Config['NumericalParameters']['MaxIt']),
+                     'MaxIt': int(Config['NumericalParameters']['MaxIt']),
                      'WarnTol': float(Config['NumericalParameters']['WarnTol'])}
 
     #%% Read output options

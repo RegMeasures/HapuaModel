@@ -119,7 +119,6 @@ def run(ModelConfigFile):
         LST = coast.longShoreTransport(ShoreY, NumericalPars['Dx'], WavePower, 
                                        WavePeriod, Wlen_h, EDir_h, 
                                        PhysicalPars)
-        print('MaxLST=%f' % np.max(LST))
         
         # Calculate runup & overtopping potential
         Runup = coast.runup(WavePeriod, Hs_offshore, PhysicalPars['BeachSlope'])

@@ -6,17 +6,48 @@ import numpy as np
 def longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, Wlen_h, EDir_h, PhysicalPars):
     """ Calculates longshore transport rate for each shore segment
     
-        Calculation performed for whole model for a single timestep.
+        Longshore transport rate is calculated using the CERC sediment 
+        transport formula (CERC 1984). The calculation is performed for the 
+        whole model for a single timestep.
         
         Parameters:
-            ShoreX
-            Dx
-            WavePower
-            EAngleOffshore
+            ShoreY (np.ndarray(float64)): The first column of ShoreY specifies 
+                the shoreline position at each shore profile relative to a 
+                straight line through the initial shoreline position (m).
+            Dx (float): Alongshore discretisation distance between shore 
+                profiles in ShoreY (m).
+            WavePower (float): Wave power (W/m wave crest length) 
+            Wlen_h: (float): Wavelength (m) at depth given by
+                PhysicalPars['WaveDataDepth'] 
+            EDir_h (float): Net direction of wave energy flux (in radians,
+                clockwise from north, in direction of wave travel) at depth 
+                given by PhysicalPars['WaveDataDepth'].
+            PhysicalPars: Physical parameters including:
+                BreakerCoef (float): see notes below.
+                K2coef (float): see notes below.
+                Gravity (float): (ms^-2)
+                WaveDataDepth (float): depth at which input wave data is 
+                    specified (m)
         
         Returns:
             LST (np.ndarray(float64)): Longshore transport rate at each 
                 shoreline segment between 2 nodes (m^3/s)
+        
+        Notes: 
+            The calculation uses PhysicalPars['K2coef'] as a transport 
+                coefficient, but this has already been calculated in 
+                loadmod.loadModel as:
+                    K2 = K / (RhoSed - RhoSea) * g * (1 - VoidRatio))
+            PhysicalPars['BreakerCoef'] is calculated in loadmod.loadModel as:
+                BreakerCoef = 8 / (RhoSea * Gravity^1.5 * GammaRatio^2)
+            EDir_h is required in radians. Conversion from degrees to radians
+                is done by loadmod.loadModel when the wave timeseries are read
+                during model initialisation.
+        
+        Reference:
+            Coastal Engineering Research Center (1984) Shore protection manual. 
+            US Army Corps of Engineers, Vicksburg, Mississippi. 
+            https://doi.org/10.5962/bhl.title.47830
     """
     
     # Calculate offshore wave angle relative to each shoreline segment
