@@ -14,6 +14,8 @@ def updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
                     RiverElev, RiverWidth, OnlineLagoon, OutletChanIx, 
                     ChanWidth, ChanDep, ChanDx,
                     LST, Bedload, Dx, Dt, PhysicalPars):
+    """ Update river, lagoon, outlet, barrier and shoreline morphology
+    """
     
     #%% Pre-calculate some useful parameters
     
