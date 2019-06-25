@@ -247,14 +247,15 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
                 break
             
             # Stability warnings
-            if np.amax(Delta)>NumericalPars['WarnTol']:
-                WarnNode = np.floor(np.argmax(Delta)/2)
-                if np.argmax(Delta)%2 == 0:
+            if np.amax(np.abs(Delta))>NumericalPars['WarnTol']:
+                WarnIx = np.argmax(np.abs(Delta))
+                WarnNode = np.floor(WarnIx/2)
+                if WarnIx % 2 == 0:
                     WarnVar = 'Depth'
                 else:
                     WarnVar = 'Velocity'
                 logging.warning('%s change in cross-section %i equals %f (greater than WarnTol)',
-                                WarnVar, WarnNode, np.max(Delta))            
+                                WarnVar, WarnNode, Delta[WarnIx])            
             ItCount += 1
         
         assert ItCount < MaxIt, 'Max iterations exceeded.'

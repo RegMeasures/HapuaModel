@@ -84,10 +84,19 @@ def run(ModelConfigFile):
         RivFlow = interpolate_at(FlowTs, HydTimes).values
         SeaLevel = interpolate_at(SeaLevelTs, HydTimes).values
         
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, 
-                                ChanDep, ChanVel, ChanDx, 
-                                TimePars['HydDt'], PhysicalPars['Roughness'], 
-                                RivFlow, SeaLevel, NumericalPars)
+        try:
+            riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, 
+                                    ChanDep, ChanVel, ChanDx, 
+                                    TimePars['HydDt'], PhysicalPars['Roughness'], 
+                                    RivFlow, SeaLevel, NumericalPars)
+        except Exception as ErrMsg:
+            logging.warning(ErrMsg)
+            logging.warning('Unsteady hydraulics failed at %s. Falling back to quasi-steady for this timestep.' % 
+                            HydTimes[-1].strftime("%m/%d/%Y, %H:%M:%S"))
+            (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
+                                                 PhysicalPars['Roughness'], 
+                                                 RivFlow[-1], SeaLevel[-1], 
+                                                 NumericalPars)
         
         (LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, OutletEndVel) = \
             riv.storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, 
