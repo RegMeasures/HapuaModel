@@ -33,11 +33,15 @@ plt.plot((ShoreX[0:-1]+ShoreX[1:])/2, LST)
 
 #%% Test river routines
 # Join river and outlet through lagoon
-(ChanDx, ChanElev, ChanWidth, LagArea, OnlineLagoon, OutletChanIx) = \
-    hm.mor.assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
+(ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
+ OnlineLagoon, OutletChanIx, ChanFlag) = \
+    hm.riv.assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
                            OutletEndX, OutletEndWidth, OutletEndElev, 
                            RiverElev, PhysicalPars['RiverWidth'], 
-                           NumericalPars['Dx'])
+                           np.zeros(RiverElev.size), np.zeros(RiverElev.size),
+                           np.zeros(ShoreX.size), np.zeros(ShoreX.size), 
+                           np.zeros(ShoreX.size), np.zeros(ShoreX.size),
+                           np.zeros(2), np.zeros(2), NumericalPars['Dx'])
 hm.visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx)
     
 # Steady state hydraulics
@@ -45,7 +49,21 @@ RivFlow = hm.core.interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']
 SeaLevel = hm.core.interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartTime']])).values
 (ChanDep, ChanVel) = hm.riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
                                         PhysicalPars['Roughness'], 
-                                        RivFlow, SeaLevel, NumericalPars)
+                                        RivFlow[0], SeaLevel[0], NumericalPars)
+
+# Store hydraulics and re-generate
+(LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, OutletEndVel) = \
+    hm.riv.storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, 
+                           ChanFlag, LagoonElev)
+(ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
+ OnlineLagoon, OutletChanIx, ChanFlag) = \
+    hm.riv.assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev, 
+                           OutletEndX, OutletEndWidth, OutletEndElev, 
+                           RiverElev, PhysicalPars['RiverWidth'], 
+                           ChanDep[ChanFlag==0], ChanVel[ChanFlag==0], 
+                           LagoonWL, LagoonVel, OutletDep, OutletVel,
+                           OutletEndDep, OutletEndVel, 
+                           NumericalPars['Dx'])
 
 # Bedload
 Bedload = hm.riv.calcBedload(ChanElev, ChanWidth, ChanDep, ChanVel, ChanDx, PhysicalPars)
@@ -56,10 +74,10 @@ ChanDist = np.insert(np.cumsum(ChanDx),0,0)
 plt.figure()
 plt.plot(ChanDist, ChanDep+ChanElev, 'b-')
 # Unsteady hydraulics
-(ChanDep, ChanVel) = hm.riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, ChanDep, 
-                                                ChanVel, ChanDx, TimePars['HydDt'], 
-                                                PhysicalPars['Roughness'], 
-                                                RivFlow, SeaLevel, NumericalPars)
+hm.riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, 
+                           ChanDep, ChanVel, ChanDx, 
+                           TimePars['HydDt'], PhysicalPars['Roughness'], 
+                           RivFlow, SeaLevel, NumericalPars)
 plt.plot(ChanDist, ChanDep+ChanElev, 'r:')
 
 #%% Morphology updating

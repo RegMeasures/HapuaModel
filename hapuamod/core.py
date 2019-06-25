@@ -42,11 +42,15 @@ def run(ModelConfigFile):
     RivFlow = interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']])).values
     SeaLevel = interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartTime']])).values
     
-    (ChanDx, ChanElev, ChanWidth, LagArea, OnlineLagoon, OutletChanIx) = \
-        mor.assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
+    (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
+     OnlineLagoon, OutletChanIx, ChanFlag) = \
+        riv.assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
                             OutletEndX, OutletEndWidth, OutletEndElev, 
                             RiverElev, PhysicalPars['RiverWidth'], 
-                            NumericalPars['Dx'])
+                            np.zeros(RiverElev.size), np.zeros(RiverElev.size),
+                            np.zeros(ShoreX.size), np.zeros(ShoreX.size), 
+                            np.zeros(ShoreX.size), np.zeros(ShoreX.size),
+                            np.zeros(2), np.zeros(2), NumericalPars['Dx'])
     
     (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
                                          PhysicalPars['Roughness'], 
@@ -85,6 +89,10 @@ def run(ModelConfigFile):
                                 TimePars['HydDt'], PhysicalPars['Roughness'], 
                                 RivFlow, SeaLevel, NumericalPars)
         
+        (LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, OutletEndVel) = \
+            riv.storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, 
+                                ChanFlag, LagoonElev)
+        
         # Calculate bedload transport
         Bedload = riv.calcBedload(ChanElev, ChanWidth, ChanDep, ChanVel, 
                                   ChanDx, PhysicalPars)
@@ -113,10 +121,14 @@ def run(ModelConfigFile):
                              LST, Bedload, NumericalPars['Dx'], TimePars['MorDt'], 
                              PhysicalPars)
         
-        (ChanDx, ChanElev, ChanWidth, LagArea, OnlineLagoon, OutletChanIx) = \
-            mor.assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
+        (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
+         OnlineLagoon, OutletChanIx, ChanFlag) = \
+            riv.assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev, 
                                 OutletEndX, OutletEndWidth, OutletEndElev, 
                                 RiverElev, PhysicalPars['RiverWidth'], 
+                                ChanDep[ChanFlag==0], ChanVel[ChanFlag==0], 
+                                LagoonWL, LagoonVel, OutletDep, OutletVel,
+                                OutletEndDep, OutletEndVel, 
                                 NumericalPars['Dx'])
         
         # Store outputs
