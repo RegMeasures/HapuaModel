@@ -14,8 +14,9 @@ from hapuamod import riv
 from hapuamod import coast
 from hapuamod import mor
 from hapuamod import visualise
+from hapuamod import out
 
-def run(ModelConfigFile):
+def run(ModelConfigFile, Overwrite=False):
     """ Main hapuamod run script
     
     Parameters:
@@ -55,6 +56,12 @@ def run(ModelConfigFile):
     (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
                                          PhysicalPars['Roughness'], 
                                          RivFlow, SeaLevel, NumericalPars)
+    
+    #%% Create output file and write initial conditions
+    out.newOutFile(OutputOpts['OutFile'], Config['ModelName'], ShoreX, 
+                   TimePars['StartTime'], Overwrite)
+    out.writeCurrent(OutputOpts['OutFile'], ShoreY, LagoonElev, OutletElev, 
+                     np.zeros(ShoreX.size-1), TimePars['StartTime'])
     
     #%% Set up variables to hold output timeseries
     OutputTs = pd.DataFrame(list(zip([RivFlow],[RivFlow],[SeaLevel])),
@@ -108,7 +115,7 @@ def run(ModelConfigFile):
                                   ChanDx, PhysicalPars)
         assert Bedload.size == ChanElev.size
         
-        # Run shoreline model
+        # Run shoreline model to calculate longshore transport
         WavesAtT = interpolate_at(WaveTs, pd.DatetimeIndex([MorTime]))
         EDir_h = WavesAtT.EDir_h[0]
         WavePower = WavesAtT.WavePower[0]
@@ -141,7 +148,12 @@ def run(ModelConfigFile):
                                 OutletEndDep, OutletEndVel, 
                                 NumericalPars['Dx'])
         
+        # increment time
+        MorTime += TimePars['MorDt']
+        
         # Store outputs
+        out.writeCurrent(OutputOpts['OutFile'], ShoreY, LagoonElev, OutletElev, 
+                         LST, MorTime)
         OutputTs = OutputTs.append(pd.DataFrame(list(zip([RivFlow[-1]],
                                                          [ChanDep[-1]*ChanVel[-1]*ChanWidth[-1]],
                                                          [SeaLevel[-1]])),
@@ -164,8 +176,7 @@ def run(ModelConfigFile):
                                           OutletChanIx, LST)
                 PlotTime += OutputOpts['PlotInt']
         
-        # increment time
-        MorTime += TimePars['MorDt']
+        
         
     return(OutputTs)
     

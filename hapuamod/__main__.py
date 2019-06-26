@@ -6,5 +6,6 @@ from hapuamod import core
 Parser = argparse.ArgumentParser(description='Hapua model')
 Parser.add_argument('ModelConfigFile', type=str, help='Model config file (*.cnf)')
 ArgsIn = Parser.parse_args()
+# TODO: Add verbosity and overwrite commandline arguments
 
 core.run(ArgsIn.ModelConfigFile)
