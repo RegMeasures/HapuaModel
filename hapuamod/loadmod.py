@@ -161,6 +161,8 @@ def loadModel(Config):
                 velocity within a single iteration of the hydrodynamic 
                 solution (m and m/s)
         OutputOpts (dict):
+            OutFile (string): filename for writing model outputs to 
+                (netCDF file)
             LogInt (pd.Timedelta): 
             PlotInt (pd.Timedelta): 
     """
@@ -341,7 +343,8 @@ def loadModel(Config):
                      'WarnTol': float(Config['NumericalParameters']['WarnTol'])}
 
     #%% Read output options
-    OutputOpts = {'LogInt': pd.Timedelta(seconds=float(Config['OutputOptions']['LogInt'])),
+    OutputOpts = {'OutFile': Config['OutputOptions']['OutFile'],
+                  'LogInt': pd.Timedelta(seconds=float(Config['OutputOptions']['LogInt'])),
                   'PlotInt': pd.Timedelta(seconds=float(Config['OutputOptions']['PlotInt']))}
     
     #%% Initialise shoreline variables

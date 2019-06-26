@@ -16,6 +16,9 @@ Config = hm.loadmod.readConfig(ModelConfigFile)
 plt.figure()
 hm.visualise.mapView(ShoreX, ShoreY, Origin, ShoreNormDir)
 
+#%% Create output netcdf file
+hm.out.newOutFile('test.nc', Config['ModelName'], ShoreX, TimePars['StartTime'])
+
 #%% Test longshore transport routine
 EDir_h = WaveTs.EDir_h[0]
 WavePower = WaveTs.WavePower[0]

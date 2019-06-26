@@ -33,11 +33,11 @@ BarrierElev = 3.0
 # Simulation start date
 StartTime = '1 Jul 2015'
 # Simulation end date '30 Jun 2016'
-EndTime = '3 Jul 2015'
+EndTime = '30 Jul 2015'
 # Hydraulic Timestep [s]
 HydDt = 5
 # Morphology Timestep [s]
-MorDt = 3600
+MorDt = 1800
 
 [PhysicalParameters]
 # K coefficient for longshore transport calculation (non-dimensional)
@@ -90,10 +90,12 @@ FrRelax2 = 0.9
 ErrTol = 0.001
 # Maximum iterations for implicit solution to unsteady river hydraulics
 MaxIt = 20
-# Warning tolerance for change in water level/velocity within a signle iteration of the hydrodynamic solution [m and m/s]
+# Warning tolerance for change in water level/velocity within a single iteration of the hydrodynamic solution [m and m/s]
 WarnTol = 0.1
 
 [OutputOptions]
+# filename of the netCDF file which outputs will be written to
+OutFile = 'HurunuiModelOutputs.nc'
 # Interval (model time) at which info will be logged during simulation [s]
 LogInt = 3600
 # Interval to update plots (zero means no plotting will occur) [s]
