@@ -188,7 +188,7 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None):
     else:
         NoOfPlots = 4
     ElevAx = RivFig.add_subplot(NoOfPlots,1,1)
-    WidthAx = RivFig.add_subplot(NoOfPlots,1,2)
+    WidthAx = RivFig.add_subplot(NoOfPlots,1,2, sharex=ElevAx)
     FlowAx = WidthAx.twinx()
     VelAx = RivFig.add_subplot(NoOfPlots,1,3, sharex=ElevAx)
     FrAx = VelAx.twinx()
