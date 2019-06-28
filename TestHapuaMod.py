@@ -16,11 +16,6 @@ Config = hm.loadmod.readConfig(ModelConfigFile)
 plt.figure()
 hm.visualise.mapView(ShoreX, ShoreY, Origin, ShoreNormDir)
 
-#%% Create output netcdf file and writie initial condition
-hm.out.newOutFile('test.nc', Config['ModelName'], ShoreX, TimePars['StartTime'], True)
-
-hm.out.writeCurrent('test.nc', ShoreY, np.zeros(ShoreX.size-1), TimePars['StartTime'])
-
 #%% Test longshore transport routine
 EDir_h = WaveTs.EDir_h[0]
 WavePower = WaveTs.WavePower[0]
@@ -95,6 +90,17 @@ hm.mor.updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
                         LST, Bedload, NumericalPars['Dx'], TimePars['MorDt'], 
                         PhysicalPars)
 plt.plot(ShoreX, (ShoreY[:,0]-OldShoreY[:,0]))
+
+#%% Create output netcdf file and write initial condition
+hm.out.newOutFile('test.nc', Config['ModelName'], TimePars['StartTime'], 
+                  ShoreX, NumericalPars['Dx'], RiverElev, True)
+
+hm.out.writeCurrent('test.nc', TimePars['StartTime'], 
+                    ShoreY, LagoonElev, OutletElev, LagoonWL, LagoonVel, 
+                     np.zeros(ShoreX.size-1), 
+                     RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0],
+                     OutletEndX, OutletEndElev, OutletEndWidth, 
+                     OutletEndDep, OutletEndVel)
 
 #%% Test core timestepping
 ModelConfigFile = 'inputs\HurunuiModel.cnf'

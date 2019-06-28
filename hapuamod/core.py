@@ -57,11 +57,19 @@ def run(ModelConfigFile, Overwrite=False):
                                          PhysicalPars['Roughness'], 
                                          RivFlow, SeaLevel, NumericalPars)
     
+    (LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, OutletEndVel) = \
+        riv.storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, 
+                            ChanFlag, LagoonElev)
+    
     #%% Create output file and write initial conditions
-    out.newOutFile(OutputOpts['OutFile'], Config['ModelName'], ShoreX, 
-                   TimePars['StartTime'], Overwrite)
-    out.writeCurrent(OutputOpts['OutFile'], ShoreY, LagoonElev, OutletElev, 
-                     np.zeros(ShoreX.size-1), TimePars['StartTime'])
+    out.newOutFile(OutputOpts['OutFile'], Config['ModelName'], TimePars['StartTime'], 
+                   ShoreX, NumericalPars['Dx'],  RiverElev, Overwrite)
+    out.writeCurrent(OutputOpts['OutFile'], TimePars['StartTime'],
+                     ShoreY, LagoonElev, OutletElev, LagoonWL, LagoonVel, 
+                     np.zeros(ShoreX.size-1), 
+                     RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0],
+                     OutletEndX, OutletEndElev, OutletEndWidth, 
+                     OutletEndDep, OutletEndVel)
     
     #%% Set up variables to hold output timeseries
     OutputTs = pd.DataFrame(list(zip([RivFlow],[RivFlow],[SeaLevel])),
@@ -152,8 +160,11 @@ def run(ModelConfigFile, Overwrite=False):
         MorTime += TimePars['MorDt']
         
         # Store outputs
-        out.writeCurrent(OutputOpts['OutFile'], ShoreY, LagoonElev, OutletElev, 
-                         LST, MorTime)
+        out.writeCurrent(OutputOpts['OutFile'], MorTime, 
+                         ShoreY, LagoonElev, OutletElev, LagoonWL, LagoonVel, LST, 
+                         RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0],
+                         OutletEndX, OutletEndElev, OutletEndWidth, 
+                         OutletEndDep, OutletEndVel)
         OutputTs = OutputTs.append(pd.DataFrame(list(zip([RivFlow[-1]],
                                                          [ChanDep[-1]*ChanVel[-1]*ChanWidth[-1]],
                                                          [SeaLevel[-1]])),
