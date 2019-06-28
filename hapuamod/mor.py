@@ -28,7 +28,7 @@ def updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
     
     # Some current physical properties of each XS
     #BedArea = ChanDx * ChanWidth[1:] 
-    AspectRatio = ChanWidth[1:]/ChanDep[1:]
+    AspectRatio = ChanWidth[1:-1]/ChanDep[1:-1]
     TooWide = AspectRatio > PhysicalPars['WidthRatio']
     
     # Update channel bed elevation

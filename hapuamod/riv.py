@@ -264,7 +264,7 @@ def assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
                     OutletEndX, OutletEndWidth, OutletEndElev, 
                     RiverElev, RiverWidth, RivDep, RivVel, 
                     LagoonWL, LagoonVel, OutletDep, OutletVel,
-                    OutletEndDep, OutletEndVel, Dx):
+                    OutletEndDep, OutletEndVel, Dx, MaxOutletElev):
     """ Combine river, lagoon and outlet into single channel for hyd-calcs
         
         (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
@@ -273,7 +273,7 @@ def assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
                                 OutletEndX, OutletEndWidth, OutletEndElev, 
                                 RiverElev, RiverWidth, RivDep, RivVel, 
                                 LagoonWL, LagoonVel, OutletDep, OutletVel, 
-                                OutletEndDep, OutletEndVel, Dx)
+                                OutletEndDep, OutletEndVel, Dx, MaxOutletElev)
         
         Returns:
             ChanDx = distance between each cross-section in combined channel\
@@ -332,27 +332,27 @@ def assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
         EndArea = np.nansum(LagoonWidth[ShoreX < OutletEndX[0]] * Dx)
     
     # Assemble the complete channel
-    ChanDx = np.tile(Dx, RiverElev.size + OnlineLagoon.size + OutletChanIx.size + 1)
+    ChanDx = np.tile(Dx, RiverElev.size + OnlineLagoon.size + OutletChanIx.size + 2)
     if OutletEndX[0]//Dx == OutletEndX[1]//Dx:
         # Outlet is straight (i.e. doesn't cross any transects)
-        ChanDx[-2] += abs(OutletEndX[1] - OutletEndX[0])
+        ChanDx[-3] += abs(OutletEndX[1] - OutletEndX[0])
     elif OutletEndX[0] < OutletEndX[1]:
         # Outlet angles from L to R
         ChanDx[RiverElev.size + OnlineLagoon.size] += Dx - (OutletEndX[0] % Dx)
-        ChanDx[-1] += OutletEndX[1] % Dx
+        ChanDx[-2] += OutletEndX[1] % Dx
     else:
         # Outlet from R to L
         ChanDx[RiverElev.size + OnlineLagoon.size] += OutletEndX[0] % Dx
-        ChanDx[-1] += Dx - (OutletEndX[1] % Dx)
+        ChanDx[-2] += Dx - (OutletEndX[1] % Dx)
     ChanFlag = np.concatenate([np.full(RiverElev.size, 0), 
                                np.full(OnlineLagoon.size, 1), 
-                               [2], np.full(OutletChanIx.size, 3), [2]])
+                               [2], np.full(OutletChanIx.size, 3), [2,4]])
     ChanElev = np.concatenate([RiverElev, LagoonElev[OnlineLagoon], 
                                [OutletEndElev[0]], OutletElev[OutletChanIx], 
-                               [OutletEndElev[1]]])
+                               [OutletEndElev[1], min(MaxOutletElev, OutletEndElev[1])]])
     ChanWidth = np.concatenate([np.tile(RiverWidth, RiverElev.size), 
                                 LagoonWidth[OnlineLagoon], [OutletEndWidth[0]],
-                                OutletWidth, [OutletEndWidth[1]]])
+                                OutletWidth, np.full(2, OutletEndWidth[1])])
     LagArea = np.zeros(ChanElev.size)
     LagArea[RiverElev.size] = StartArea
     LagArea[-(OutletChanIx.size+3)] = EndArea
@@ -362,7 +362,7 @@ def assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
                               LagoonWL[OnlineLagoon]-LagoonElev[OnlineLagoon],
                               [OutletEndDep[0]], 
                               OutletDep[OutletChanIx], 
-                              [OutletEndDep[-1]]])
+                              OutletEndDep[-2:]])
     # If depth is missing then interpolate it
     DepNan = np.isnan(ChanDep)
     if np.any(DepNan):
@@ -373,7 +373,7 @@ def assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
                               LagoonVel[OnlineLagoon],
                               [OutletEndVel[0]], 
                               OutletVel[OutletChanIx], 
-                              [OutletEndVel[-1]]])
+                              OutletEndVel[-2:]])
     # If vel is missing then interpolate it (based on flow rather than vel)
     VelNan = np.isnan(ChanVel)
     if np.any(VelNan):
@@ -424,14 +424,17 @@ def storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, ChanFlag,
     OutletVel[OutletChanIx] = ChanVel[ChanFlag==3]
     
     # Depth and vel at ends of outlet channel
-    OutletEndDep = ChanDep[ChanFlag==2]
-    OutletEndVel = ChanVel[ChanFlag==2]
+    EndNodes = np.logical_or(ChanFlag==2, ChanFlag==4)
+    OutletEndDep = ChanDep[EndNodes]
+    OutletEndVel = ChanVel[EndNodes]
     
     return (LagoonWL, LagoonVel, OutletDep, OutletVel, 
             OutletEndDep, OutletEndVel)
     
 def calcBedload(z, B, h, V, dx, PhysicalPars):
     """ Calculate bedload transport using Bagnold 1980 streampower approach
+    
+        Uses a central weighting approach
         
         Parameters:
             z = bed level at each cross-section [m]
@@ -467,10 +470,13 @@ def calcBedload(z, B, h, V, dx, PhysicalPars):
     # streampower per unit width [kg/m/s]
     omega = Rho * S * V * h 
     
-    # bedload transport rate (bulk volume accounting for voids) [m^3/s]
-    Qs = RhoS/(RhoS-Rho) * 0.01 * (np.maximum(omega-omega_0,0.0)/0.5)**(3/2) * (h/0.1)**(-2/3) * (D/0.0011)**(-1/2) * B / (RhoS*(1-VoidRatio)) 
+    # bedload transport rate at each node (bulk volume accounting for voids) [m^3/s]
+    Qs_node = RhoS/(RhoS-Rho) * 0.01 * (np.maximum(omega-omega_0,0.0)/0.5)**(3/2) * (h/0.1)**(-2/3) * (D/0.0011)**(-1/2) * B / (RhoS*(1-VoidRatio)) 
     # TODO move constant part of above line into loadmod (i.e. out of loop)
-    Qs[V<0] *= -1
+    Qs_node[V<0] *= -1
     
-    return(Qs)
+    # bedload transport in each reach (central weighting)
+    Qs_reach = (Qs_node[:-1] + Qs_node[1:])/2
+    
+    return(Qs_reach)
     

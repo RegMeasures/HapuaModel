@@ -51,7 +51,8 @@ def run(ModelConfigFile, Overwrite=False):
                             np.zeros(RiverElev.size), np.zeros(RiverElev.size),
                             np.zeros(ShoreX.size), np.zeros(ShoreX.size), 
                             np.zeros(ShoreX.size), np.zeros(ShoreX.size),
-                            np.zeros(2), np.zeros(2), NumericalPars['Dx'])
+                            np.zeros(2), np.zeros(2), NumericalPars['Dx'],
+                            PhysicalPars['MaxOutletElev'])
     
     (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
                                          PhysicalPars['Roughness'], 
@@ -80,7 +81,7 @@ def run(ModelConfigFile, Overwrite=False):
     LivePlot = OutputOpts['PlotInt'] > pd.Timedelta(0)
     if LivePlot:
         LsLines = visualise.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, 
-                                        np.zeros(ChanElev.size))
+                                        np.zeros(ChanElev.size-1))
         BdyFig = visualise.BdyCndFig(OutputTs)
         ModelFig = visualise.modelView(ShoreX, ShoreY, OutletEndX, 
                                        OutletChanIx, np.zeros(ShoreX.size-1))
@@ -121,7 +122,7 @@ def run(ModelConfigFile, Overwrite=False):
         # Calculate bedload transport
         Bedload = riv.calcBedload(ChanElev, ChanWidth, ChanDep, ChanVel, 
                                   ChanDx, PhysicalPars)
-        assert Bedload.size == ChanElev.size
+        assert Bedload.size == ChanElev.size-1
         
         # Run shoreline model to calculate longshore transport
         WavesAtT = interpolate_at(WaveTs, pd.DatetimeIndex([MorTime]))
@@ -154,7 +155,7 @@ def run(ModelConfigFile, Overwrite=False):
                                 ChanDep[ChanFlag==0], ChanVel[ChanFlag==0], 
                                 LagoonWL, LagoonVel, OutletDep, OutletVel,
                                 OutletEndDep, OutletEndVel, 
-                                NumericalPars['Dx'])
+                                NumericalPars['Dx'], PhysicalPars['MaxOutletElev'])
         
         # increment time
         MorTime += TimePars['MorDt']

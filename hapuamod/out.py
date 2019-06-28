@@ -230,7 +230,7 @@ def writeCurrent(FileName, CurrentTime,
     NcFile.variables['outlet_end_x'][TimeIx,:] = OutletEndX
     NcFile.variables['outlet_end_width'][TimeIx,:] = OutletEndWidth
     NcFile.variables['outlet_end_z'][TimeIx,:] = OutletEndElev
-    NcFile.variables['outlet_end_wl'][TimeIx,:] = OutletEndElev + OutletEndDep
-    NcFile.variables['outlet_end_vel'][TimeIx,:] = OutletEndVel
+    NcFile.variables['outlet_end_wl'][TimeIx,:] = OutletEndElev + OutletEndDep[0:2]
+    NcFile.variables['outlet_end_vel'][TimeIx,:] = OutletEndVel[0:2]
     
     NcFile.close()

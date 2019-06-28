@@ -223,7 +223,7 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None):
     
     # Plot bedload
     if not Bedload is None:
-        QsLine, = QsAx.plot(Dist, Bedload*3600, 'k-')
+        QsLine, = QsAx.plot(D2, Bedload*3600, 'k-')
         QsAx.set_ylabel(r'Bedload [$\mathrm{m^3/hr}$]')
         QsAx.set_xlabel('Distance downstream [m]')
         QsAx.set_ylim([0,10])
@@ -263,7 +263,7 @@ def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep,
     LongSecFig[11].set_data(Dist, ChanVel)
     LongSecFig[12].set_data(Dist, Fr)
     if not Bedload is None:
-        LongSecFig[13].set_data(Dist, Bedload*3600)
+        LongSecFig[13].set_data(D2, Bedload*3600)
     
     # Update flow axis scaling
     LongSecFig[3].relim()

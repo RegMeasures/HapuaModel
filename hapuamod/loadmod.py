@@ -143,6 +143,10 @@ def loadModel(Config):
             WidthRatio (float): Ratio of channel width to depth for eroding 
                 river channel
             BackshoreElev (float): Elevation of lagoon backshore (m)
+            MaxOutletElev (float): Maximum elevation of the downstream end of 
+                the outlet channel [m] This elevation is applied downstream of 
+                the last real outlet channel cross-section and should be below 
+                the minimum sea level.
             K2coef (float): Calculated from other inputs for use in calculation
                 of longshore transport rate. K2 = K / (RhoSed - RhoSea) * g * (1 - VoidRatio))
             BreakerCoef (float): Calculated from other inputs for use in 
@@ -321,7 +325,8 @@ def loadModel(Config):
                     'RiverWidth': float(Config['PhysicalParameters']['RiverWidth']),
                     'Roughness': float(Config['PhysicalParameters']['RoughnessManning']),
                     'WidthRatio': float(Config['PhysicalParameters']['WidthDepthRatio']),
-                    'BackshoreElev': float(Config['PhysicalParameters']['BackshoreElev'])}
+                    'BackshoreElev': float(Config['PhysicalParameters']['BackshoreElev']),
+                    'MaxOutletElev': float(Config['PhysicalParameters']['MaxOutletElev'])}
 
     GammaLST = ((PhysicalPars['RhoSed'] - PhysicalPars['RhoSea']) * 
                 PhysicalPars['Gravity'] * (1 - PhysicalPars['VoidRatio']))
@@ -336,8 +341,6 @@ def loadModel(Config):
     NumericalPars = {'Dx': Dx,
                      'Beta': float(Config['NumericalParameters']['Beta']),
                      'Theta': float(Config['NumericalParameters']['Theta']),
-                     'FrRelax1': float(Config['NumericalParameters']['FrRelax1']),
-                     'FrRelax2': float(Config['NumericalParameters']['FrRelax2']),
                      'ErrTol': float(Config['NumericalParameters']['ErrTol']),
                      'MaxIt': int(Config['NumericalParameters']['MaxIt']),
                      'WarnTol': float(Config['NumericalParameters']['WarnTol'])}
