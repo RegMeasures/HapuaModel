@@ -144,10 +144,9 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx,
     ModelFig[6].set_data([0,0], [RiverY, RiverY-300])
     if not LST is None:
         ModelFig[8].set_data((ShoreX[:-1]+ShoreX[1:])/2, LST*3600)
-    
-    # Update LST axis scaling
-    ModelFig[7].relim()
-    ModelFig[7].autoscale_view(tight = False)
+        # Update LST axis scaling
+        ModelFig[7].relim()
+        ModelFig[7].autoscale_view(tight = False)
     
     # Redraw
     ModelFig[0].canvas.draw()
@@ -200,11 +199,13 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None):
     WaterLine, = ElevAx.plot(Dist, WL, 'b-')
     EnergyLine, = ElevAx.plot(D2, Energy, 'b:')
     ElevAx.set_ylabel('Elevation [m]')
+    ElevAx.grid(axis='x', which='both', linestyle=':')
     
     # Plot the river width and flow
     WidthLine, = WidthAx.plot(Dist, ChanWidth, 'k-')
     WidthAx.set_ylabel('Width [m]')
     WidthAx.set_ylim([0,np.amax(ChanWidth)+10])
+    WidthAx.grid(axis='x', which='both', linestyle=':')
     
     FlowLine, = FlowAx.plot(Dist, Q, 'c-')
     FlowAx.set_ylabel('Flow [$\mathrm{m^3/s}$]')
@@ -215,6 +216,7 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None):
     VelAx.set_ylabel('Velocity [m/s]', color='red')
     VelAx.tick_params(axis='y', colors='red')
     VelAx.set_ylim([0,2])
+    VelAx.grid(axis='x', which='both', linestyle=':')
     
     FrLine, = FrAx.plot(Dist, Fr, 'g-')
     FrAx.set_ylabel('Froude No.', color='green')
@@ -227,6 +229,7 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None):
         QsAx.set_ylabel(r'Bedload [$\mathrm{m^3/hr}$]')
         QsAx.set_xlabel('Distance downstream [m]')
         QsAx.set_ylim([0,10])
+        QsAx.grid(axis='x', which='both', linestyle=':')
     
     # Compile outputs
     if Bedload is None:

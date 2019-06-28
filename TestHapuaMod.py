@@ -41,7 +41,8 @@ plt.plot((ShoreX[0:-1]+ShoreX[1:])/2, LST)
                            np.zeros(RiverElev.size), np.zeros(RiverElev.size),
                            np.zeros(ShoreX.size), np.zeros(ShoreX.size), 
                            np.zeros(ShoreX.size), np.zeros(ShoreX.size),
-                           np.zeros(2), np.zeros(2), NumericalPars['Dx'])
+                           np.zeros(2), np.zeros(2), NumericalPars['Dx'],
+                           PhysicalPars['MaxOutletElev'])
 hm.visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx)
     
 # Steady state hydraulics
@@ -63,7 +64,7 @@ SeaLevel = hm.core.interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartT
                            ChanDep[ChanFlag==0], ChanVel[ChanFlag==0], 
                            LagoonWL, LagoonVel, OutletDep, OutletVel,
                            OutletEndDep, OutletEndVel, 
-                           NumericalPars['Dx'])
+                           NumericalPars['Dx'], PhysicalPars['MaxOutletElev'])
 
 # Bedload
 Bedload = hm.riv.calcBedload(ChanElev, ChanWidth, ChanDep, ChanVel, ChanDx, PhysicalPars)
