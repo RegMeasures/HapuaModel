@@ -121,7 +121,7 @@ def run(ModelConfigFile, Overwrite=False):
         
         # Calculate bedload transport
         Bedload = riv.calcBedload(ChanElev, ChanWidth, ChanDep, ChanVel, 
-                                  ChanDx, PhysicalPars)
+                                  ChanDx, PhysicalPars, NumericalPars['Psi'])
         assert Bedload.size == ChanElev.size-1
         
         # Run shoreline model to calculate longshore transport

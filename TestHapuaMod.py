@@ -67,7 +67,8 @@ SeaLevel = hm.core.interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartT
                            NumericalPars['Dx'], PhysicalPars['MaxOutletElev'])
 
 # Bedload
-Bedload = hm.riv.calcBedload(ChanElev, ChanWidth, ChanDep, ChanVel, ChanDx, PhysicalPars)
+Bedload = hm.riv.calcBedload(ChanElev, ChanWidth, ChanDep, ChanVel, ChanDx, 
+                             PhysicalPars, NumericalPars['Psi'])
 
 hm.visualise.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload)
 

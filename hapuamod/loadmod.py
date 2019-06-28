@@ -157,6 +157,7 @@ def loadModel(Config):
             Beta (float): Momentum (Boussinesq) coefficient
             Theta (float): Temporal weighting factor for implicit Preissmann 
                 scheme 
+            Psi (float): Spatial weighting factor for bedload transport
             ErrTol (float): Error tolerance for depth and velocity in implicit 
                 solution to unsteady river hydraulics (m and m/s)
             MaxIt (int): Maximum iterations for implicit solution to unsteady 
@@ -341,6 +342,7 @@ def loadModel(Config):
     NumericalPars = {'Dx': Dx,
                      'Beta': float(Config['NumericalParameters']['Beta']),
                      'Theta': float(Config['NumericalParameters']['Theta']),
+                     'Psi': float(Config['NumericalParameters']['Psi']),
                      'ErrTol': float(Config['NumericalParameters']['ErrTol']),
                      'MaxIt': int(Config['NumericalParameters']['MaxIt']),
                      'WarnTol': float(Config['NumericalParameters']['WarnTol'])}

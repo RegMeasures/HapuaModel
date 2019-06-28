@@ -431,7 +431,7 @@ def storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, ChanFlag,
     return (LagoonWL, LagoonVel, OutletDep, OutletVel, 
             OutletEndDep, OutletEndVel)
     
-def calcBedload(z, B, h, V, dx, PhysicalPars):
+def calcBedload(z, B, h, V, dx, PhysicalPars, Psi):
     """ Calculate bedload transport using Bagnold 1980 streampower approach
     
         Uses a central weighting approach
@@ -444,6 +444,7 @@ def calcBedload(z, B, h, V, dx, PhysicalPars):
             dx = distance-to-next at each cross section (note, the array dx is
                  one smaller than z, B, etc) [m]
             PhysicalPars = dict of model input parameters
+            Psi = spatial weighting factor for bedload transport
         
         Returns:
             Qs = numpy array of bedload transport at each cross-section 
@@ -475,8 +476,8 @@ def calcBedload(z, B, h, V, dx, PhysicalPars):
     # TODO move constant part of above line into loadmod (i.e. out of loop)
     Qs_node[V<0] *= -1
     
-    # bedload transport in each reach (central weighting)
-    Qs_reach = (Qs_node[:-1] + Qs_node[1:])/2
+    # bedload transport in each reach
+    Qs_reach = (1-Psi)*Qs_node[:-1] + Psi*Qs_node[1:]
     
     return(Qs_reach)
     

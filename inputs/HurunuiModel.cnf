@@ -78,7 +78,7 @@ BackshoreElev = 30
 # Maximum elevation of the downstream end of the outlet channel [m] 
 # This elevation is applied downstream of the last real outlet channel 
 # cross-section and should be below the minimum sea level.
-MaxOutletElev = -1.5
+MaxOutletElev = -2.5
 
 [NumericalParameters]
 # Alongshore discretisation resolution (transect spacing) [m]
@@ -89,6 +89,8 @@ AlongShoreDx = 20
 Beta = 1.05
 # Temporal weighting factor for implicit Preissmann scheme 
 Theta = 0.7
+# Spatial weighting coefficient for bedload transport (0.5=central, 0-0.5=partial upwinding)
+Psi = 0.4
 # Error tolerance for implicit solution to unsteady river hydraulics [m and m/s]
 ErrTol = 0.001
 # Maximum iterations for implicit solution to unsteady river hydraulics
