@@ -117,6 +117,18 @@ def newOutFile(FileName, ModelName, StartTime,
     OutletElevVar.units = 'm'
     OutletElevVar.long_name = 'Outlet bed elevation at each transect'
     
+    # Barrier crest level
+    BarrierElevVar = NcFile.createVariable('barrier_crest_z', np.float32, 
+                                           (TimeDim.name, XDim.name))
+    BarrierElevVar.units = 'm'
+    BarrierElevVar.long_name = 'Barrier crest elevation at each transect'
+    
+    # Inner barrier crest level
+    InnerBarrierElevVar = NcFile.createVariable('inner_barrier_crest_z', np.float32, 
+                                                (TimeDim.name, XDim.name))
+    InnerBarrierElevVar.units = 'm'
+    InnerBarrierElevVar.long_name = 'Inner barrier crest elevation at each transect'
+    
     # Lagoon water level
     LagoonWlVar = NcFile.createVariable('lagoon_wl', np.float32, 
                                         (TimeDim.name, XDim.name))
@@ -213,8 +225,10 @@ def writeCurrent(FileName, CurrentTime,
     NcFile.variables['lagoon_y'][TimeIx,:] = ShoreY[:,3]
     NcFile.variables['cliff_y'][TimeIx,:] = ShoreY[:,4]
     
-    NcFile.variables['lagoon_bed_z'][TimeIx,:] = ShoreZ[:,3]
+    NcFile.variables['barrier_crest_z'][TimeIx,:] = ShoreZ[:,0]
     NcFile.variables['outlet_bed_z'][TimeIx,:] = ShoreZ[:,1]
+    NcFile.variables['inner_barrier_crest_z'][TimeIx,:] = ShoreZ[:,2]
+    NcFile.variables['lagoon_bed_z'][TimeIx,:] = ShoreZ[:,3]
     
     NcFile.variables['lagoon_wl'][TimeIx,:] = LagoonWL
     NcFile.variables['lagoon_vel'][TimeIx,:] = LagoonVel

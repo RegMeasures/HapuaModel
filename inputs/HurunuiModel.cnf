@@ -86,7 +86,7 @@ AlongShoreDx = 20
 # Momentum (Boussinesq) coefficient (generally in the range 1 to 1.05) 
 # Can be set to zero to ignore the convective acceleration term of the momentum
 # equation if desired!
-Beta = 1.05
+Beta = 0
 # Temporal weighting factor for implicit Preissmann scheme 
 Theta = 0.7
 # Spatial weighting coefficient for bedload transport (0.5=central, 0-0.5=partial upwinding)
