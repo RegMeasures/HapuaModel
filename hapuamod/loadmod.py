@@ -103,12 +103,13 @@ def loadModel(Config):
                 2: Lagoonward edge of outlet channel (or nan)
                 3: Seaward edge of lagoon (nan if beyond lagoon extent)
                 4: Cliff toe position
-        LagoonElev (np.ndarray(float64)): elevation of lagoon bed at positions 
-            given by ShoreX (m)
-        BarrierElev (np.ndarray(float64)): elevation of barrier crest at 
-            positions given by ShoreX (m)
-        OutletElev (np.ndarray(float64)): elevation of outlet channel bed at 
-            positions given by ShoreX (nan where no outlet channel, m)
+        ShoreZ (np.ndarray(float64)): elevation of aspects of cross-shore 
+            profile at transects with x-coordinates given by ShoreX (m). The 
+            columns of ShoreZ represent:
+                0: Barrier crest height
+                1: Outlet channel bed elevation (nan if no outlet at profile)
+                2: Inner barrier crest height (nan if no outlet at profile)
+                3: Lagoon bed elevation (nan if no lagoon at profile)
         RiverElev (np.ndarray(float64)): elevation of river bed cross-sections 
             upstream of lagoon (m)
         OutletEndX (np.ndarray(float64)): X-coordinate of upstream and 
@@ -358,7 +359,7 @@ def loadModel(Config):
     
     #%% Initialise shoreline variables
     
-    # Convert shoreline into model coordinate system
+    # Convert shoreline polyline into model coordinate system
     IniShoreCoords2 = np.empty(IniShoreCoords.shape)
     (IniShoreCoords2[:,0], IniShoreCoords2[:,1]) = geom.real2mod(IniShoreCoords[:,0], IniShoreCoords[:,1], Origin, ShoreNormDir)
     if IniShoreCoords2[0,0] > IniShoreCoords2[-1,0]:
@@ -369,6 +370,9 @@ def loadModel(Config):
     ShoreX = np.arange(math.ceil(IniShoreCoords2[0,0]/Dx)*Dx, 
                        IniShoreCoords2[-1,0], Dx)
     ShoreY = np.full([ShoreX.size, 5], np.nan)
+    ShoreZ = np.full([ShoreX.size, 4], np.nan)
+    
+    # Interpolate shoreline position onto model transects    
     ShoreY[:,0] = np.interp(ShoreX, IniShoreCoords2[:,0], IniShoreCoords2[:,1])
     
     #%% Initialise lagoon and outlet channel variables
@@ -442,20 +446,19 @@ def loadModel(Config):
     OutletEndWidth = np.full(2, IniCond['OutletWidth'])
     
     # Initialise lagoon bed elevation
-    LagoonElev = np.full(ShoreX.size, IniCond['LagoonBed'])
-    LagoonElev[np.isnan(ShoreY[:,3])] = np.nan
+    ShoreZ[~np.isnan(ShoreY[:,3]),3] = np.full(ShoreX.size, IniCond['LagoonBed'])
     
     # Initialise outlet channel bed elevation
-    OutletElev = np.full(ShoreX.size, np.nan)
     BedLevel = np.linspace(IniCond['LagoonBed'], IniCond['OutletBed'], np.sum(OutletMask)+2)
     if OutletToR:
-        OutletElev[OutletMask] = BedLevel[1:-1]
+        ShoreZ[OutletMask, 1] = BedLevel[1:-1]
     else:
-        OutletElev[OutletMask] = np.flipud(BedLevel[1:-1])
+        ShoreZ[OutletMask, 1] = np.flipud(BedLevel[1:-1])
     OutletEndElev = BedLevel[[0,-1]]
     
     # Initialise barrier crest elevation
-    BarrierElev = np.full(ShoreX.size, IniCond['BarrierElev'])
+    ShoreZ[:, 0] = np.full(ShoreX.size, IniCond['BarrierElev'])
+    ShoreZ[OutletMask, 2] = np.full(np.sum(OutletMask), IniCond['BarrierElev'])
     
     #%% Initialising river variables
     RiverElev = np.flipud(np.arange(IniCond['LagoonBed'],
@@ -474,6 +477,6 @@ def loadModel(Config):
 #    plt.axis('equal')
     
     return (FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, 
-            ShoreX, ShoreY, LagoonElev, BarrierElev, OutletElev, 
-            RiverElev, OutletEndX, OutletEndWidth, OutletEndElev,
+            ShoreX, ShoreY, ShoreZ, RiverElev, 
+            OutletEndX, OutletEndWidth, OutletEndElev,
             TimePars, PhysicalPars, NumericalPars, OutputOpts)

@@ -9,11 +9,11 @@ import logging
 
 # import local modules
 
-def updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
-                    OutletEndX, OutletEndWidth, OutletEndElev, 
-                    RiverElev, RiverWidth, OnlineLagoon, OutletChanIx, 
-                    ChanWidth, ChanDep, ChanDx,
-                    LST, Bedload, Dx, Dt, PhysicalPars):
+def updateMorphology(ShoreX, ShoreY, ShoreZ,
+                     OutletEndX, OutletEndWidth, OutletEndElev, 
+                     RiverElev, RiverWidth, OnlineLagoon, OutletChanIx, 
+                     ChanWidth, ChanDep, ChanDx,
+                     LST, Bedload, Dx, Dt, PhysicalPars):
     """ Update river, lagoon, outlet, barrier and shoreline morphology
     """
     
@@ -40,48 +40,48 @@ def updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
     # note that += modifies variables in place so no need to explicitly return them!
     # No change in river width allowed so all erosion applied to bed.
     RiverElev[1:] += (BedDep[:NRiv] + EroVol[:NRiv]) / (PhysicalPars['RiverWidth'] * Dx)
-    LagoonElev[OnlineLagoon] += ((BedDep[NRiv:-NOut] + BedEro[NRiv:-NOut])
-                                 / ((ShoreY[OnlineLagoon, 3] - ShoreY[OnlineLagoon, 4]) * Dx))
-    OutletElev[OutletChanIx] += (BedDep[-NOut+1:-1] + BedEro[-NOut+1:-1]) / (ChanWidth[-NOut+1:-1] * Dx)
+    ShoreZ[OnlineLagoon, 3] += ((BedDep[NRiv:-NOut] + BedEro[NRiv:-NOut])
+                                / ((ShoreY[OnlineLagoon, 3] - ShoreY[OnlineLagoon, 4]) * Dx))
+    ShoreZ[OutletChanIx, 1] += (BedDep[-NOut+1:-1] + BedEro[-NOut+1:-1]) / (ChanWidth[-NOut+1:-1] * Dx)
     OutletEndElev += (BedDep[[-NOut,-1]] + BedEro[[-NOut,-1]]) / (OutletEndWidth * ChanDx[[-NOut+1,-1]])
     
     # Update lagoon and outlet channel bank positions
     # Note: River upstream of lagoon has fixed width - all morpho change is on bed
-    # TODO: Account for differences in bank height either side of outlet channel
-    # Lagoon
-    ShoreY[OnlineLagoon,3] -= (BankEro[NRiv:-NOut]/2) / ((BarrierElev[OnlineLagoon] - LagoonElev[OnlineLagoon]) * Dx)
-    ShoreY[OnlineLagoon,4] += (BankEro[NRiv:-NOut]/2) / ((PhysicalPars['BackshoreElev'] - LagoonElev[OnlineLagoon]) * Dx)
+    LagoonBankElev = ShoreZ[:,0]
+    LagoonBankElev[OutletChanIx] = ShoreZ[OutletChanIx, 2]
+    ShoreY[OnlineLagoon,3] -= (BankEro[NRiv:-NOut]/2) / ((LagoonBankElev[OnlineLagoon] - ShoreZ[OnlineLagoon,3]) * Dx)
+    ShoreY[OnlineLagoon,4] += (BankEro[NRiv:-NOut]/2) / ((PhysicalPars['BackshoreElev'] - ShoreZ[OnlineLagoon,3]) * Dx)
     # Outlet channel
-    ShoreY[OutletChanIx,1] -= (BankEro[-NOut+1:-1]/2) / ((BarrierElev[OutletChanIx] - OutletElev[OutletChanIx]) * Dx)
-    ShoreY[OutletChanIx,2] += (BankEro[-NOut+1:-1]/2) / ((BarrierElev[OutletChanIx] - OutletElev[OutletChanIx]) * Dx)
-    OutletEndWidth -= BankEro[[-NOut,-1]] / ((BarrierElev[OutletChanIx[[0,-1]]] - OutletEndElev) * ChanDx[[-NOut+1,-1]])
+    ShoreY[OutletChanIx,1] -= (BankEro[-NOut+1:-1]/2) / ((ShoreZ[OutletChanIx,0] - ShoreZ[OutletChanIx,1]) * Dx)
+    ShoreY[OutletChanIx,2] += (BankEro[-NOut+1:-1]/2) / ((ShoreZ[OutletChanIx,2] - ShoreZ[OutletChanIx,1]) * Dx)
+    OutletEndWidth -= BankEro[[-NOut,-1]] / ((ShoreZ[OutletChanIx[[0,-1]],0] - OutletEndElev) * ChanDx[[-NOut+1,-1]])
     
     # Put sediment discharged from outlet onto shoreline 
     # TODO improve sediment distribution...
-    ShoreY[OutletRbShoreIx-1:OutletRbShoreIx,0] += (Bedload[-1] / 2) * Dt.seconds / ((PhysicalPars['ClosureDepth'] + BarrierElev[OutletRbShoreIx-1:OutletRbShoreIx]) * Dx)
+    ShoreY[OutletRbShoreIx-1:OutletRbShoreIx,0] += (Bedload[-1] / 2) * Dt.seconds / ((PhysicalPars['ClosureDepth'] + ShoreZ[OutletRbShoreIx-1:OutletRbShoreIx,0]) * Dx)
     
     #%% 1-Line shoreline model morphology
     
     # Update shoreline position
     # TODO add shoreline boundary conditions here (github issue #10)
     ShoreY[1:-1,0] += ((LST[:-1] - LST[1:]) * Dt.seconds 
-                       / ((PhysicalPars['ClosureDepth'] + BarrierElev[1:-1]) * Dx))
+                       / ((PhysicalPars['ClosureDepth'] + ShoreZ[1:-1,0]) * Dx))
     
     # Remove LST driven sed supply out of outlet channel and put on outlet channel bank instead
     if LST[OutletRbShoreIx-1]>0:
         # Transport from L to R
         ShoreY[OutletRbShoreIx,0] -= (LST[OutletRbShoreIx-1] * Dt.seconds 
                                       / ((PhysicalPars['ClosureDepth'] 
-                                          + BarrierElev[OutletRbShoreIx]) * Dx))
-        WidthReduction = (LST[OutletRbShoreIx-1] * Dt.seconds) / ((BarrierElev[OutletChanIx[-1]] - OutletEndElev[1]) * ChanDx[-1])
+                                          + ShoreZ[OutletRbShoreIx,0]) * Dx))
+        WidthReduction = (LST[OutletRbShoreIx-1] * Dt.seconds) / ((ShoreZ[OutletChanIx[-1],0] - OutletEndElev[1]) * ChanDx[-1])
         OutletEndWidth[1] -= WidthReduction
         OutletEndX[1] += WidthReduction/2
     else:
         # Transport from R to L
         ShoreY[OutletRbShoreIx-1,0] += (LST[OutletRbShoreIx-1] * Dt.seconds 
                                         / ((PhysicalPars['ClosureDepth'] 
-                                            + BarrierElev[OutletRbShoreIx-1]) * Dx))
-        WidthReduction = (-LST[OutletRbShoreIx-1] * Dt.seconds) / ((BarrierElev[OutletChanIx[-1]] - OutletEndElev[1]) * ChanDx[-1])
+                                            + ShoreZ[OutletRbShoreIx-1,0]) * Dx))
+        WidthReduction = (-LST[OutletRbShoreIx-1] * Dt.seconds) / ((ShoreZ[OutletChanIx[-1],0] - OutletEndElev[1]) * ChanDx[-1])
         OutletEndWidth[1] -= WidthReduction
         OutletEndX[1] -= WidthReduction/2
         
@@ -116,12 +116,16 @@ def updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
             Extend = False
     
     if Extend:
-        # Width of new outlet section = end width
-        # Bed level of new outlet section  = end bed level
         # Dist from new outlet section to shoreline = 1/2 distance of last outlet section
         ShoreY[ExtendMask,1] = ShoreY[ExtendMask,0] - (ShoreY[OutletChanIx[-1],0] - ShoreY[OutletChanIx[-1],1])/2
+        # Width of new outlet section = end width
         ShoreY[ExtendMask,2] = ShoreY[ExtendMask,1] - OutletEndWidth[1]
-        OutletElev[ExtendMask] = OutletEndElev[1]
+        # Bed level of new outlet section  = end bed level
+        ShoreZ[ExtendMask,1] = OutletEndElev[1]
+        # Barrier height of inner barrier same as old outer barrier
+        ShoreZ[ExtendMask,2] = ShoreZ[ExtendMask,0]
+        # TODO: Modify Barrier height of outer barrier ?????
+        
         # Update OutletChanIx as it has changed and its used later in this function
         if OutletEndX[0] < OutletEndX[1]:
             OutletChanIx = np.where(np.logical_and(OutletEndX[0] < ShoreX, 
@@ -168,11 +172,12 @@ def updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
                 logging.info('Schematisation requires removal of any remaining gravel between new lagoon and cliff-toe as part of extension')
                 # Convert outlet channel to lagoon
                 ShoreY[LagExtension,3] = ShoreY[LagExtension,1]
-                LagoonElev[LagExtension] = OutletElev[LagExtension]
+                ShoreZ[LagExtension,3] = ShoreZ[LagExtension,1]
                 # Remove outlet channel
                 ShoreY[LagExtension,1] = np.nan
                 ShoreY[LagExtension,2] = np.nan
-                OutletElev[LagExtension] = np.nan
+                ShoreZ[LagExtension,1] = np.nan
+                ShoreZ[LagExtension,2] = np.nan
         
         # Check seaward end
         # Not sure what happens if truncation of both ends happens in same timestep???
@@ -215,19 +220,25 @@ def updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
         logging.info('Outlet intersects shoreline at %i transects - filling outlet with sediment from shoreface' % np.sum(ShoreIntersect))
         IntTsects = OutletExists[ShoreIntersect]
         ShoreY[IntTsects, 0] -= ((ShoreY[IntTsects, 1] - ShoreY[IntTsects, 2]) 
-                                 * (BarrierElev[IntTsects] - OutletElev[IntTsects]) 
-                                 / (BarrierElev[IntTsects] + PhysicalPars['ClosureDepth']))
+                                 * (ShoreZ[IntTsects, 2] - ShoreZ[IntTsects, 1]) 
+                                 / (ShoreZ[IntTsects, 2] + PhysicalPars['ClosureDepth']))
+        # Remove outlet channel from transect now it has been dissolved into shoreline
         ShoreY[IntTsects, 1] = np.nan
         ShoreY[IntTsects, 2] = np.nan
-        OutletElev[IntTsects] = np.nan
+        ShoreZ[IntTsects, 1] = np.nan
+        # Remove inner barrier now there's no outlet in the transect
+        ShoreZ[IntTsects, 0] = ShoreZ[IntTsects, 2]
+        ShoreZ[IntTsects, 2] = np.nan
     
     LagoonIntersect = ShoreY[OutletExists,2] < ShoreY[OutletExists,3]
     if np.any(LagoonIntersect):
         logging.info('Outlet intersects lagoon at %i transects - adding channel width into lagoon' % np.sum(LagoonIntersect))
         IntTsects = OutletExists[LagoonIntersect]
-        # TODO: handle sediment balance properly here based on difference in bed elevation between lagoon and channel?
-        ShoreY[IntTsects, 3] = ShoreY[IntTsects, 1]
+        ShoreY[IntTsects, 3] += ((ShoreY[IntTsects, 1] - ShoreY[IntTsects, 2]) 
+                                 * (ShoreZ[IntTsects, 2] - ShoreZ[IntTsects, 1]) 
+                                 / (ShoreZ[IntTsects, 0] - ShoreZ[IntTsects, 3]))
+        # Remove outlet channel from transect now it has been dissolved into shoreline
         ShoreY[IntTsects, 1] = np.nan
         ShoreY[IntTsects, 2] = np.nan
-        OutletElev[IntTsects] = np.nan
+        ShoreZ[IntTsects, 1] = np.nan
     

@@ -260,7 +260,7 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
         
         assert ItCount < MaxIt, 'Max iterations exceeded.'
 
-def assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev, 
+def assembleChannel(ShoreX, ShoreY, ShoreZ, 
                     OutletEndX, OutletEndWidth, OutletEndElev, 
                     RiverElev, RiverWidth, RivDep, RivVel, 
                     LagoonWL, LagoonVel, OutletDep, OutletVel,
@@ -269,7 +269,7 @@ def assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
         
         (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
          OnlineLagoon, OutletChanIx, ChanFlag) = \
-            riv.assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev, 
+            riv.assembleChannel(ShoreX, ShoreY, ShoreZ, 
                                 OutletEndX, OutletEndWidth, OutletEndElev, 
                                 RiverElev, RiverWidth, RivDep, RivVel, 
                                 LagoonWL, LagoonVel, OutletDep, OutletVel, 
@@ -347,8 +347,8 @@ def assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
     ChanFlag = np.concatenate([np.full(RiverElev.size, 0), 
                                np.full(OnlineLagoon.size, 1), 
                                [2], np.full(OutletChanIx.size, 3), [2,4]])
-    ChanElev = np.concatenate([RiverElev, LagoonElev[OnlineLagoon], 
-                               [OutletEndElev[0]], OutletElev[OutletChanIx], 
+    ChanElev = np.concatenate([RiverElev, ShoreZ[OnlineLagoon,3], 
+                               [OutletEndElev[0]], ShoreZ[OutletChanIx,1], 
                                [OutletEndElev[1], min(MaxOutletElev, OutletEndElev[1])]])
     ChanWidth = np.concatenate([np.tile(RiverWidth, RiverElev.size), 
                                 LagoonWidth[OnlineLagoon], [OutletEndWidth[0]],
@@ -359,7 +359,7 @@ def assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
     
     # Assemble the hydraulic initial conditions
     ChanDep = np.concatenate([RivDep,
-                              LagoonWL[OnlineLagoon]-LagoonElev[OnlineLagoon],
+                              LagoonWL[OnlineLagoon]-ShoreZ[OnlineLagoon,3],
                               [OutletEndDep[0]], 
                               OutletDep[OutletChanIx], 
                               OutletEndDep[-2:]])

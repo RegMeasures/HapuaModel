@@ -9,8 +9,8 @@ import hapuamod as hm
 ModelConfigFile = 'inputs\HurunuiModel.cnf'
 Config = hm.loadmod.readConfig(ModelConfigFile)
 (FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, 
- ShoreX, ShoreY, LagoonElev, BarrierElev, OutletElev, 
- RiverElev, OutletEndX, OutletEndWidth, OutletEndElev,
+ ShoreX, ShoreY, ShoreZ, RiverElev, 
+ OutletEndX, OutletEndWidth, OutletEndElev,
  TimePars, PhysicalPars, NumericalPars, OutputOpts) = hm.loadmod.loadModel(Config)
 
 plt.figure()
@@ -35,7 +35,7 @@ plt.plot((ShoreX[0:-1]+ShoreX[1:])/2, LST)
 # Join river and outlet through lagoon
 (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
  OnlineLagoon, OutletChanIx, ChanFlag) = \
-    hm.riv.assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
+    hm.riv.assembleChannel(ShoreX, ShoreY, ShoreZ,
                            OutletEndX, OutletEndWidth, OutletEndElev, 
                            RiverElev, PhysicalPars['RiverWidth'], 
                            np.zeros(RiverElev.size), np.zeros(RiverElev.size),
@@ -56,10 +56,10 @@ SeaLevel = hm.core.interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartT
 # Store hydraulics and re-generate
 (LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, OutletEndVel) = \
     hm.riv.storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, 
-                           ChanFlag, LagoonElev)
+                           ChanFlag, ShoreZ[:,3])
 (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
  OnlineLagoon, OutletChanIx, ChanFlag) = \
-    hm.riv.assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev, 
+    hm.riv.assembleChannel(ShoreX, ShoreY, ShoreZ, 
                            OutletEndX, OutletEndWidth, OutletEndElev, 
                            RiverElev, PhysicalPars['RiverWidth'], 
                            ChanDep[ChanFlag==0], ChanVel[ChanFlag==0], 
@@ -86,7 +86,7 @@ plt.plot(ChanDist, ChanDep+ChanElev, 'r:')
 #%% Morphology updating
 # Bed updating
 OldShoreY = ShoreY.copy()
-hm.mor.updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
+hm.mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
                         OutletEndX, OutletEndWidth, OutletEndElev, 
                         RiverElev, PhysicalPars['RiverWidth'], OnlineLagoon, 
                         OutletChanIx, ChanWidth, ChanDep, ChanDx,
@@ -99,11 +99,11 @@ hm.out.newOutFile('test.nc', Config['ModelName'], TimePars['StartTime'],
                   ShoreX, NumericalPars['Dx'], RiverElev, True)
 
 hm.out.writeCurrent('test.nc', TimePars['StartTime'], 
-                    ShoreY, LagoonElev, OutletElev, LagoonWL, LagoonVel, 
-                     np.zeros(ShoreX.size-1), 
-                     RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0],
-                     OutletEndX, OutletEndElev, OutletEndWidth, 
-                     OutletEndDep, OutletEndVel)
+                    ShoreY, ShoreZ, LagoonWL, LagoonVel, 
+                    np.zeros(ShoreX.size-1), 
+                    RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0],
+                    OutletEndX, OutletEndElev, OutletEndWidth, 
+                    OutletEndDep, OutletEndVel)
 
 #%% Test core timestepping
 ModelConfigFile = 'inputs\HurunuiModel.cnf'

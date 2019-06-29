@@ -34,8 +34,7 @@ def run(ModelConfigFile, Overwrite=False):
     
     #%% Load the model
     Config = loadmod.readConfig(ModelConfigFile)
-    (FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, 
-     ShoreX, ShoreY, LagoonElev, BarrierElev, OutletElev, 
+    (FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, ShoreX, ShoreY, ShoreZ, 
      RiverElev, OutletEndX, OutletEndWidth, OutletEndElev,
      TimePars, PhysicalPars, NumericalPars, OutputOpts) = loadmod.loadModel(Config)
     
@@ -45,7 +44,7 @@ def run(ModelConfigFile, Overwrite=False):
     
     (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
      OnlineLagoon, OutletChanIx, ChanFlag) = \
-        riv.assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
+        riv.assembleChannel(ShoreX, ShoreY, ShoreZ,
                             OutletEndX, OutletEndWidth, OutletEndElev, 
                             RiverElev, PhysicalPars['RiverWidth'], 
                             np.zeros(RiverElev.size), np.zeros(RiverElev.size),
@@ -60,13 +59,13 @@ def run(ModelConfigFile, Overwrite=False):
     
     (LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, OutletEndVel) = \
         riv.storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, 
-                            ChanFlag, LagoonElev)
+                            ChanFlag, ShoreZ[:,3])
     
     #%% Create output file and write initial conditions
     out.newOutFile(OutputOpts['OutFile'], Config['ModelName'], TimePars['StartTime'], 
                    ShoreX, NumericalPars['Dx'],  RiverElev, Overwrite)
     out.writeCurrent(OutputOpts['OutFile'], TimePars['StartTime'],
-                     ShoreY, LagoonElev, OutletElev, LagoonWL, LagoonVel, 
+                     ShoreY, ShoreZ, LagoonWL, LagoonVel, 
                      np.zeros(ShoreX.size-1), 
                      RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0],
                      OutletEndX, OutletEndElev, OutletEndWidth, 
@@ -96,7 +95,7 @@ def run(ModelConfigFile, Overwrite=False):
         # Re-assemble the combined river channel incase it has evolved
         (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
          OnlineLagoon, OutletChanIx, ChanFlag) = \
-            riv.assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev, 
+            riv.assembleChannel(ShoreX, ShoreY, ShoreZ, 
                                 OutletEndX, OutletEndWidth, OutletEndElev, 
                                 RiverElev, PhysicalPars['RiverWidth'], 
                                 ChanDep[ChanFlag==0], ChanVel[ChanFlag==0], 
@@ -128,7 +127,7 @@ def run(ModelConfigFile, Overwrite=False):
         # Store the hydraulics ready to use for initial conditions in the next loop
         (LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, OutletEndVel) = \
             riv.storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, 
-                                ChanFlag, LagoonElev)
+                                ChanFlag, ShoreZ[:,3])
         
         # Calculate bedload transport
         Bedload = riv.calcBedload(ChanElev, ChanWidth, ChanDep, ChanVel, 
@@ -151,7 +150,7 @@ def run(ModelConfigFile, Overwrite=False):
         Runup = coast.runup(WavePeriod, Hs_offshore, PhysicalPars['BeachSlope'])
         
         # Update morphology
-        mor.updateMorphology(ShoreX, ShoreY, LagoonElev, OutletElev, BarrierElev,
+        mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
                              OutletEndX, OutletEndWidth, OutletEndElev, 
                              RiverElev, PhysicalPars['RiverWidth'], OnlineLagoon, 
                              OutletChanIx, ChanWidth, ChanDep, ChanDx,
@@ -163,7 +162,7 @@ def run(ModelConfigFile, Overwrite=False):
         
         # Save outputs
         out.writeCurrent(OutputOpts['OutFile'], MorTime, 
-                         ShoreY, LagoonElev, OutletElev, LagoonWL, LagoonVel, LST, 
+                         ShoreY, ShoreZ, LagoonWL, LagoonVel, LST, 
                          RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0],
                          OutletEndX, OutletEndElev, OutletEndWidth, 
                          OutletEndDep, OutletEndVel)

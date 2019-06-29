@@ -190,7 +190,7 @@ def newOutFile(FileName, ModelName, StartTime,
     NcFile.close()
 
 def writeCurrent(FileName, CurrentTime,
-                 ShoreY, LagoonElev, OutletElev, LagoonWL, LagoonVel, LST, 
+                 ShoreY, ShoreZ, LagoonWL, LagoonVel, LST, 
                  RiverElev, RiverDep, RiverVel,
                  OutletEndX, OutletEndElev, OutletEndWidth, 
                  OutletEndDep, OutletEndVel):
@@ -213,8 +213,8 @@ def writeCurrent(FileName, CurrentTime,
     NcFile.variables['lagoon_y'][TimeIx,:] = ShoreY[:,3]
     NcFile.variables['cliff_y'][TimeIx,:] = ShoreY[:,4]
     
-    NcFile.variables['lagoon_bed_z'][TimeIx,:] = LagoonElev
-    NcFile.variables['outlet_bed_z'][TimeIx,:] = OutletElev
+    NcFile.variables['lagoon_bed_z'][TimeIx,:] = ShoreZ[:,3]
+    NcFile.variables['outlet_bed_z'][TimeIx,:] = ShoreZ[:,1]
     
     NcFile.variables['lagoon_wl'][TimeIx,:] = LagoonWL
     NcFile.variables['lagoon_vel'][TimeIx,:] = LagoonVel
