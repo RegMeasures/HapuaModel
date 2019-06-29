@@ -59,7 +59,8 @@ def mapView(ShoreX, ShoreY, Origin, ShoreNormDir):
     # tidy up the plot
     plt.axis('equal')
 
-def modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx, LST=None):
+def modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx, 
+              WavePower=0, EDir_h=0, LST=None, WaveScaling=0.01):
     """ Map the current model state in model coordinates
     
     Parameters:
@@ -90,10 +91,11 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx, LST=None):
     CliffLine,  = PlanAx.plot(ShoreX, ShoreY[:,4], 'k-', label='Cliff')
     RiverLine,  = PlanAx.plot([0,0], [-100,-300], 'b-', label='River')
     if not LST is None:
+        WaveArrow = PlanAx.arrow(0,200,100,100)
         LstLine, = LstAx.plot((ShoreX[:-1]+ShoreX[1:])/2, LST*3600, 'k-')
     
     # Add some labels
-    plt.legend()
+    PlanAx.legend()
     PlanAx.set_xlabel('Model X-coordinate (m)')
     PlanAx.set_ylabel('Model Y-coordinate (m)')
     if not LST is None:
@@ -101,22 +103,27 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx, LST=None):
     
     # Compile outputs
     if not LST is None:
-        ModelFig = (PlanFig, PlanAx, ShoreLine, OutletLine, LagoonLine, 
-                    CliffLine, RiverLine, LstAx, LstLine)
+        ModelFig = {'PlanFig':PlanFig, 'PlanAx':PlanAx, 'ShoreLine':ShoreLine, 
+                    'OutletLine':OutletLine, 'LagoonLine':LagoonLine, 
+                    'CliffLine':CliffLine, 'RiverLine':RiverLine, 
+                    'WaveArrow':WaveArrow, 'WaveScaling':WaveScaling, 
+                    'LstAx':LstAx, 'LstLine':LstLine}
     else:
-        ModelFig = (PlanFig, PlanAx, ShoreLine, OutletLine, LagoonLine, 
-                    CliffLine, RiverLine)
+        ModelFig = {'PlanFig':PlanFig, 'PlanAx':PlanAx, 'ShoreLine':ShoreLine, 
+                    'OutletLine':OutletLine, 'LagoonLine':LagoonLine, 
+                    'CliffLine':CliffLine, 'RiverLine':RiverLine}
     
     # Replace with correct lines
     if not LST is None:
-        updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx, LST)
+        updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx, 
+                        WavePower, EDir_h, LST)
     else:
         updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx)
     
     return ModelFig
 
 def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx,
-                    LST=None):
+                    WavePower=0, EDir_h=0, LST=None):
     
     # Calculate outlet plotting position
     OutletX = np.tile(ShoreX,[2,1]).flatten()
@@ -136,21 +143,32 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx,
     # Calculate river plotting position
     RiverY = ShoreY[ShoreX==0,4]
     
+    if (-np.pi/2) < EDir_h < (np.pi/2):
+        ArrLength = WavePower
+    else:
+        ArrLength = 0.01
+    ArrWidth = np.maximum((ArrLength * ModelFig['WaveScaling'])/10, 0.001)
+    WaveX = -np.sin(EDir_h) * ArrLength * ModelFig['WaveScaling']
+    WaveY = -np.cos(EDir_h) * ArrLength * ModelFig['WaveScaling']
+    
     # Update the lines
-    ModelFig[2].set_data(ShoreX, ShoreY[:,0])
-    ModelFig[3].set_data(OutletX, OutletY)
-    ModelFig[4].set_data(ShoreX, ShoreY[:,3])
-    ModelFig[5].set_data(ShoreX, ShoreY[:,4])
-    ModelFig[6].set_data([0,0], [RiverY, RiverY-300])
+    ModelFig['ShoreLine'].set_data(ShoreX, ShoreY[:,0])
+    ModelFig['OutletLine'].set_data(OutletX, OutletY)
+    ModelFig['LagoonLine'].set_data(ShoreX, ShoreY[:,3])
+    ModelFig['CliffLine'].set_data(ShoreX, ShoreY[:,4])
+    ModelFig['RiverLine'].set_data([0,0], [RiverY, RiverY-300])
     if not LST is None:
-        ModelFig[8].set_data((ShoreX[:-1]+ShoreX[1:])/2, LST*3600)
+        ModelFig['WaveArrow'].remove()
+        ModelFig['WaveArrow'] = ModelFig['PlanAx'].arrow(0, 200, WaveX, WaveY,
+                                                         width=ArrWidth)
+        ModelFig['LstLine'].set_data((ShoreX[:-1]+ShoreX[1:])/2, LST*3600)
         # Update LST axis scaling
-        ModelFig[7].relim()
-        ModelFig[7].autoscale_view(tight = False)
+        ModelFig['LstAx'].relim()
+        ModelFig['LstAx'].autoscale_view(tight = False)
     
     # Redraw
-    ModelFig[0].canvas.draw()
-    ModelFig[0].canvas.flush_events()
+    ModelFig['PlanFig'].canvas.draw()
+    ModelFig['PlanFig'].canvas.flush_events()
     
 def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None):
     """ Create a long section of the river to the lagoon outlet

@@ -22,6 +22,7 @@ def readConfig(ModelConfigFile):
     
     if not os.path.isfile(ModelConfigFile):
         logging.error('%s not found' % ModelConfigFile)
+        raise FileNotFoundError
     
     # Read the main config file
     logging.info('Loading "%s"' % ModelConfigFile)
@@ -75,11 +76,14 @@ def loadModel(Config):
                 WavePeriod (float64): Wave period (s)
                 Wlen_h (float64): Wavelength (m)
                 WavePower (float64): Wave power (W/m wave crest length)
-                EDir_h (float64): Net direction of wave energy at depth h 
-                    (where h is given as PhysicalParameter WaveDataDepth). 
-                    EAngle_h is read as a bearing in degrees, but is 
-                    converted to a direction relative to BaseShoreNormDir in 
-                    radians as part of the pre-processing (radians)
+                EDir_h (float64): Net direction wave energy arrives FROM at 
+                    depth h (where h is given as PhysicalParameter 
+                    WaveDataDepth), relative to shore-normal (+ve = arriving 
+                    from right of shore normal, -ve = arriving from left of 
+                    shore nornmal). EAngle_h is read as a bearing in degrees, 
+                    but is converted to a direction relative to 
+                    BaseShoreNormDir in radians as part of the pre-processing 
+                    (radians)
                 Hsig_Offshore (float64): Offshiore significant wave height (m)
         SeaLevelTs (DataFrame): Sea level timeseries as single column DataFrame
             with datetime index. Column name is "SeaLevel" (m)

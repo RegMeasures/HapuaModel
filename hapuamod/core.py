@@ -84,7 +84,8 @@ def run(ModelConfigFile, Overwrite=False):
                                         np.zeros(ChanElev.size-1))
         BdyFig = visualise.BdyCndFig(OutputTs)
         ModelFig = visualise.modelView(ShoreX, ShoreY, OutletEndX, 
-                                       OutletChanIx, np.zeros(ShoreX.size-1))
+                                       OutletChanIx, 0, 0, 
+                                       np.zeros(ShoreX.size-1))
     
     #%% Main timestepping loop
     MorTime = TimePars['StartTime']
@@ -185,7 +186,7 @@ def run(ModelConfigFile, Overwrite=False):
                                             Bedload)
                 visualise.updateBdyCndFig(BdyFig, OutputTs)
                 visualise.updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, 
-                                          OutletChanIx, LST)
+                                          OutletChanIx, WavePower, EDir_h, LST)
                 PlotTime += OutputOpts['PlotInt']
         
         

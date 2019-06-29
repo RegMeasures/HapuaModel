@@ -19,9 +19,10 @@ WaveData = WaveData.set_index('DateTime')
 OutputData = WaveData.loc[:,['WavePeriod','Wlen_h']]
 
 #%% Calculate net wave power magnitude and direction
-OutputData['WavePower'] = 1025 * 9.81 * np.sqrt(np.power(WaveData['XWForce'],2) + 
-                                                np.power(WaveData['YWForce'],2))
-OutputData['EDir_h'] = np.rad2deg(np.arctan2(-WaveData['XWForce'], -WaveData['YWForce']))
+# Note All directional wave information is reported in direction it arrives FROM
+OutputData['WavePower'] = 1025 * 9.81 * np.sqrt(np.power(WaveData['XTransp'],2) + 
+                                                np.power(WaveData['YTransp'],2))
+OutputData['EDir_h'] = np.rad2deg(np.arctan2(WaveData['XTransp'], WaveData['YTransp']))-180
 OutputData['EDir_h'] = OutputData['EDir_h'] % 360
 
 #%% Calculate offshore significant wave height

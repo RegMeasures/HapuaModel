@@ -20,8 +20,9 @@ def longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, Wlen_h, EDir_h, Physic
             Wlen_h: (float): Wavelength (m) at depth given by
                 PhysicalPars['WaveDataDepth'] 
             EDir_h (float): Net direction of wave energy flux (in radians,
-                clockwise from north, in direction of wave travel) at depth 
-                given by PhysicalPars['WaveDataDepth'].
+                relative to shore normal, -ve = waves arriving from left of 
+                shore-normal, +ve = waves arriving from right of shore-normal)
+                 at depth given by PhysicalPars['WaveDataDepth'].
             PhysicalPars: Physical parameters including:
                 BreakerCoef (float): see notes below.
                 K2coef (float): see notes below.
@@ -53,6 +54,11 @@ def longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, Wlen_h, EDir_h, Physic
     # Calculate offshore wave angle relative to each shoreline segment
     LocalRelShoreDir = np.arctan((ShoreY[0:-1,0] - ShoreY[1:,0])/Dx)
     LocalEDir_h = EDir_h - LocalRelShoreDir
+    
+    # Set wave power to zero for segments where waves are directed offshore
+    LocalWavePower = np.full(LocalEDir_h.size, WavePower)
+    LocalWavePower[LocalEDir_h < (-np.pi/2)] = 0
+    LocalWavePower[LocalEDir_h > (np.pi/2)] = 0
     
     # Calculate breaking wave depth
     BreakerDepth = (PhysicalPars['BreakerCoef'] * WavePower)**0.2
