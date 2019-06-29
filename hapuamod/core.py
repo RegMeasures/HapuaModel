@@ -92,10 +92,19 @@ def run(ModelConfigFile, Overwrite=False):
     LogTime = TimePars['StartTime']
     PlotTime = TimePars['StartTime']
     while MorTime <= TimePars['EndTime']:
+        
+        # Re-assemble the combined river channel incase it has evolved
+        (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
+         OnlineLagoon, OutletChanIx, ChanFlag) = \
+            riv.assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev, 
+                                OutletEndX, OutletEndWidth, OutletEndElev, 
+                                RiverElev, PhysicalPars['RiverWidth'], 
+                                ChanDep[ChanFlag==0], ChanVel[ChanFlag==0], 
+                                LagoonWL, LagoonVel, OutletDep, OutletVel,
+                                OutletEndDep, OutletEndVel, 
+                                NumericalPars['Dx'], PhysicalPars['MaxOutletElev'])
                 
         # Run the river model for all the timesteps upto the next morphology step
-        
-        # HydTimes = np.arange(MorTime, MorTime+TimePars['MorDt'], TimePars['HydDt'])
         HydTimes = pd.date_range(MorTime, MorTime+TimePars['MorDt'], 
                                  freq=TimePars['HydDt'], closed='right')
         
@@ -116,6 +125,7 @@ def run(ModelConfigFile, Overwrite=False):
                                                  RivFlow[-1], SeaLevel[-1], 
                                                  NumericalPars)
         
+        # Store the hydraulics ready to use for initial conditions in the next loop
         (LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, OutletEndVel) = \
             riv.storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, 
                                 ChanFlag, LagoonElev)
@@ -125,7 +135,7 @@ def run(ModelConfigFile, Overwrite=False):
                                   ChanDx, PhysicalPars, NumericalPars['Psi'])
         assert Bedload.size == ChanElev.size-1
         
-        # Run shoreline model to calculate longshore transport
+        # Calculate longshore transport
         WavesAtT = interpolate_at(WaveTs, pd.DatetimeIndex([MorTime]))
         EDir_h = WavesAtT.EDir_h[0]
         WavePower = WavesAtT.WavePower[0]
@@ -148,20 +158,10 @@ def run(ModelConfigFile, Overwrite=False):
                              LST, Bedload, NumericalPars['Dx'], TimePars['MorDt'], 
                              PhysicalPars)
         
-        (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
-         OnlineLagoon, OutletChanIx, ChanFlag) = \
-            riv.assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev, 
-                                OutletEndX, OutletEndWidth, OutletEndElev, 
-                                RiverElev, PhysicalPars['RiverWidth'], 
-                                ChanDep[ChanFlag==0], ChanVel[ChanFlag==0], 
-                                LagoonWL, LagoonVel, OutletDep, OutletVel,
-                                OutletEndDep, OutletEndVel, 
-                                NumericalPars['Dx'], PhysicalPars['MaxOutletElev'])
-        
         # increment time
         MorTime += TimePars['MorDt']
         
-        # Store outputs
+        # Save outputs
         out.writeCurrent(OutputOpts['OutFile'], MorTime, 
                          ShoreY, LagoonElev, OutletElev, LagoonWL, LagoonVel, LST, 
                          RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0],

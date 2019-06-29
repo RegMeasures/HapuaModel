@@ -233,20 +233,20 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None):
     VelLine, = VelAx.plot(Dist, ChanVel, 'r-')
     VelAx.set_ylabel('Velocity [m/s]', color='red')
     VelAx.tick_params(axis='y', colors='red')
-    VelAx.set_ylim([0,2])
+    VelAx.set_ylim([0,3])
     VelAx.grid(axis='x', which='both', linestyle=':')
     
     FrLine, = FrAx.plot(Dist, Fr, 'g-')
     FrAx.set_ylabel('Froude No.', color='green')
     FrAx.tick_params(axis='y', colors='green')
-    FrAx.set_ylim([0,1.3])
+    FrAx.set_ylim([0,1.6])
     
     # Plot bedload
     if not Bedload is None:
         QsLine, = QsAx.plot(D2, Bedload*3600, 'k-')
         QsAx.set_ylabel(r'Bedload [$\mathrm{m^3/hr}$]')
         QsAx.set_xlabel('Distance downstream [m]')
-        QsAx.set_ylim([0,10])
+        QsAx.set_ylim([0,30])
         QsAx.grid(axis='x', which='both', linestyle=':')
     
     # Compile outputs

@@ -382,6 +382,12 @@ def assembleChannel(ShoreX, ShoreY, LagoonElev, OutletElev,
         ChanVel[VelNan] = (np.interp(np.where(DepNan)[0], np.where(~DepNan)[0], ChanQ[~DepNan])
                            / ChanDep[VelNan])
     
+    # Check there are no nan values in the channel!
+    assert not np.any(np.isnan(ChanWidth)), 'NaN values in ChanWidth after assembleChannel'
+    assert not np.any(np.isnan(ChanElev)), 'NaN values in ChanElev after assembleChannel'
+    assert not np.any(np.isnan(ChanVel)), 'NaN values in ChanVel after assembleChannel'
+    assert not np.any(np.isnan(ChanDep)), 'NaN values in ChanDep after assembleChannel'
+    
     return (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
             OnlineLagoon, OutletChanIx, ChanFlag)
 
