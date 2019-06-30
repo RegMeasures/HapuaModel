@@ -92,3 +92,42 @@ def runup(WavePeriod, Hs_offshore, BeachSlope):
     """
     Runup = 0.49 * BeachSlope**0.5 * WavePeriod * Hs_offshore
     return Runup
+
+def overtopping(Runup, SeaLevel, ShoreY, ShoreZ, PhysicalPars):
+    """ Overtopping/overwashing sediment fluxes to barrier crest and backshore
+        
+        (CST_tot, OverwashProp) = overtopping(Runup, SeaLevel, ShoreY, ShoreZ, 
+                                              PhysicalPars)
+        Parameters:
+            Runup
+            SeaLevel
+            ShoreY
+            ShoreZ
+            
+        Returns:
+            CST_tot = total cross-shore sediment flux at each transect (m3/s/m)
+            OverwashProp = proportion of CST_tot overwashing at each transect
+        
+    """
+    # Overtopping potential
+    OP = np.maximum(Runup + SeaLevel - ShoreZ[:,0], 0.0)
+    
+    # Total sed flux
+    CST_tot = PhysicalPars['OT_coef'] * OP**PhysicalPars['OT_exp']
+    
+    # Barrier width
+    OutletPresent = ~np.isnan(ShoreY[:,1])
+    CrestWidth = ShoreY[:,0] - ShoreY[:,3]
+    CrestWidth[OutletPresent] = ShoreY[OutletPresent,0] - ShoreY[OutletPresent,1]
+    
+    # Split sed flux between crest and backshore (except where no lagoon)
+    NoLagoon = ShoreY[:,3] <= ShoreY[:,4]
+    OverwashProp = np.minimum(PhysicalPars['OwProp_coef'] * OP / CrestWidth, 1.)
+    OverwashProp[NoLagoon] = 0.0
+    
+    return(CST_tot, OverwashProp)
+    
+    
+
+    
+    

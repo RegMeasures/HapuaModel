@@ -148,13 +148,16 @@ def run(ModelConfigFile, Overwrite=False):
         
         # Calculate runup & overtopping potential
         Runup = coast.runup(WavePeriod, Hs_offshore, PhysicalPars['BeachSlope'])
+        (CST_tot, OverwashProp) = coast.overtopping(Runup, SeaLevel[-1], ShoreY, 
+                                                    ShoreZ, PhysicalPars)
         
         # Update morphology
         mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
                              OutletEndX, OutletEndWidth, OutletEndElev, 
                              RiverElev, PhysicalPars['RiverWidth'], OnlineLagoon, 
                              OutletChanIx, ChanWidth, ChanDep, ChanDx,
-                             LST, Bedload, NumericalPars['Dx'], TimePars['MorDt'], 
+                             LST, Bedload, CST_tot, OverwashProp,
+                             NumericalPars['Dx'], TimePars['MorDt'], 
                              PhysicalPars)
         
         # increment time

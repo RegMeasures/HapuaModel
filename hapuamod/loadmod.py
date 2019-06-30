@@ -152,6 +152,9 @@ def loadModel(Config):
                 the outlet channel [m] This elevation is applied downstream of 
                 the last real outlet channel cross-section and should be below 
                 the minimum sea level.
+            OT_coef (float): Overtopping coefficient
+            OT_exp (float): Overtopping exponent
+            OwProp_coef (float): Overwash proportion coefficient
             K2coef (float): Calculated from other inputs for use in calculation
                 of longshore transport rate. K2 = K / (RhoSed - RhoSea) * g * (1 - VoidRatio))
             BreakerCoef (float): Calculated from other inputs for use in 
@@ -324,7 +327,7 @@ def loadModel(Config):
                     'GammaRatio': float(Config['PhysicalParameters']['GammaRatio']),
                     'WaveDataDepth': float(Config['PhysicalParameters']['WaveDataDepth']),
                     'ClosureDepth': float(Config['PhysicalParameters']['ClosureDepth']),
-                    'BeachSlope': float(Config['PhysicalParameters']['ClosureDepth']),
+                    'BeachSlope': float(Config['PhysicalParameters']['BeachSlope']),
                     'RiverSlope': float(Config['PhysicalParameters']['RiverSlope']),
                     'GrainSize': float(Config['PhysicalParameters']['GrainSize']),
                     'UpstreamLength': float(Config['PhysicalParameters']['UpstreamLength']),
@@ -332,7 +335,10 @@ def loadModel(Config):
                     'Roughness': float(Config['PhysicalParameters']['RoughnessManning']),
                     'WidthRatio': float(Config['PhysicalParameters']['WidthDepthRatio']),
                     'BackshoreElev': float(Config['PhysicalParameters']['BackshoreElev']),
-                    'MaxOutletElev': float(Config['PhysicalParameters']['MaxOutletElev'])}
+                    'MaxOutletElev': float(Config['PhysicalParameters']['MaxOutletElev']),
+                    'OT_coef': float(Config['PhysicalParameters']['OT_coef']),
+                    'OT_exp': float(Config['PhysicalParameters']['OT_exp']),
+                    'OwProp_coef': float(Config['PhysicalParameters']['OwProp_coef'])}
 
     GammaLST = ((PhysicalPars['RhoSed'] - PhysicalPars['RhoSea']) * 
                 PhysicalPars['Gravity'] * (1 - PhysicalPars['VoidRatio']))

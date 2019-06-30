@@ -13,7 +13,8 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                      OutletEndX, OutletEndWidth, OutletEndElev, 
                      RiverElev, RiverWidth, OnlineLagoon, OutletChanIx, 
                      ChanWidth, ChanDep, ChanDx,
-                     LST, Bedload, Dx, Dt, PhysicalPars):
+                     LST, Bedload, CST_tot, OverwashProp,
+                     Dx, Dt, PhysicalPars):
     """ Update river, lagoon, outlet, barrier and shoreline morphology
     """
     
@@ -62,37 +63,47 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     
     #%% 1-Line shoreline model morphology
     
+    ShorefaceHeight = PhysicalPars['ClosureDepth'] + ShoreZ[:,0]
+    
     # Update shoreline position
     # TODO add shoreline boundary conditions here (github issue #10)
     ShoreY[1:-1,0] += ((LST[:-1] - LST[1:]) * Dt.seconds 
-                       / ((PhysicalPars['ClosureDepth'] + ShoreZ[1:-1,0]) * Dx))
+                       / (ShorefaceHeight[1:-1] * Dx))
     
     # Remove LST driven sed supply out of outlet channel and put on outlet channel bank instead
     if LST[OutletRbShoreIx-1]>0:
         # Transport from L to R
         ShoreY[OutletRbShoreIx,0] -= (LST[OutletRbShoreIx-1] * Dt.seconds 
-                                      / ((PhysicalPars['ClosureDepth'] 
-                                          + ShoreZ[OutletRbShoreIx,0]) * Dx))
+                                      / (ShorefaceHeight[OutletRbShoreIx] * Dx))
         WidthReduction = (LST[OutletRbShoreIx-1] * Dt.seconds) / ((ShoreZ[OutletChanIx[-1],0] - OutletEndElev[1]) * ChanDx[-1])
         OutletEndWidth[1] -= WidthReduction
         OutletEndX[1] += WidthReduction/2
     else:
         # Transport from R to L
         ShoreY[OutletRbShoreIx-1,0] += (LST[OutletRbShoreIx-1] * Dt.seconds 
-                                        / ((PhysicalPars['ClosureDepth'] 
-                                            + ShoreZ[OutletRbShoreIx-1,0]) * Dx))
+                                        / (ShorefaceHeight[OutletRbShoreIx-1] * Dx))
         WidthReduction = (-LST[OutletRbShoreIx-1] * Dt.seconds) / ((ShoreZ[OutletChanIx[-1],0] - OutletEndElev[1]) * ChanDx[-1])
         OutletEndWidth[1] -= WidthReduction
         OutletEndX[1] -= WidthReduction/2
         
     #%% Cross-shore morphology (overtopping etc)
     
-    # Calculate barrier width of seaward patr of barrier 
-    # (including the influence of the outlet channel)
+    OutletPresent = ~np.isnan(ShoreY[:,1])
     
-    # Calculate volume changes to barrier width and height
+    CrestWidth = ShoreY[:,0] - ShoreY[:,3]
+    CrestWidth[OutletPresent] = ShoreY[OutletPresent,0] - ShoreY[OutletPresent,1]
     
-    # Apply volume changes
+    BackBarHeight = ShoreZ[:,0] - ShoreZ[:,3]
+    BackBarHeight[OutletPresent] = ShoreZ[OutletPresent,0] - ShoreZ[OutletPresent,1]
+    
+    # Accumulation of sediment on top of the barrier
+    ShoreZ[:,0] += (1-OverwashProp) * CST_tot * Dt.seconds / CrestWidth
+    
+    # Accumulation of sediment on the back of the barrier
+    ShoreY[:,3] -= OverwashProp * CST_tot * Dt.seconds / BackBarHeight
+    
+    # Erosion of sediment off the shoreface (don't move ends)
+    ShoreY[1:-1,0] -= CST_tot[1:-1] * Dt.seconds / ShorefaceHeight[1:-1]
     
     #%% Check if d/s end of outlet channel has migrated across a transect line and adjust as necessary...
     

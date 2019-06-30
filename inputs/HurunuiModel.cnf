@@ -79,6 +79,12 @@ BackshoreElev = 30
 # This elevation is applied downstream of the last real outlet channel 
 # cross-section and should be below the minimum sea level.
 MaxOutletElev = -2.5
+# Overtopping coefficient - controls magnitude of overtopping sediment flux [s^-1]
+OT_coef = 0.002
+# Overtopping exponent (recommended value = 2)
+OT_exp = 2
+# Overwash proportion coefficient
+OwProp_coef = 20
 
 [NumericalParameters]
 # Alongshore discretisation resolution (transect spacing) [m]

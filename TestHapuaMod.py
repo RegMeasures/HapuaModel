@@ -83,15 +83,23 @@ hm.riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea,
                            RivFlow, SeaLevel, NumericalPars)
 plt.plot(ChanDist, ChanDep+ChanElev, 'r:')
 
+#%% Runup/overtopping
+WavePeriod = WaveTs.WavePeriod[0]
+Hs_offshore = WaveTs.Hsig_Offshore[0]
+
+Runup = hm.coast.runup(WavePeriod, Hs_offshore, PhysicalPars['BeachSlope'])
+
+(CST_tot, OverwashProp) = hm.coast.overtopping(Runup, SeaLevel, ShoreY, 
+                                               ShoreZ, PhysicalPars)
+
 #%% Morphology updating
-# Bed updating
 OldShoreY = ShoreY.copy()
 hm.mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
                         OutletEndX, OutletEndWidth, OutletEndElev, 
                         RiverElev, PhysicalPars['RiverWidth'], OnlineLagoon, 
                         OutletChanIx, ChanWidth, ChanDep, ChanDx,
-                        LST, Bedload, NumericalPars['Dx'], TimePars['MorDt'], 
-                        PhysicalPars)
+                        LST, Bedload, CST_tot, OverwashProp,
+                        NumericalPars['Dx'], TimePars['MorDt'], PhysicalPars)
 plt.plot(ShoreX, (ShoreY[:,0]-OldShoreY[:,0]))
 
 #%% Create output netcdf file and write initial condition
