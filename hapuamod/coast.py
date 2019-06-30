@@ -125,6 +125,10 @@ def overtopping(Runup, SeaLevel, ShoreY, ShoreZ, PhysicalPars):
     OverwashProp = np.minimum(PhysicalPars['OwProp_coef'] * OP / CrestWidth, 1.)
     OverwashProp[NoLagoon] = 0.0
     
+    # Checks
+    assert np.all(np.logical_and(OverwashProp>=0.0, OverwashProp<=1.0)), 'OverwashProp outside of range 0-1 in overtopping function'
+    assert np.all(CST_tot >= 0), 'Negative cross-shore transport in overtopping function!'
+    
     return(CST_tot, OverwashProp)
     
     

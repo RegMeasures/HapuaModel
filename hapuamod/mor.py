@@ -100,7 +100,8 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     ShoreZ[:,0] += (1-OverwashProp) * CST_tot * Dt.seconds / CrestWidth
     
     # Accumulation of sediment on the back of the barrier
-    ShoreY[:,3] -= OverwashProp * CST_tot * Dt.seconds / BackBarHeight
+    ShoreY[~OutletPresent,3] -= OverwashProp[~OutletPresent] * CST_tot[~OutletPresent] * Dt.seconds / BackBarHeight[~OutletPresent]
+    ShoreY[OutletPresent,1] -= OverwashProp[OutletPresent] * CST_tot[OutletPresent] * Dt.seconds / BackBarHeight[OutletPresent]
     
     # Erosion of sediment off the shoreface (don't move ends)
     ShoreY[1:-1,0] -= CST_tot[1:-1] * Dt.seconds / ShorefaceHeight[1:-1]
