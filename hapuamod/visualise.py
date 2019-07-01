@@ -59,26 +59,33 @@ def mapView(ShoreX, ShoreY, Origin, ShoreNormDir):
     # tidy up the plot
     plt.axis('equal')
 
-def modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx, 
-              WavePower=0, EDir_h=0, LST=None, WaveScaling=0.01):
+def modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx, ShoreZ=None,
+              WavePower=None, EDir_h=0, LST=None, CST=None, 
+              WaveScaling=0.01, CstScaling=0.00005, LstScaling=0.0001,
+              QuiverWidth=0.002):
     """ Map the current model state in model coordinates
     
-    Parameters:
-        ShoreX
-        ShoreY
-        OutletEndX
-        OutletEndY
-        LST (Optional)
+        Parameters:
+            ShoreX
+            ShoreY
+            OutletEndX
+            OutletChanIx
+            WavePower (optional)
+            LST (Optional)
+            
+        Returns:
+            ModelFig (dict): handles for the various parts of the plot. Used as
+                input to updateModelView.
         
-    Returns:
-        ModelFig = (PlanFig, PlanAx, ShoreLine, OutletLine, LagoonLine, CliffLine)
+        Note: smaller 'scale' makes arrows longer
     """
     
     # Create a new figure
-    if not LST is None:
+    if not ShoreZ is None:
         PlanFig = plt.figure(figsize=[10,6])
         PlanAx = plt.subplot2grid((3,1), (0,0), rowspan=2)
-        LstAx = plt.subplot2grid((3,1), (2,0), sharex=PlanAx)
+        VertAx = plt.subplot2grid((3,1), (2,0), sharex=PlanAx)
+        VertAx.set_ylim([1,5])
     else:
         PlanFig, PlanAx = plt.subplots(figsize=[10,5])
     
@@ -90,40 +97,54 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx,
     LagoonLine, = PlanAx.plot(ShoreX, ShoreY[:,3], 'c-', label='Lagoon')
     CliffLine,  = PlanAx.plot(ShoreX, ShoreY[:,4], 'k-', label='Cliff')
     RiverLine,  = PlanAx.plot([0,0], [-100,-300], 'b-', label='River')
-    if not LST is None:
+    if not ShoreZ is None:
+        CrestLine, = VertAx.plot(ShoreX, ShoreY[:,0], 'k-', label='Barrier crest')
+    
+    if not WavePower is None:
         WaveArrow = PlanAx.arrow(0,200,100,100)
-        LstLine, = LstAx.plot((ShoreX[:-1]+ShoreX[1:])/2, LST*3600, 'k-')
+    
+    if not LST is None:
+        LstQuiver = PlanAx.quiver((ShoreX[:-1]+ShoreX[1:])/2, 
+                                  (ShoreY[:-1,0]+ShoreY[1:,0])/2, 
+                                  LST, np.zeros(LST.size),
+                                  scale=LstScaling, width=QuiverWidth,
+                                  scale_units='x', units='width')
+    
+    if not CST is None:
+        CstQuiver = PlanAx.quiver(ShoreX, ShoreY[:,0], 
+                                  np.zeros(CST.size), -CST, 
+                                  scale=CstScaling, width=QuiverWidth,
+                                  scale_units='x', units='width')
     
     # Add some labels
     PlanAx.legend()
     PlanAx.set_xlabel('Model X-coordinate (m)')
     PlanAx.set_ylabel('Model Y-coordinate (m)')
-    if not LST is None:
-        LstAx.set_ylabel('LST [$\mathrm{m^3/hr}$]')
+    VertAx.set_ylabel('Elevation (m)')
     
-    # Compile outputs
+    # Compile output variable
+    ModelFig = {'PlanFig':PlanFig, 'PlanAx':PlanAx, 'ShoreLine':ShoreLine, 
+                'OutletLine':OutletLine, 'LagoonLine':LagoonLine, 
+                'CliffLine':CliffLine, 'RiverLine':RiverLine}
+    if not ShoreZ is None:
+        ModelFig['CrestLine'] = CrestLine
+    if not WavePower is None:
+        ModelFig['WaveArrow'] = WaveArrow
+        ModelFig['WaveScaling'] = WaveScaling
     if not LST is None:
-        ModelFig = {'PlanFig':PlanFig, 'PlanAx':PlanAx, 'ShoreLine':ShoreLine, 
-                    'OutletLine':OutletLine, 'LagoonLine':LagoonLine, 
-                    'CliffLine':CliffLine, 'RiverLine':RiverLine, 
-                    'WaveArrow':WaveArrow, 'WaveScaling':WaveScaling, 
-                    'LstAx':LstAx, 'LstLine':LstLine}
-    else:
-        ModelFig = {'PlanFig':PlanFig, 'PlanAx':PlanAx, 'ShoreLine':ShoreLine, 
-                    'OutletLine':OutletLine, 'LagoonLine':LagoonLine, 
-                    'CliffLine':CliffLine, 'RiverLine':RiverLine}
+        ModelFig['LstQuiver'] = LstQuiver
+    if not CST is None:
+        ModelFig['CstQuiver'] = CstQuiver
     
-    # Replace with correct lines
-    if not LST is None:
-        updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx, 
-                        WavePower, EDir_h, LST)
-    else:
-        updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx)
+    # Update plot with correct data
+    updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx, 
+                    ShoreZ=ShoreZ, WavePower=WavePower, EDir_h=EDir_h, 
+                    LST=LST, CST=CST)
     
     return ModelFig
 
-def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx,
-                    WavePower=0, EDir_h=0, LST=None):
+def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx, ShoreZ=None,
+                    WavePower=None, EDir_h=0, LST=None, CST=None):
     
     # Calculate outlet plotting position
     OutletX = np.tile(ShoreX,[2,1]).flatten()
@@ -157,14 +178,32 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx,
     ModelFig['LagoonLine'].set_data(ShoreX, ShoreY[:,3])
     ModelFig['CliffLine'].set_data(ShoreX, ShoreY[:,4])
     ModelFig['RiverLine'].set_data([0,0], [RiverY, RiverY-300])
-    if not LST is None:
+    
+    if not ShoreZ is None:
+        ModelFig['CrestLine'].set_data(ShoreX, ShoreZ[:,0])
+    
+    if not WavePower is None:
         ModelFig['WaveArrow'].remove()
         ModelFig['WaveArrow'] = ModelFig['PlanAx'].arrow(0, 200, WaveX, WaveY,
                                                          width=ArrWidth)
-        ModelFig['LstLine'].set_data((ShoreX[:-1]+ShoreX[1:])/2, LST*3600)
-        # Update LST axis scaling
-        ModelFig['LstAx'].relim()
-        ModelFig['LstAx'].autoscale_view(tight = False)
+    if not LST is None:
+        LstScale = ModelFig['LstQuiver'].scale
+        LstWidth = ModelFig['LstQuiver'].width
+        ModelFig['LstQuiver'].remove()
+        ModelFig['LstQuiver'] = ModelFig['PlanAx'].quiver((ShoreX[:-1]+ShoreX[1:])/2, 
+                                                          (ShoreY[:-1,0]+ShoreY[1:,0])/2, 
+                                                          LST, np.zeros(LST.size),
+                                                          scale=LstScale, width=LstWidth,
+                                                          scale_units='x', units='width')
+    
+    if not CST is None:
+        CstScale = ModelFig['CstQuiver'].scale
+        CstWidth = ModelFig['CstQuiver'].width
+        ModelFig['CstQuiver'].remove()
+        ModelFig['CstQuiver'] = ModelFig['PlanAx'].quiver(ShoreX, ShoreY[:,0], 
+                                                          np.zeros(ShoreX.size), -CST, 
+                                                          scale=CstScale, width=CstWidth,
+                                                          scale_units='x', units='width')
     
     # Redraw
     ModelFig['PlanFig'].canvas.draw()
