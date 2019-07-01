@@ -23,6 +23,9 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     # Find location outlet channel intersects shoreline
     OutletRbShoreIx = np.where(OutletEndX[1] < ShoreX)[0][0]
     
+    # Shoreface height for converting volumetric change into advance retreat of shoreline
+    ShorefaceHeight = PhysicalPars['ClosureDepth'] + ShoreZ[:,0]
+    
     #%% 1D River model morphology
     # Change in volume at each cross-section (except the upstream Bdy and dummy downstream XS)
     dVol = (Bedload[:-1]-Bedload[1:]) * Dt.seconds
@@ -59,11 +62,10 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     
     # Put sediment discharged from outlet onto shoreline 
     # TODO improve sediment distribution...
-    ShoreY[OutletRbShoreIx-1:OutletRbShoreIx,0] += (Bedload[-1] / 2) * Dt.seconds / ((PhysicalPars['ClosureDepth'] + ShoreZ[OutletRbShoreIx-1:OutletRbShoreIx,0]) * Dx)
+    ShoreY[[OutletRbShoreIx-1,OutletRbShoreIx],0] += ((Bedload[-1] / 2) * Dt.seconds 
+                                                    / (ShorefaceHeight[[OutletRbShoreIx-1,OutletRbShoreIx]] * Dx))
     
     #%% 1-Line shoreline model morphology
-    
-    ShorefaceHeight = PhysicalPars['ClosureDepth'] + ShoreZ[:,0]
     
     # Update shoreline position
     # TODO add shoreline boundary conditions here (github issue #10)
