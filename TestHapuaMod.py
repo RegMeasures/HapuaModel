@@ -34,7 +34,7 @@ plt.plot((ShoreX[0:-1]+ShoreX[1:])/2, LST)
 #%% Test river routines
 # Join river and outlet through lagoon
 (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
- OnlineLagoon, OutletChanIx, ChanFlag) = \
+ OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
     hm.riv.assembleChannel(ShoreX, ShoreY, ShoreZ,
                            OutletEndX, OutletEndWidth, OutletEndElev, 
                            RiverElev, PhysicalPars['RiverWidth'], 
@@ -43,8 +43,7 @@ plt.plot((ShoreX[0:-1]+ShoreX[1:])/2, LST)
                            np.zeros(ShoreX.size), np.zeros(ShoreX.size),
                            np.zeros(2), np.zeros(2), NumericalPars['Dx'],
                            PhysicalPars['MaxOutletElev'])
-hm.visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx,
-                       WavePower, EDir_h, LST)
+hm.visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx)
     
 # Steady state hydraulics
 RivFlow = hm.core.interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']])).values
@@ -56,9 +55,9 @@ SeaLevel = hm.core.interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartT
 # Store hydraulics and re-generate
 (LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, OutletEndVel) = \
     hm.riv.storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, 
-                           ChanFlag, ShoreZ[:,3])
+                           ChanFlag, ShoreZ[:,3], Closed)
 (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
- OnlineLagoon, OutletChanIx, ChanFlag) = \
+ OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
     hm.riv.assembleChannel(ShoreX, ShoreY, ShoreZ, 
                            OutletEndX, OutletEndWidth, OutletEndElev, 
                            RiverElev, PhysicalPars['RiverWidth'], 
@@ -77,8 +76,8 @@ ChanDist = np.insert(np.cumsum(ChanDx),0,0)
 plt.figure()
 plt.plot(ChanDist, ChanDep+ChanElev, 'b-')
 # Unsteady hydraulics
-hm.riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, 
-                           ChanDep, ChanVel, ChanDx, 
+hm.riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, 
+                           ChanDep, ChanVel, ChanDx,
                            TimePars['HydDt'], PhysicalPars['Roughness'], 
                            RivFlow, SeaLevel, NumericalPars)
 plt.plot(ChanDist, ChanDep+ChanElev, 'r:')
@@ -97,7 +96,7 @@ OldShoreY = ShoreY.copy()
 hm.mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
                         OutletEndX, OutletEndWidth, OutletEndElev, 
                         RiverElev, PhysicalPars['RiverWidth'], OnlineLagoon, 
-                        OutletChanIx, ChanWidth, ChanDep, ChanDx,
+                        OutletChanIx, ChanWidth, ChanDep, ChanDx, Closed,
                         LST, Bedload, CST_tot, OverwashProp,
                         NumericalPars['Dx'], TimePars['MorDt'], PhysicalPars)
 plt.plot(ShoreX, (ShoreY[:,0]-OldShoreY[:,0]))

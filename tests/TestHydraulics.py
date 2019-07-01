@@ -44,6 +44,7 @@ ChanElev = np.linspace(0.003*np.sum(ChanDx) - 2, -2, ChanDx.size+1)
 ChanWidth = np.full(ChanDx.size+1, 70.0)
 LagArea = np.full(ChanDx.size+1, 0.0)
 Dist = np.insert(np.cumsum(ChanDx),0,0)
+Closed = False
 
 Roughness = 0.03
 PhysicalPars = {'RiverSlope': 0.003,
@@ -78,7 +79,7 @@ logging.info('Steady solution took %f s' % SteadyTime)
 
 try:
     # Unsteady solution
-    UnsteadyTime = timeit.timeit(stmt='riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, ChanDx, HydDt, Roughness, Q_Ts, DsWl_Ts, NumericalPars)', 
+    UnsteadyTime = timeit.timeit(stmt='riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, ChanDep, ChanVel, ChanDx, HydDt, Roughness, Q_Ts, DsWl_Ts, NumericalPars)', 
                                  globals=globals(), number=10)
     logging.info('Unsteady solution of %i timesteps took %f s' % (Q_Ts.size, UnsteadyTime))
     
@@ -109,7 +110,7 @@ DsWl_Ts = np.full(Q_Ts.size, DsWL)
 
 try:
     # Unsteady solution
-    UnsteadyTime = timeit.timeit(stmt='riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, ChanDx, HydDt, Roughness, Q_Ts, DsWl_Ts, NumericalPars)', 
+    UnsteadyTime = timeit.timeit(stmt='riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, ChanDep, ChanVel, ChanDx, HydDt, Roughness, Q_Ts, DsWl_Ts, NumericalPars)', 
                                  globals=globals(), number=10)
     logging.info('Unsteady solution of %i timesteps took %f s' % (Q_Ts.size, UnsteadyTime))
     
@@ -155,7 +156,7 @@ try:
     StepSize = 20 
     for ii in range(0, DsWl_Ts.size, StepSize):
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, ChanDx, 
+        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, ChanDep, ChanVel, ChanDx, 
                                 HydDt, Roughness, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
                                 NumericalPars)
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2)
@@ -210,7 +211,7 @@ try:
     StepSize = 20 
     for ii in range(0, DsWl_Ts.size, StepSize):
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, ChanDx, 
+        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, ChanDep, ChanVel, ChanDx, 
                                 HydDt, Roughness, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
                                 NumericalPars)
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
@@ -266,7 +267,7 @@ try:
     StepSize = 20 
     for ii in range(0, DsWl_Ts.size, StepSize):
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, ChanDx, 
+        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, ChanDep, ChanVel, ChanDx, 
                                 HydDt, Roughness, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
                                 NumericalPars)
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
@@ -325,7 +326,7 @@ try:
     StepSize = 5 
     for ii in range(0, DsWl_Ts.size, StepSize):
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, ChanDx, 
+        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, ChanDep, ChanVel, ChanDx, 
                                 HydDt, Roughness, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
                                 NumericalPars)
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
@@ -397,7 +398,7 @@ try:
     StepSize = 5 
     for ii in range(0, DsWl_Ts.size, StepSize):
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, ChanDx, 
+        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, ChanDep, ChanVel, ChanDx, 
                                 HydDt, Roughness, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
                                 NumericalPars)
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
@@ -470,7 +471,7 @@ try:
     StepSize = 5 
     for ii in range(0, DsWl_Ts.size, StepSize):
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, ChanDx, 
+        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, ChanDep, ChanVel, ChanDx, 
                                 HydDt, Roughness, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
                                 NumericalPars)
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
@@ -546,7 +547,7 @@ try:
     for ii in range(0, DsWl_Ts.size, StepSize):
 
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, ChanDx, 
+        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, ChanDep, ChanVel, ChanDx, 
                                 HydDt, Roughness, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
                                 NumericalPars)
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
@@ -579,6 +580,71 @@ logging.info('Maximum mass balance error = %f%% (of inflow)' % np.max(np.abs(Out
 logging.info('Cumulative volumetric error over simulation = %f m3 (%f%% of total inflow)' % 
              (OutputTs8['CumVolErr'].iloc[-1], 
               OutputTs8['CumVolErr'].iloc[-1] / (np.sum(OutputTs8['Qin'])*StepSize*HydDt.seconds)))
+
+#%% Test 10
+logging.info('<hr>')
+logging.info('<h1>Test 10: Closed outlet</h1>')
+
+# Setup
+DsWl_Ts = np.concatenate([np.linspace(DsWL, DsWL-1, 500),
+                          np.linspace(DsWL-1, DsWL+1, 200)])
+Q_Ts = np.full(DsWl_Ts.size, Qin/2)
+LagArea[40] = 20000
+ChanElev = np.linspace(0.003*np.sum(ChanDx) - 2, -2, ChanDx.size+1)
+ChanWidth = np.full(ChanDx.size+1, 70.0)
+ChanDep = SteadyDep.copy()
+ChanVel = SteadyVel.copy()
+Closed = True
+
+# Initialise outputs
+VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
+VolErr = 0.0
+VolErrPerc = 0.0
+CumVolErr = 0.0
+OutputTs4 = pd.DataFrame(list(zip([Qin],[Qin],[DsWL],[VolumeInModel],[VolErr],[VolErrPerc],[CumVolErr])),
+                         columns=['Qin','Qout','SeaLevel','Volume','VolErr','VolErrPerc','CumVolErr'],
+                         index=[0])
+
+try:
+    # Unsteady solution with lagoon storage and closed outlet
+    LongSecFig = vis.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel)
+    LongSecFig[0].suptitle('Test 10: Closed outlet')
+    StepSize = 20 
+    for ii in range(0, DsWl_Ts.size, StepSize):
+        TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
+        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, ChanDep, ChanVel, ChanDx, 
+                                HydDt, Roughness, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
+                                NumericalPars)
+        VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
+        VolIn = (ChanDep[0]*ChanVel[0]*ChanWidth[0] + OutputTs4['Qin'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
+        VolOut = (ChanDep[-1]*ChanVel[-1]*ChanWidth[-1] + OutputTs4['Qout'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
+        # Mass balance error = DeltaVol + VolOut - VolIn
+        VolErr = (VolumeInModel - OutputTs4['Volume'].iloc[-1]) + VolOut - VolIn
+        VolErrPerc = VolErr/VolIn
+        CumVolErr += VolErr
+        OutputTs4 = OutputTs4.append(pd.DataFrame(list(zip([ChanDep[0]*ChanVel[0]*ChanWidth[0]],
+                                                           [ChanDep[-1]*ChanVel[-1]*ChanWidth[-1]],
+                                                           [ChanDep[-1]+ChanElev[-1]],
+                                                           [VolumeInModel], [VolErr], [VolErrPerc], [CumVolErr])),
+                                                  columns=['Qin','Qout','SeaLevel','Volume','VolErr','VolErrPerc','CumVolErr'],
+                                                  index=[TimesToRun[-1]]))
+        vis.updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel)
+except:
+    logging.exception('Unsteady solution for test 10 failed after %i timesteps' % OutputTs4.index[-1]) 
+
+# Reporting
+BdyFig = vis.BdyCndFig(OutputTs4)
+BdyFig[0].suptitle('Test 10: Closed outlet')
+BdyFig[0].savefig('Test10_TimeSeries.png')
+plt.close(BdyFig[0])
+logging.info('<img src="Test10_TimeSeries.png">')
+LongSecFig[0].savefig('Test10_LongSection.png')
+plt.close(LongSecFig[0])
+logging.info('<img src="Test10_LongSection.png">')
+logging.info('Maximum mass balance error = %f%% (of inflow)' % np.max(np.abs(OutputTs4.VolErrPerc)))
+logging.info('Cumulative volumetric error over simulation = %f m3 (%f%% of total inflow)' % 
+             (OutputTs4['CumVolErr'].iloc[-1], 
+              OutputTs4['CumVolErr'].iloc[-1] / (np.sum(OutputTs4['Qin'])*StepSize*HydDt.seconds)))
 
 #%% If needed
 dx = ChanDx

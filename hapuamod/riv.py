@@ -70,7 +70,8 @@ def solveSteady(ChanDx, ChanElev, ChanWidth, Roughness, Qin, DsWL,
     
     return ChanDep, ChanVel
 
-def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
+def solveFullPreissmann(z, B, LagArea, Closed, h, V, 
+                        dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
     """ Solve full S-V eqns for a rectangular channel using preissmann scheme.
         Uses a newton raphson solution to the preissmann discretisation of the 
         Saint-Venant equations.
@@ -80,9 +81,12 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
         Parameters:
             z (np.ndarray(float64)): Bed elevation at each node (m)
             B (np.ndarray(float64)): Channel width at each node (m)
-            LagArea
+            LagArea(np.ndarray(float64)): Offline area connected to each node (m2)
+            Closed (boolean): Flag indicating zero flow downstream boundary
+                condition.
             h (np.ndarray(float64)): Depth at each node at the last timestep (m)
-            V (np.ndarray(float64)): Mean velocity at each node at the last timestep (m)
+            V (np.ndarray(float64)): Mean velocity at each node at the last 
+                timestep (m)
             dx (np.ndarray(float64)): Length of each reach between nodes (m)
                 note the dx array should be one shorter than for z, B, etc
             dt (pd.timedelta): timestep
@@ -173,8 +177,10 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
                                         ) - C2
             
             # Error in Ds Bdy
-            Err[2*N-1] = z[N-1] + h[N-1] - DsWl
-            #Err[2*N-1] = z[N-1] + h[N-1] + V[N-1]**2/(2*g) - DsWl
+            if Closed:
+                Err[-1] = h[-1] * V[-1]
+            else:
+                Err[-1] = z[-1] + h[-1] - DsWl
             
             # Solve errors using Newton Raphson
             # a Delta = Err
@@ -217,9 +223,12 @@ def solveFullPreissmann(z, B, LagArea, h, V, dx, dt, n, Q_Ts, DsWl_Ts, Numerical
                                                 + 2*g*dt*Theta*A[1:]*Sf[1:]/V[1:])
             
             # Ds Bdy condition derivatives
-            a_banded[2,2*N-1] = 0
-            #a_banded[2,2*N-1] = V[N-1]/g
-            a_banded[3,2*N-2] = 1
+            if Closed:
+                a_banded[2,2*N-1] = h[-1]
+                a_banded[3,2*N-2] = V[-1]
+            else:
+                a_banded[2,2*N-1] = 0
+                a_banded[3,2*N-2] = 1
             
             # Solve the banded matrix
             try:
@@ -276,24 +285,26 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
                                 OutletEndDep, OutletEndVel, Dx, MaxOutletElev)
         
         Returns:
-            ChanDx = distance between each cross-section in combined channel\
-            ChanElev = Bed level at each cross-section
-            ChanWidth = Width of each cross-section
-            LagArea = Surface area of offline lagoon storage attached to each 
-                      node (all zero except for first and last 'lagoon'
-                      cross-section).
-            ChanDep = Water depth in each cross-section
-            ChanVel = Water velocity in each cross-section
-            OnlineLagoon = indices of lagoon transects which are 'online'. Note
-                           that the indices are given in the order in which the 
-                           lagoon sections appear in the combined channel. i.e.
-                           if the outlet is offset to the left the lagoon 
-                           transect indices in OnlineLagoon will be decreasing.
-            OutletChanIx = indices of outlet channel transects which are 
-                           'online' - similar to OnlineLagoon
-            ChanFlag = Flags showing the origin of the different cross-sections
-                       making up the outlet channel. 0 = river, 1 = lagoon,
-                       2 = outlet channel ends, 3 = outlet channel.
+            ChanDx: distance between each cross-section in combined channel\
+            ChanElev: Bed level at each cross-section
+            ChanWidth: Width of each cross-section
+            LagArea: Surface area of offline lagoon storage attached to each 
+                node (all zero except for first and last 'lagoon'
+                cross-section).
+            ChanDep: Water depth in each cross-section
+            ChanVel: Water velocity in each cross-section
+            OnlineLagoon: indices of lagoon transects which are 'online'. Note
+                that the indices are given in the order in which the lagoon 
+                sections appear in the combined channel. i.e. if the outlet 
+                is offset to the left the lagoon transect indices in 
+                OnlineLagoon will be decreasing.
+            OutletChanIx: indices of outlet channel transects which are 
+                'online' - similar to OnlineLagoon
+            ChanFlag: Flags showing the origin of the different cross-sections
+                making up the outlet channel. 0 = river, 1 = lagoon,
+                2 = outlet channel ends, 3 = outlet channel.
+            Closed (boolean): Is the channel closed or open at its downstream 
+                end?
     """
     
     # Find location and orientation of outlet channel
@@ -315,6 +326,11 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
                                                          ShoreX < OutletEndX[0]))[0])
     OutletWidth = ShoreY[OutletChanIx,1] - ShoreY[OutletChanIx,2]
     
+    # Check if closure has occured.
+    Closed = np.any(OutletWidth<=0)
+    if Closed:
+        OutletChanIx = np.empty(0)
+    
     # TODO: Account for potentially dry parts of the lagoon when 
     #       calculating ChanArea
     
@@ -322,58 +338,86 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
     LagoonWidth = ShoreY[:,3] - ShoreY[:,4]
     if OutletEndX[0] > 0:
         # Outlet channel to right of river
-        OnlineLagoon = np.where(np.logical_and(0 <= ShoreX, ShoreX <= OutletEndX[0]))[0]
+        if Closed:
+            OnlineLagoon = np.where(np.logical_and(0 <= ShoreX, LagoonWidth > 0))[0]
+            EndArea = 0
+        else:
+            OnlineLagoon = np.where(np.logical_and(0 <= ShoreX, ShoreX <= OutletEndX[0]))[0]
+            EndArea = np.nansum(LagoonWidth[ShoreX > OutletEndX[0]] * Dx)
         StartArea = np.nansum(LagoonWidth[ShoreX < 0] * Dx)
-        EndArea = np.nansum(LagoonWidth[ShoreX > OutletEndX[0]] * Dx)
     else:
         # Outlet channel to left of river
-        OnlineLagoon = np.flipud(np.where(np.logical_and(0 >= ShoreX, ShoreX >= OutletEndX[0]))[0])
+        if Closed:
+            OnlineLagoon = np.flipud(np.where(np.logical_and(0 >= ShoreX, LagoonWidth > 0))[0])
+            EndArea = 0
+        else:
+            OnlineLagoon = np.flipud(np.where(np.logical_and(0 >= ShoreX, ShoreX >= OutletEndX[0]))[0])
+            EndArea = np.nansum(LagoonWidth[ShoreX < OutletEndX[0]] * Dx)
         StartArea = np.nansum(LagoonWidth[ShoreX > 0] * Dx)
-        EndArea = np.nansum(LagoonWidth[ShoreX < OutletEndX[0]] * Dx)
+        
+    # TODO: handle the weirdness which makes it theoretically possible for the below asserts to fail
+    assert np.abs(OnlineLagoon[-1]-OnlineLagoon[0]) == (OnlineLagoon.size-1), 'Gap in online lagoon (possibly split lagoon and closed?) need to handle this'
+    assert np.all(LagoonWidth[OnlineLagoon]>0), 'Lagoon closure in assembleChannel - need to modify code to deal with this'
     
     # Assemble the complete channel
-    ChanDx = np.tile(Dx, RiverElev.size + OnlineLagoon.size + OutletChanIx.size + 2)
-    if OutletEndX[0]//Dx == OutletEndX[1]//Dx:
-        # Outlet is straight (i.e. doesn't cross any transects)
-        ChanDx[-3] += abs(OutletEndX[1] - OutletEndX[0])
-    elif OutletEndX[0] < OutletEndX[1]:
-        # Outlet angles from L to R
-        ChanDx[RiverElev.size + OnlineLagoon.size] += Dx - (OutletEndX[0] % Dx)
-        ChanDx[-2] += OutletEndX[1] % Dx
-    else:
-        # Outlet from R to L
-        ChanDx[RiverElev.size + OnlineLagoon.size] += OutletEndX[0] % Dx
-        ChanDx[-2] += Dx - (OutletEndX[1] % Dx)
-    ChanFlag = np.concatenate([np.full(RiverElev.size, 0), 
-                               np.full(OnlineLagoon.size, 1), 
-                               [2], np.full(OutletChanIx.size, 3), [2,4]])
-    ChanElev = np.concatenate([RiverElev, ShoreZ[OnlineLagoon,3], 
-                               [OutletEndElev[0]], ShoreZ[OutletChanIx,1], 
-                               [OutletEndElev[1], min(MaxOutletElev, OutletEndElev[1])]])
-    ChanWidth = np.concatenate([np.tile(RiverWidth, RiverElev.size), 
-                                LagoonWidth[OnlineLagoon], [OutletEndWidth[0]],
-                                OutletWidth, np.full(2, OutletEndWidth[1])])
+    if Closed:
+        ChanDx = np.tile(Dx, RiverElev.size + OnlineLagoon.size - 1)
+        ChanFlag = np.concatenate([np.full(RiverElev.size, 0), 
+                                   np.full(OnlineLagoon.size, 1)])
+        ChanElev = np.concatenate([RiverElev, ShoreZ[OnlineLagoon,3]])
+        ChanWidth = np.concatenate([np.tile(RiverWidth, RiverElev.size), 
+                                    LagoonWidth[OnlineLagoon]])
+    else: # open
+        ChanDx = np.tile(Dx, RiverElev.size + OnlineLagoon.size + OutletChanIx.size + 2)
+        if OutletEndX[0]//Dx == OutletEndX[1]//Dx:
+            # Outlet is straight (i.e. doesn't cross any transects)
+            ChanDx[-3] += abs(OutletEndX[1] - OutletEndX[0])
+        elif OutletEndX[0] < OutletEndX[1]:
+            # Outlet angles from L to R
+            ChanDx[RiverElev.size + OnlineLagoon.size] += Dx - (OutletEndX[0] % Dx)
+            ChanDx[-2] += OutletEndX[1] % Dx
+        else:
+            # Outlet from R to L
+            ChanDx[RiverElev.size + OnlineLagoon.size] += OutletEndX[0] % Dx
+            ChanDx[-2] += Dx - (OutletEndX[1] % Dx)
+        ChanFlag = np.concatenate([np.full(RiverElev.size, 0), 
+                                   np.full(OnlineLagoon.size, 1), 
+                                   [2], np.full(OutletChanIx.size, 3), [2,4]])
+        ChanElev = np.concatenate([RiverElev, ShoreZ[OnlineLagoon,3], 
+                                   [OutletEndElev[0]], ShoreZ[OutletChanIx,1], 
+                                   [OutletEndElev[1], min(MaxOutletElev, OutletEndElev[1])]])
+        ChanWidth = np.concatenate([np.tile(RiverWidth, RiverElev.size), 
+                                    LagoonWidth[OnlineLagoon], [OutletEndWidth[0]],
+                                    OutletWidth, np.full(2, OutletEndWidth[1])])
     LagArea = np.zeros(ChanElev.size)
     LagArea[RiverElev.size] = StartArea
-    LagArea[-(OutletChanIx.size+3)] = EndArea
+    LagArea[RiverElev.size + OnlineLagoon.size - 1] = EndArea
     
     # Assemble the hydraulic initial conditions
-    ChanDep = np.concatenate([RivDep,
-                              LagoonWL[OnlineLagoon]-ShoreZ[OnlineLagoon,3],
-                              [OutletEndDep[0]], 
-                              OutletDep[OutletChanIx], 
-                              OutletEndDep[-2:]])
+    if Closed:
+        ChanDep = np.concatenate([RivDep,
+                                  LagoonWL[OnlineLagoon]-ShoreZ[OnlineLagoon,3]])
+        ChanVel = np.concatenate([RivVel,
+                                  LagoonVel[OnlineLagoon]])
+        ChanVel[-1] = 0.0
+    else:
+        ChanDep = np.concatenate([RivDep,
+                                  LagoonWL[OnlineLagoon]-ShoreZ[OnlineLagoon,3],
+                                  [OutletEndDep[0]], 
+                                  OutletDep[OutletChanIx], 
+                                  OutletEndDep[-2:]])
+        ChanVel = np.concatenate([RivVel,
+                                  LagoonVel[OnlineLagoon],
+                                  [OutletEndVel[0]], 
+                                  OutletVel[OutletChanIx], 
+                                  OutletEndVel[-2:]])
     # If depth is missing then interpolate it
     DepNan = np.isnan(ChanDep)
     if np.any(DepNan):
         logging.debug('Interpolating %i missing channel depths' % np.sum(DepNan))
         ChanDep[DepNan] = np.interp(np.where(DepNan)[0], np.where(~DepNan)[0], ChanDep[~DepNan])
     
-    ChanVel = np.concatenate([RivVel,
-                              LagoonVel[OnlineLagoon],
-                              [OutletEndVel[0]], 
-                              OutletVel[OutletChanIx], 
-                              OutletEndVel[-2:]])
+    
     # If vel is missing then interpolate it (based on flow rather than vel)
     VelNan = np.isnan(ChanVel)
     if np.any(VelNan):
@@ -383,16 +427,17 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
                            / ChanDep[VelNan])
     
     # Check there are no nan values in the channel!
+    assert not np.any(ChanWidth<=0), 'Outlet width <= 0 in one or more cross-sections after assembleChannel'
     assert not np.any(np.isnan(ChanWidth)), 'NaN values in ChanWidth after assembleChannel'
     assert not np.any(np.isnan(ChanElev)), 'NaN values in ChanElev after assembleChannel'
     assert not np.any(np.isnan(ChanVel)), 'NaN values in ChanVel after assembleChannel'
     assert not np.any(np.isnan(ChanDep)), 'NaN values in ChanDep after assembleChannel'
     
     return (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
-            OnlineLagoon, OutletChanIx, ChanFlag)
+            OnlineLagoon, OutletChanIx, ChanFlag, Closed)
 
 def storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, ChanFlag, 
-                    LagoonElev):
+                    LagoonElev, Closed):
     """ Extract lagoon/outlet hydraulic conditions.
         
         (LagoonWL, LagoonVel, OutletDep, OutletVel, 
@@ -401,7 +446,7 @@ def storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, ChanFlag,
                             ChanFlag, LagoonElev)
         
         All the hydraulics calculations are carried out on a merged channel
-        which includes the river upstream of the lagoon, the onluine part of
+        which includes the river upstream of the lagoon, the online part of
         lagoon itself, and the outlet channel. This function extracts the 
         current hydraulics in the lagoon and outlet channel and stores them in 
         shore parrallel model schematisation. This is necessary to allow the 
@@ -421,18 +466,18 @@ def storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, ChanFlag,
     LagoonVel = np.full(LagoonElev.size, np.nan)
     LagoonVel[OnlineLagoon] = ChanVel[ChanFlag==1]
     
-    # Outlet Depth
+    # Outlet depth and velocity
     OutletDep = np.full(LagoonElev.size, np.nan)
-    OutletDep[OutletChanIx] = ChanDep[ChanFlag==3]
-    
-    # Outlet Vel
     OutletVel = np.full(LagoonElev.size, np.nan)
-    OutletVel[OutletChanIx] = ChanVel[ChanFlag==3]
-    
-    # Depth and vel at ends of outlet channel
-    EndNodes = np.logical_or(ChanFlag==2, ChanFlag==4)
-    OutletEndDep = ChanDep[EndNodes]
-    OutletEndVel = ChanVel[EndNodes]
+    if Closed:
+        OutletEndDep = np.nan(3)
+        OutletEndVel = np.nan(3)
+    else:        
+        OutletDep[OutletChanIx] = ChanDep[ChanFlag==3]
+        OutletVel[OutletChanIx] = ChanVel[ChanFlag==3]
+        EndNodes = np.logical_or(ChanFlag==2, ChanFlag==4)
+        OutletEndDep = ChanDep[EndNodes]
+        OutletEndVel = ChanVel[EndNodes]
     
     return (LagoonWL, LagoonVel, OutletDep, OutletVel, 
             OutletEndDep, OutletEndVel)

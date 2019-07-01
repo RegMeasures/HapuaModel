@@ -12,7 +12,7 @@ import logging
 def updateMorphology(ShoreX, ShoreY, ShoreZ,
                      OutletEndX, OutletEndWidth, OutletEndElev, 
                      RiverElev, RiverWidth, OnlineLagoon, OutletChanIx, 
-                     ChanWidth, ChanDep, ChanDx,
+                     ChanWidth, ChanDep, ChanDx, Closed,
                      LST, Bedload, CST_tot, OverwashProp,
                      Dx, Dt, PhysicalPars):
     """ Update river, lagoon, outlet, barrier and shoreline morphology
@@ -21,7 +21,8 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     #%% Pre-calculate some useful parameters
     
     # Find location outlet channel intersects shoreline
-    OutletRbShoreIx = np.where(OutletEndX[1] < ShoreX)[0][0]
+    if not Closed:
+        OutletRbShoreIx = np.where(OutletEndX[1] < ShoreX)[0][0]
     
     # Shoreface height for converting volumetric change into advance retreat of shoreline
     ShorefaceHeight = PhysicalPars['ClosureDepth'] + ShoreZ[:,0]
@@ -56,16 +57,17 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     ShoreY[OnlineLagoon,3] -= (BankEro[NRiv:-NOut]/2) / ((LagoonBankElev[OnlineLagoon] - ShoreZ[OnlineLagoon,3]) * Dx)
     ShoreY[OnlineLagoon,4] += (BankEro[NRiv:-NOut]/2) / ((PhysicalPars['BackshoreElev'] - ShoreZ[OnlineLagoon,3]) * Dx)
     # Outlet channel
-    ShoreY[OutletChanIx,1] -= (BankEro[-NOut+1:-1]/2) / ((ShoreZ[OutletChanIx,0] - ShoreZ[OutletChanIx,1]) * Dx)
-    ShoreY[OutletChanIx,2] += (BankEro[-NOut+1:-1]/2) / ((ShoreZ[OutletChanIx,2] - ShoreZ[OutletChanIx,1]) * Dx)
-    
-    OutletEndWidth[0] -= BankEro[-NOut] / ((ShoreZ[OutletChanIx[0],0] - OutletEndElev[0]) * ChanDx[-NOut+1])
-    OutletEndWidth[1] -= BankEro[-1] / ((PhysicalPars['SpitHeight'] - OutletEndElev[1]) * PhysicalPars['SpitWidth'])
-    
-    # Put sediment discharged from outlet onto shoreline 
-    # TODO improve sediment distribution...
-    ShoreY[[OutletRbShoreIx-1,OutletRbShoreIx],0] += ((Bedload[-1] / 2) * Dt.seconds 
-                                                    / (ShorefaceHeight[[OutletRbShoreIx-1,OutletRbShoreIx]] * Dx))
+    if not Closed:
+        ShoreY[OutletChanIx,1] -= (BankEro[-NOut+1:-1]/2) / ((ShoreZ[OutletChanIx,0] - ShoreZ[OutletChanIx,1]) * Dx)
+        ShoreY[OutletChanIx,2] += (BankEro[-NOut+1:-1]/2) / ((ShoreZ[OutletChanIx,2] - ShoreZ[OutletChanIx,1]) * Dx)
+        
+        OutletEndWidth[0] -= BankEro[-NOut] / ((ShoreZ[OutletChanIx[0],0] - OutletEndElev[0]) * ChanDx[-NOut+1])
+        OutletEndWidth[1] -= BankEro[-1] / ((PhysicalPars['SpitHeight'] - OutletEndElev[1]) * PhysicalPars['SpitWidth'])
+        
+        # Put sediment discharged from outlet onto shoreline 
+        # TODO improve sediment distribution...
+        ShoreY[[OutletRbShoreIx-1,OutletRbShoreIx],0] += ((Bedload[-1] / 2) * Dt.seconds 
+                                                        / (ShorefaceHeight[[OutletRbShoreIx-1,OutletRbShoreIx]] * Dx))
     
     #%% 1-Line shoreline model morphology
     
@@ -75,27 +77,27 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                        / (ShorefaceHeight[1:-1] * Dx))
     
     # Remove LST driven sed supply out of outlet channel and put on outlet channel bank instead
-    
-    if LST[OutletRbShoreIx-1]>0:
-        # Transport from L to R
-        ShoreY[OutletRbShoreIx,0] -= (LST[OutletRbShoreIx-1] * Dt.seconds 
-                                      / (ShorefaceHeight[OutletRbShoreIx] * Dx))
-        WidthReduction = ((LST[OutletRbShoreIx-1] * Dt.seconds) 
-                          / ((PhysicalPars['SpitHeight'] - OutletEndElev[1]) * PhysicalPars['SpitWidth']))
-        OutletEndWidth[1] -= WidthReduction
-        OutletEndX[1] += WidthReduction/2
-    else:
-        # Transport from R to L
-        ShoreY[OutletRbShoreIx-1,0] += (LST[OutletRbShoreIx-1] * Dt.seconds 
-                                        / (ShorefaceHeight[OutletRbShoreIx-1] * Dx))
-        WidthReduction = ((-LST[OutletRbShoreIx-1] * Dt.seconds) 
-                          / ((PhysicalPars['SpitHeight'] - OutletEndElev[1]) * PhysicalPars['SpitWidth']))
-        OutletEndWidth[1] -= WidthReduction
-        OutletEndX[1] -= WidthReduction/2
+    if not Closed:
+        if LST[OutletRbShoreIx-1]>0:
+            # Transport from L to R
+            ShoreY[OutletRbShoreIx,0] -= (LST[OutletRbShoreIx-1] * Dt.seconds 
+                                          / (ShorefaceHeight[OutletRbShoreIx] * Dx))
+            WidthReduction = ((LST[OutletRbShoreIx-1] * Dt.seconds) 
+                              / ((PhysicalPars['SpitHeight'] - OutletEndElev[1]) * PhysicalPars['SpitWidth']))
+            OutletEndWidth[1] -= WidthReduction
+            OutletEndX[1] += WidthReduction/2
+        else:
+            # Transport from R to L
+            ShoreY[OutletRbShoreIx-1,0] += (LST[OutletRbShoreIx-1] * Dt.seconds 
+                                            / (ShorefaceHeight[OutletRbShoreIx-1] * Dx))
+            WidthReduction = ((-LST[OutletRbShoreIx-1] * Dt.seconds) 
+                              / ((PhysicalPars['SpitHeight'] - OutletEndElev[1]) * PhysicalPars['SpitWidth']))
+            OutletEndWidth[1] -= WidthReduction
+            OutletEndX[1] -= WidthReduction/2
         
     #%% Cross-shore morphology (overtopping etc)
     
-    OutletPresent = ~np.isnan(ShoreY[:,1])
+    OutletPresent = ~np.isnan(ShoreY[:,1]) # Note not all "OutletPresent" are online/connected to sea...
     
     CrestWidth = ShoreY[:,0] - ShoreY[:,3]
     CrestWidth[OutletPresent] = ShoreY[OutletPresent,0] - ShoreY[OutletPresent,1]
@@ -114,44 +116,44 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     ShoreY[1:-1,0] -= CST_tot[1:-1] * Dt.seconds / ShorefaceHeight[1:-1]
     
     #%% Check if d/s end of outlet channel has migrated across a transect line and adjust as necessary...
-    
-    if OutletEndX[0] < OutletEndX[1]:
-        # Outlet angles from L to R
-        if ShoreX[OutletChanIx[-1]+1] < OutletEndX[1]:
-            Extend = True
-            ExtendMask = np.logical_and(ShoreX[OutletChanIx[-1]] <= ShoreX,
-                                        ShoreX <= OutletEndX[1])
-            logging.info('Outlet channel elongated rightwards across transect line x=%f' % ShoreX[ExtendMask][-1])
-        else:
-            Extend = False    
-    else:
-        # Outlet angles from R to L
-        if ShoreX[OutletChanIx[-1]-1] > OutletEndX[1]:
-            Extend = True
-            ExtendMask = np.logical_and(ShoreX[OutletChanIx[-1]] > ShoreX,
-                                        ShoreX >= OutletEndX[1])
-            logging.info('Outlet channel elongated leftwards across transect line x=%f' % ShoreX[ExtendMask][0])
-        else:
-            Extend = False
-    
-    if Extend:
-        # Dist from new outlet section to shoreline = PhysicalPars['SpitWidth']
-        ShoreY[ExtendMask,1] = ShoreY[ExtendMask,0] - PhysicalPars['SpitWidth']
-        # Width of new outlet section = end width
-        ShoreY[ExtendMask,2] = ShoreY[ExtendMask,1] - OutletEndWidth[1]
-        # Bed level of new outlet section  = end bed level
-        ShoreZ[ExtendMask,1] = OutletEndElev[1]
-        # Barrier height of inner barrier = PhysicalPars['SpitHeight']
-        ShoreZ[ExtendMask,2] = PhysicalPars['SpitHeight']
-        # TODO: Modify Barrier height of outer barrier ?????
-        
-        # Update OutletChanIx as it has changed and its used later in this function
+    if not Closed:
         if OutletEndX[0] < OutletEndX[1]:
-            OutletChanIx = np.where(np.logical_and(OutletEndX[0] < ShoreX, 
-                                                   ShoreX < OutletEndX[1]))[0]
+            # Outlet angles from L to R
+            if ShoreX[OutletChanIx[-1]+1] < OutletEndX[1]:
+                Extend = True
+                ExtendMask = np.logical_and(ShoreX[OutletChanIx[-1]] <= ShoreX,
+                                            ShoreX <= OutletEndX[1])
+                logging.info('Outlet channel elongated rightwards across transect line x=%f' % ShoreX[ExtendMask][-1])
+            else:
+                Extend = False    
         else:
-            OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] < ShoreX,
-                                                             ShoreX < OutletEndX[0]))[0])
+            # Outlet angles from R to L
+            if ShoreX[OutletChanIx[-1]-1] > OutletEndX[1]:
+                Extend = True
+                ExtendMask = np.logical_and(ShoreX[OutletChanIx[-1]] > ShoreX,
+                                            ShoreX >= OutletEndX[1])
+                logging.info('Outlet channel elongated leftwards across transect line x=%f' % ShoreX[ExtendMask][0])
+            else:
+                Extend = False
+        
+        if Extend:
+            # Dist from new outlet section to shoreline = PhysicalPars['SpitWidth']
+            ShoreY[ExtendMask,1] = ShoreY[ExtendMask,0] - PhysicalPars['SpitWidth']
+            # Width of new outlet section = end width
+            ShoreY[ExtendMask,2] = ShoreY[ExtendMask,1] - OutletEndWidth[1]
+            # Bed level of new outlet section  = end bed level
+            ShoreZ[ExtendMask,1] = OutletEndElev[1]
+            # Barrier height of inner barrier = PhysicalPars['SpitHeight']
+            ShoreZ[ExtendMask,2] = PhysicalPars['SpitHeight']
+            # TODO: Modify Barrier height of outer barrier ?????
+            
+            # Update OutletChanIx as it has changed and its used later in this function
+            if OutletEndX[0] < OutletEndX[1]:
+                OutletChanIx = np.where(np.logical_and(OutletEndX[0] < ShoreX, 
+                                                       ShoreX < OutletEndX[1]))[0]
+            else:
+                OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] < ShoreX,
+                                                                 ShoreX < OutletEndX[0]))[0])
         
     
     #%% Check for outlet channel truncation
@@ -211,8 +213,8 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                 # Outlet angles from R to L
                 OutletEndX[1] = ShoreX[TruncationIx[-1]] + Dx/2 
     
-    # if outlet has only 1 transect then adjust shoreline/lagoonline to preserve it's width when we adjust ShoreY in the next step
-    else:
+    # if outlet is open but has only 1 transect then adjust shoreline/lagoonline to preserve it's width when we adjust ShoreY in the next step
+    elif not Closed:
         if OutletEndX[0]//Dx == OutletEndX[1]//Dx:
             if OutletEndX[0] < OutletEndX[1]:
                 OutletChanIx = np.where(np.logical_and(OutletEndX[0] < ShoreX, 

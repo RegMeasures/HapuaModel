@@ -120,7 +120,8 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx, ShoreZ=None,
     PlanAx.legend()
     PlanAx.set_xlabel('Model X-coordinate (m)')
     PlanAx.set_ylabel('Model Y-coordinate (m)')
-    VertAx.set_ylabel('Elevation (m)')
+    if not ShoreZ is None:
+        VertAx.set_ylabel('Elevation (m)')
     
     # Compile output variable
     ModelFig = {'PlanFig':PlanFig, 'PlanAx':PlanAx, 'ShoreLine':ShoreLine, 
@@ -164,13 +165,14 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx, ShoreZ=N
     # Calculate river plotting position
     RiverY = ShoreY[ShoreX==0,4]
     
-    if (-np.pi/2) < EDir_h < (np.pi/2):
-        ArrLength = WavePower
-    else:
-        ArrLength = 0.01
-    ArrWidth = np.maximum((ArrLength * ModelFig['WaveScaling'])/10, 0.001)
-    WaveX = -np.sin(EDir_h) * ArrLength * ModelFig['WaveScaling']
-    WaveY = -np.cos(EDir_h) * ArrLength * ModelFig['WaveScaling']
+    if not WavePower is None:
+        if (-np.pi/2) < EDir_h < (np.pi/2):
+            ArrLength = WavePower
+        else:
+            ArrLength = 0.01
+        ArrWidth = np.maximum((ArrLength * ModelFig['WaveScaling'])/10, 0.001)
+        WaveX = -np.sin(EDir_h) * ArrLength * ModelFig['WaveScaling']
+        WaveY = -np.cos(EDir_h) * ArrLength * ModelFig['WaveScaling']
     
     # Update the lines
     ModelFig['ShoreLine'].set_data(ShoreX, ShoreY[:,0])
