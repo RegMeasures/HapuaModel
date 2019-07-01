@@ -23,7 +23,7 @@ OutletLocation = InitialOutlet.shp
 # Initial outlet width [m]
 OutletWidth = 35
 # Initial bed level of the seaward end of the outlet channel
-OutletBed = -1.5
+OutletBed = -1.0
 # Lagoon bed elevation [m]
 LagoonBed = -1.0
 # Barrier crest height [m]
@@ -37,11 +37,11 @@ EndTime = '30 Jun 2016'
 # Hydraulic Timestep [s]
 HydDt = 5
 # Morphology Timestep [s]
-MorDt = 1800
+MorDt = 900
 
 [PhysicalParameters]
 # K coefficient for longshore transport calculation (non-dimensional)
-Kcoef = 0.017
+Kcoef = 0.03
 # Sediment density [kg/m^3]
 RhoSed = 2650
 # Seawater density [kg/m^3]
@@ -78,13 +78,16 @@ BackshoreElev = 30
 # Maximum elevation of the downstream end of the outlet channel [m] 
 # This elevation is applied downstream of the last real outlet channel 
 # cross-section and should be below the minimum sea level.
-MaxOutletElev = -2.5
+MaxOutletElev = -2.0
 # Overtopping coefficient - controls magnitude of overtopping sediment flux [s^-1]
-OT_coef = 0.002
+OT_coef = 0.0005
 # Overtopping exponent (recommended value = 2)
 OT_exp = 2
 # Overwash proportion coefficient
-OwProp_coef = 20
+OwProp_coef = 10
+# Crest height and width of 'new' barrier created by longshore transport across river mouth [m]
+SpitHeight = 2
+SpitWidth = 10
 
 [NumericalParameters]
 # Alongshore discretisation resolution (transect spacing) [m]

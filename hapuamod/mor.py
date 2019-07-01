@@ -58,7 +58,9 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     # Outlet channel
     ShoreY[OutletChanIx,1] -= (BankEro[-NOut+1:-1]/2) / ((ShoreZ[OutletChanIx,0] - ShoreZ[OutletChanIx,1]) * Dx)
     ShoreY[OutletChanIx,2] += (BankEro[-NOut+1:-1]/2) / ((ShoreZ[OutletChanIx,2] - ShoreZ[OutletChanIx,1]) * Dx)
-    OutletEndWidth -= BankEro[[-NOut,-1]] / ((ShoreZ[OutletChanIx[[0,-1]],0] - OutletEndElev) * ChanDx[[-NOut+1,-1]])
+    
+    OutletEndWidth[0] -= BankEro[-NOut] / ((ShoreZ[OutletChanIx[0],0] - OutletEndElev[0]) * ChanDx[-NOut+1])
+    OutletEndWidth[1] -= BankEro[-1] / ((PhysicalPars['SpitHeight'] - OutletEndElev[1]) * PhysicalPars['SpitWidth'])
     
     # Put sediment discharged from outlet onto shoreline 
     # TODO improve sediment distribution...
@@ -73,18 +75,21 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                        / (ShorefaceHeight[1:-1] * Dx))
     
     # Remove LST driven sed supply out of outlet channel and put on outlet channel bank instead
+    
     if LST[OutletRbShoreIx-1]>0:
         # Transport from L to R
         ShoreY[OutletRbShoreIx,0] -= (LST[OutletRbShoreIx-1] * Dt.seconds 
                                       / (ShorefaceHeight[OutletRbShoreIx] * Dx))
-        WidthReduction = (LST[OutletRbShoreIx-1] * Dt.seconds) / ((ShoreZ[OutletChanIx[-1],0] - OutletEndElev[1]) * ChanDx[-1])
+        WidthReduction = ((LST[OutletRbShoreIx-1] * Dt.seconds) 
+                          / ((PhysicalPars['SpitHeight'] - OutletEndElev[1]) * PhysicalPars['SpitWidth']))
         OutletEndWidth[1] -= WidthReduction
         OutletEndX[1] += WidthReduction/2
     else:
         # Transport from R to L
         ShoreY[OutletRbShoreIx-1,0] += (LST[OutletRbShoreIx-1] * Dt.seconds 
                                         / (ShorefaceHeight[OutletRbShoreIx-1] * Dx))
-        WidthReduction = (-LST[OutletRbShoreIx-1] * Dt.seconds) / ((ShoreZ[OutletChanIx[-1],0] - OutletEndElev[1]) * ChanDx[-1])
+        WidthReduction = ((-LST[OutletRbShoreIx-1] * Dt.seconds) 
+                          / ((PhysicalPars['SpitHeight'] - OutletEndElev[1]) * PhysicalPars['SpitWidth']))
         OutletEndWidth[1] -= WidthReduction
         OutletEndX[1] -= WidthReduction/2
         
@@ -130,14 +135,14 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             Extend = False
     
     if Extend:
-        # Dist from new outlet section to shoreline = 1/2 distance of last outlet section
-        ShoreY[ExtendMask,1] = ShoreY[ExtendMask,0] - (ShoreY[OutletChanIx[-1],0] - ShoreY[OutletChanIx[-1],1])/2
+        # Dist from new outlet section to shoreline = PhysicalPars['SpitWidth']
+        ShoreY[ExtendMask,1] = ShoreY[ExtendMask,0] - PhysicalPars['SpitWidth']
         # Width of new outlet section = end width
         ShoreY[ExtendMask,2] = ShoreY[ExtendMask,1] - OutletEndWidth[1]
         # Bed level of new outlet section  = end bed level
         ShoreZ[ExtendMask,1] = OutletEndElev[1]
-        # Barrier height of inner barrier same as old outer barrier
-        ShoreZ[ExtendMask,2] = ShoreZ[ExtendMask,0]
+        # Barrier height of inner barrier = PhysicalPars['SpitHeight']
+        ShoreZ[ExtendMask,2] = PhysicalPars['SpitHeight']
         # TODO: Modify Barrier height of outer barrier ?????
         
         # Update OutletChanIx as it has changed and its used later in this function

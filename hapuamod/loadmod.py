@@ -338,7 +338,9 @@ def loadModel(Config):
                     'MaxOutletElev': float(Config['PhysicalParameters']['MaxOutletElev']),
                     'OT_coef': float(Config['PhysicalParameters']['OT_coef']),
                     'OT_exp': float(Config['PhysicalParameters']['OT_exp']),
-                    'OwProp_coef': float(Config['PhysicalParameters']['OwProp_coef'])}
+                    'OwProp_coef': float(Config['PhysicalParameters']['OwProp_coef']),
+                    'SpitHeight': float(Config['PhysicalParameters']['SpitHeight']),
+                    'SpitWidth': float(Config['PhysicalParameters']['SpitWidth'])}
 
     GammaLST = ((PhysicalPars['RhoSed'] - PhysicalPars['RhoSea']) * 
                 PhysicalPars['Gravity'] * (1 - PhysicalPars['VoidRatio']))
