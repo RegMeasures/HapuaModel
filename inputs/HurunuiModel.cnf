@@ -86,7 +86,7 @@ OT_exp = 2
 # Overwash proportion coefficient
 OwProp_coef = 10
 # Crest height and width of 'new' barrier created by longshore transport across river mouth [m]
-SpitHeight = 2
+SpitHeight = 2.5
 SpitWidth = 10
 
 [NumericalParameters]

@@ -143,8 +143,17 @@ def newOutFile(FileName, ModelName, StartTime,
         
     # Longshore transport
     LstVar = NcFile.createVariable('lst', np.float32, (TimeDim.name, XSegDim.name))
-    LstVar.units = 'm3/day'
+    LstVar.units = 'm3/hour'
     LstVar.long_name = 'longshore transport rate at each transect'
+    
+    # Crossshore transport
+    CstVar = NcFile.createVariable('cst', np.float32, (TimeDim.name, XDim.name))
+    CstVar.units = 'm3/hour'
+    CstVar.long_name = 'cross-shore transport rate from the shore face to the barrier at each transect'
+    
+    OWVar = NcFile.createVariable('overwash_proportion', np.float32, (TimeDim.name, XDim.name))
+    OWVar.units = '0 to 1'
+    OWVar.long_name = 'proportion of cross-shore transport going over barrier to backshore (as opposed to onto barrier crest)'
     
     #%% Create river variables
     
@@ -202,7 +211,7 @@ def newOutFile(FileName, ModelName, StartTime,
     NcFile.close()
 
 def writeCurrent(FileName, CurrentTime,
-                 ShoreY, ShoreZ, LagoonWL, LagoonVel, LST, 
+                 ShoreY, ShoreZ, LagoonWL, LagoonVel, LST, CST, OverwashProp,
                  RiverElev, RiverDep, RiverVel,
                  OutletEndX, OutletEndElev, OutletEndWidth, 
                  OutletEndDep, OutletEndVel):
@@ -233,7 +242,10 @@ def writeCurrent(FileName, CurrentTime,
     NcFile.variables['lagoon_wl'][TimeIx,:] = LagoonWL
     NcFile.variables['lagoon_vel'][TimeIx,:] = LagoonVel
     
-    NcFile.variables['lst'][TimeIx,:] = LST*86400
+    NcFile.variables['cst'][TimeIx,:] = CST*3600
+    NcFile.variables['overwash_proportion'][TimeIx,:] = OverwashProp
+    
+    NcFile.variables['lst'][TimeIx,:] = LST*3600
     
     # Append new data to river variables
     NcFile.variables['river_bed_z'][TimeIx,:] = RiverElev

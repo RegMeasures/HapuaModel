@@ -66,7 +66,7 @@ def run(ModelConfigFile, Overwrite=False):
                    ShoreX, NumericalPars['Dx'],  RiverElev, Overwrite)
     out.writeCurrent(OutputOpts['OutFile'], TimePars['StartTime'],
                      ShoreY, ShoreZ, LagoonWL, LagoonVel, 
-                     np.zeros(ShoreX.size-1), 
+                     np.zeros(ShoreX.size-1), np.zeros(ShoreX.size), np.zeros(ShoreX.size), 
                      RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0],
                      OutletEndX, OutletEndElev, OutletEndWidth, 
                      OutletEndDep, OutletEndVel)
@@ -167,7 +167,7 @@ def run(ModelConfigFile, Overwrite=False):
         
         # Save outputs
         out.writeCurrent(OutputOpts['OutFile'], MorTime, 
-                         ShoreY, ShoreZ, LagoonWL, LagoonVel, LST, 
+                         ShoreY, ShoreZ, LagoonWL, LagoonVel, LST, CST_tot, OverwashProp,
                          RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0],
                          OutletEndX, OutletEndElev, OutletEndWidth, 
                          OutletEndDep, OutletEndVel)
