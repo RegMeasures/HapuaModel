@@ -155,6 +155,7 @@ def loadModel(Config):
             OT_coef (float): Overtopping coefficient
             OT_exp (float): Overtopping exponent
             OwProp_coef (float): Overwash proportion coefficient
+            MinOutletWidth (float): Threshold width to trigger outlet closure
             K2coef (float): Calculated from other inputs for use in calculation
                 of longshore transport rate. K2 = K / (RhoSed - RhoSea) * g * (1 - VoidRatio))
             BreakerCoef (float): Calculated from other inputs for use in 
@@ -340,7 +341,8 @@ def loadModel(Config):
                     'OT_exp': float(Config['PhysicalParameters']['OT_exp']),
                     'OwProp_coef': float(Config['PhysicalParameters']['OwProp_coef']),
                     'SpitHeight': float(Config['PhysicalParameters']['SpitHeight']),
-                    'SpitWidth': float(Config['PhysicalParameters']['SpitWidth'])}
+                    'SpitWidth': float(Config['PhysicalParameters']['SpitWidth']),
+                    'MinOutletWidth': float(Config['PhysicalParameters']['MinOutletWidth'])}
 
     GammaLST = ((PhysicalPars['RhoSed'] - PhysicalPars['RhoSea']) * 
                 PhysicalPars['Gravity'] * (1 - PhysicalPars['VoidRatio']))

@@ -273,7 +273,7 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
                     OutletEndX, OutletEndWidth, OutletEndElev, 
                     RiverElev, RiverWidth, RivDep, RivVel, 
                     LagoonWL, LagoonVel, OutletDep, OutletVel,
-                    OutletEndDep, OutletEndVel, Dx, MaxOutletElev):
+                    OutletEndDep, OutletEndVel, Dx, PhysicalPars):
     """ Combine river, lagoon and outlet into single channel for hyd-calcs
         
         (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
@@ -327,9 +327,12 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
     OutletWidth = ShoreY[OutletChanIx,1] - ShoreY[OutletChanIx,2]
     
     # Check if closure has occured.
-    Closed = np.any(OutletWidth<=0)
+    Closed = np.any(OutletWidth<=PhysicalPars['MinOutletWidth']) | np.any(OutletEndWidth<=PhysicalPars['MinOutletWidth'])
     if Closed:
+        logging.info('Outlet closed')
         OutletChanIx = np.empty(0)
+    elif np.min(OutletWidth) < 5:
+        logging.debug('Narrow outlet, min outlet width = %f' % (np.min(OutletWidth)))
     
     # TODO: Account for potentially dry parts of the lagoon when 
     #       calculating ChanArea
@@ -385,7 +388,7 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
                                    [2], np.full(OutletChanIx.size, 3), [2,4]])
         ChanElev = np.concatenate([RiverElev, ShoreZ[OnlineLagoon,3], 
                                    [OutletEndElev[0]], ShoreZ[OutletChanIx,1], 
-                                   [OutletEndElev[1], min(MaxOutletElev, OutletEndElev[1])]])
+                                   [OutletEndElev[1], min(PhysicalPars['MaxOutletElev'], OutletEndElev[1])]])
         ChanWidth = np.concatenate([np.tile(RiverWidth, RiverElev.size), 
                                     LagoonWidth[OnlineLagoon], [OutletEndWidth[0]],
                                     OutletWidth, np.full(2, OutletEndWidth[1])])
@@ -423,7 +426,7 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
     if np.any(VelNan):
         logging.debug('Interpolating %i missing channel velocities' % np.sum(VelNan))
         ChanQ = ChanDep*ChanVel
-        ChanVel[VelNan] = (np.interp(np.where(DepNan)[0], np.where(~DepNan)[0], ChanQ[~DepNan])
+        ChanVel[VelNan] = (np.interp(np.where(VelNan)[0], np.where(~VelNan)[0], ChanQ[~VelNan])
                            / ChanDep[VelNan])
     
     # Check there are no nan values in the channel!
@@ -470,8 +473,8 @@ def storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, ChanFlag,
     OutletDep = np.full(LagoonElev.size, np.nan)
     OutletVel = np.full(LagoonElev.size, np.nan)
     if Closed:
-        OutletEndDep = np.nan(3)
-        OutletEndVel = np.nan(3)
+        OutletEndDep = np.full(3, np.nan)
+        OutletEndVel = np.full(3, np.nan)
     else:        
         OutletDep[OutletChanIx] = ChanDep[ChanFlag==3]
         OutletVel[OutletChanIx] = ChanVel[ChanFlag==3]

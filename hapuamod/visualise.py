@@ -144,23 +144,24 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx, ShoreZ=None,
     
     return ModelFig
 
-def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx, ShoreZ=None,
-                    WavePower=None, EDir_h=0, LST=None, CST=None):
+def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx, Closed=False, 
+                    ShoreZ=None, WavePower=None, EDir_h=0, LST=None, CST=None):
     
     # Calculate outlet plotting position
     OutletX = np.tile(ShoreX,[2,1]).flatten()
     OutletY = ShoreY[:,[1,2]].transpose().flatten()
-    # Join the end of the (online) outlet channel to the shore/lagoon line
-    OutletX = np.append(OutletX,
-                        [np.nan, 
-                         ShoreX[OutletChanIx[0]], OutletEndX[0], ShoreX[OutletChanIx[0]],
-                         np.nan,
-                         ShoreX[OutletChanIx[-1]], OutletEndX[1], ShoreX[OutletChanIx[-1]]])
-    OutletY = np.append(OutletY,
-                        [np.nan, 
-                         ShoreY[OutletChanIx[0],1], np.interp(OutletEndX[0],ShoreX,ShoreY[:,3]), ShoreY[OutletChanIx[0],2],
-                         np.nan,
-                         ShoreY[OutletChanIx[-1],1], np.interp(OutletEndX[1],ShoreX,ShoreY[:,0]), ShoreY[OutletChanIx[-1],2]])
+    if not Closed:
+        # Join the end of the (online) outlet channel to the shore/lagoon line
+        OutletX = np.append(OutletX,
+                            [np.nan, 
+                             ShoreX[OutletChanIx[0]], OutletEndX[0], ShoreX[OutletChanIx[0]],
+                             np.nan,
+                             ShoreX[OutletChanIx[-1]], OutletEndX[1], ShoreX[OutletChanIx[-1]]])
+        OutletY = np.append(OutletY,
+                            [np.nan, 
+                             ShoreY[OutletChanIx[0],1], np.interp(OutletEndX[0],ShoreX,ShoreY[:,3]), ShoreY[OutletChanIx[0],2],
+                             np.nan,
+                             ShoreY[OutletChanIx[-1],1], np.interp(OutletEndX[1],ShoreX,ShoreY[:,0]), ShoreY[OutletChanIx[-1],2]])
     
     # Calculate river plotting position
     RiverY = ShoreY[ShoreX==0,4]

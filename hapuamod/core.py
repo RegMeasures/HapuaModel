@@ -51,7 +51,7 @@ def run(ModelConfigFile, Overwrite=False):
                             np.zeros(ShoreX.size), np.zeros(ShoreX.size), 
                             np.zeros(ShoreX.size), np.zeros(ShoreX.size),
                             np.zeros(2), np.zeros(2), NumericalPars['Dx'],
-                            PhysicalPars['MaxOutletElev'])
+                            PhysicalPars)
     
     (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
                                          PhysicalPars['Roughness'], 
@@ -103,7 +103,7 @@ def run(ModelConfigFile, Overwrite=False):
                                 ChanDep[ChanFlag==0], ChanVel[ChanFlag==0], 
                                 LagoonWL, LagoonVel, OutletDep, OutletVel,
                                 OutletEndDep, OutletEndVel, 
-                                NumericalPars['Dx'], PhysicalPars['MaxOutletElev'])
+                                NumericalPars['Dx'], PhysicalPars)
                 
         # Run the river model for all the timesteps upto the next morphology step
         HydTimes = pd.date_range(MorTime, MorTime+TimePars['MorDt'], 
@@ -112,19 +112,19 @@ def run(ModelConfigFile, Overwrite=False):
         RivFlow = interpolate_at(FlowTs, HydTimes).values
         SeaLevel = interpolate_at(SeaLevelTs, HydTimes).values
         
-        try:
-            riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed,
-                                    ChanDep, ChanVel, ChanDx, 
-                                    TimePars['HydDt'], PhysicalPars['Roughness'], 
-                                    RivFlow, SeaLevel, NumericalPars)
-        except Exception as ErrMsg:
-            logging.warning(ErrMsg)
-            logging.warning('Unsteady hydraulics failed at %s. Falling back to quasi-steady for this timestep.' % 
-                            HydTimes[-1].strftime("%m/%d/%Y, %H:%M:%S"))
-            (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
-                                                 PhysicalPars['Roughness'], 
-                                                 RivFlow[-1], SeaLevel[-1], 
-                                                 NumericalPars)
+        # try:
+        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed,
+                                ChanDep, ChanVel, ChanDx, 
+                                TimePars['HydDt'], PhysicalPars['Roughness'], 
+                                RivFlow, SeaLevel, NumericalPars)
+#        except Exception as ErrMsg:
+#            logging.warning(ErrMsg)
+#            logging.warning('Unsteady hydraulics failed at %s. Falling back to quasi-steady for this timestep.' % 
+#                            HydTimes[-1].strftime("%m/%d/%Y, %H:%M:%S"))
+#            (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
+#                                                 PhysicalPars['Roughness'], 
+#                                                 RivFlow[-1], SeaLevel[-1], 
+#                                                 NumericalPars)
         
         # Store the hydraulics ready to use for initial conditions in the next loop
         (LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, OutletEndVel) = \
@@ -157,8 +157,8 @@ def run(ModelConfigFile, Overwrite=False):
         mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
                              OutletEndX, OutletEndWidth, OutletEndElev, 
                              RiverElev, PhysicalPars['RiverWidth'], OnlineLagoon, 
-                             OutletChanIx, ChanWidth, ChanDep, ChanDx, Closed,
-                             LST, Bedload, CST_tot, OverwashProp,
+                             OutletChanIx, ChanWidth, ChanDep, ChanDx, ChanFlag, 
+                             Closed, LST, Bedload, CST_tot, OverwashProp,
                              NumericalPars['Dx'], TimePars['MorDt'], 
                              PhysicalPars)
         
@@ -190,7 +190,7 @@ def run(ModelConfigFile, Overwrite=False):
                                             Bedload)
                 visualise.updateBdyCndFig(BdyFig, OutputTs)
                 visualise.updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, 
-                                          OutletChanIx, ShoreZ=ShoreZ, 
+                                          OutletChanIx, Closed=Closed, ShoreZ=ShoreZ, 
                                           WavePower=WavePower, EDir_h=EDir_h, 
                                           LST=LST, CST=CST_tot)
                 PlotTime += OutputOpts['PlotInt']
