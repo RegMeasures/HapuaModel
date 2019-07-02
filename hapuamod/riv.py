@@ -272,7 +272,7 @@ def solveFullPreissmann(z, B, LagArea, Closed, h, V,
 def assembleChannel(ShoreX, ShoreY, ShoreZ, 
                     OutletEndX, OutletEndWidth, OutletEndElev, 
                     RiverElev, RiverWidth, RivDep, RivVel, 
-                    LagoonWL, LagoonVel, OutletDep, OutletVel,
+                    LagoonWL, LagoonVel, OutletWL, OutletVel,
                     OutletEndDep, OutletEndVel, Dx, PhysicalPars):
     """ Combine river, lagoon and outlet into single channel for hyd-calcs
         
@@ -281,7 +281,7 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
             riv.assembleChannel(ShoreX, ShoreY, ShoreZ, 
                                 OutletEndX, OutletEndWidth, OutletEndElev, 
                                 RiverElev, RiverWidth, RivDep, RivVel, 
-                                LagoonWL, LagoonVel, OutletDep, OutletVel, 
+                                LagoonWL, LagoonVel, OutletWL, OutletVel, 
                                 OutletEndDep, OutletEndVel, Dx, MaxOutletElev)
         
         Returns:
@@ -407,7 +407,7 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
         ChanDep = np.concatenate([RivDep,
                                   LagoonWL[OnlineLagoon]-ShoreZ[OnlineLagoon,3],
                                   [OutletEndDep[0]], 
-                                  OutletDep[OutletChanIx], 
+                                  OutletWL[OutletChanIx]-ShoreZ[OutletChanIx,1], 
                                   OutletEndDep[-2:]])
         ChanVel = np.concatenate([RivVel,
                                   LagoonVel[OnlineLagoon],
@@ -440,10 +440,10 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
             OnlineLagoon, OutletChanIx, ChanFlag, Closed)
 
 def storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, ChanFlag, 
-                    LagoonElev, Closed):
+                    ShoreZ, Closed):
     """ Extract lagoon/outlet hydraulic conditions.
         
-        (LagoonWL, LagoonVel, OutletDep, OutletVel, 
+        (LagoonWL, LagoonVel, OutletWL, OutletVel, 
          OutletEndDep, OutletEndVel) = \
             storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, 
                             ChanFlag, LagoonElev)
@@ -458,7 +458,7 @@ def storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, ChanFlag,
     """
     
     # Lagoon WL
-    LagoonWL = LagoonElev.copy()
+    LagoonWL = ShoreZ[:,3].copy()
     LagoonWL[OnlineLagoon] += ChanDep[ChanFlag==1]
     MinOnline = np.min(OnlineLagoon)
     MaxOnline = np.max(OnlineLagoon)
@@ -466,23 +466,23 @@ def storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, ChanFlag,
     LagoonWL[MaxOnline+1:] = LagoonWL[MaxOnline]
     
     # Lagoon Vel
-    LagoonVel = np.full(LagoonElev.size, np.nan)
+    LagoonVel = np.full(LagoonWL.size, np.nan)
     LagoonVel[OnlineLagoon] = ChanVel[ChanFlag==1]
     
     # Outlet depth and velocity
-    OutletDep = np.full(LagoonElev.size, np.nan)
-    OutletVel = np.full(LagoonElev.size, np.nan)
+    OutletWL = ShoreZ[:,1].copy()
+    OutletVel = np.full(LagoonWL.size, np.nan)
     if Closed:
         OutletEndDep = np.full(3, np.nan)
         OutletEndVel = np.full(3, np.nan)
     else:        
-        OutletDep[OutletChanIx] = ChanDep[ChanFlag==3]
+        OutletWL[OutletChanIx] += ChanDep[ChanFlag==3]
         OutletVel[OutletChanIx] = ChanVel[ChanFlag==3]
         EndNodes = np.logical_or(ChanFlag==2, ChanFlag==4)
         OutletEndDep = ChanDep[EndNodes]
         OutletEndVel = ChanVel[EndNodes]
     
-    return (LagoonWL, LagoonVel, OutletDep, OutletVel, 
+    return (LagoonWL, LagoonVel, OutletWL, OutletVel, 
             OutletEndDep, OutletEndVel)
     
 def calcBedload(z, B, h, V, dx, PhysicalPars, Psi):

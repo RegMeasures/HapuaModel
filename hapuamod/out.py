@@ -139,7 +139,19 @@ def newOutFile(FileName, ModelName, StartTime,
     LagoonVelVar = NcFile.createVariable('lagoon_vel', np.float32, 
                                           (TimeDim.name, XDim.name))
     LagoonVelVar.units = 'm/s'
-    LagoonVelVar.long_name = 'Mean lagoon velocity at each transect (+ve = outflowing i.e. toward outlet channel)'
+    LagoonVelVar.long_name = 'Mean lagoon velocity at each transect (+ve = outflowing i.e. towards outlet channel)'
+    
+    # Outlet water level
+    OutletWlVar = NcFile.createVariable('outlet_wl', np.float32, 
+                                          (TimeDim.name, XDim.name))
+    OutletWlVar.units = 'm'
+    OutletWlVar.long_name = 'Outlet water level at each transect'
+    
+    # Outlet velosity
+    OutletVelVar = NcFile.createVariable('outlet_vel', np.float32, 
+                                          (TimeDim.name, XDim.name))
+    OutletVelVar.units = 'm/s'
+    OutletVelVar.long_name = 'Mean outlet channel velocity at each transect (+ve = outflowing i.e. towards sea)'
         
     # Longshore transport
     LstVar = NcFile.createVariable('lst', np.float32, (TimeDim.name, XSegDim.name))
@@ -211,7 +223,8 @@ def newOutFile(FileName, ModelName, StartTime,
     NcFile.close()
 
 def writeCurrent(FileName, CurrentTime,
-                 ShoreY, ShoreZ, LagoonWL, LagoonVel, LST, CST, OverwashProp,
+                 ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, OutletVel,
+                 LST, CST, OverwashProp,
                  RiverElev, RiverDep, RiverVel,
                  OutletEndX, OutletEndElev, OutletEndWidth, 
                  OutletEndDep, OutletEndVel):
@@ -241,6 +254,8 @@ def writeCurrent(FileName, CurrentTime,
     
     NcFile.variables['lagoon_wl'][TimeIx,:] = LagoonWL
     NcFile.variables['lagoon_vel'][TimeIx,:] = LagoonVel
+    NcFile.variables['outlet_wl'][TimeIx,:] = OutletWL
+    NcFile.variables['outlet_vel'][TimeIx,:] = OutletVel
     
     NcFile.variables['cst'][TimeIx,:] = CST*3600
     NcFile.variables['overwash_proportion'][TimeIx,:] = OverwashProp

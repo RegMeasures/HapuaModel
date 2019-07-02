@@ -53,9 +53,9 @@ SeaLevel = hm.core.interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartT
                                         RivFlow[0], SeaLevel[0], NumericalPars)
 
 # Store hydraulics and re-generate
-(LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, OutletEndVel) = \
+(LagoonWL, LagoonVel, OutletWL, OutletVel, OutletEndDep, OutletEndVel) = \
     hm.riv.storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, 
-                           ChanFlag, ShoreZ[:,3], Closed)
+                           ChanFlag, ShoreZ, Closed)
 (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
  OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
     hm.riv.assembleChannel(ShoreX, ShoreY, ShoreZ, 

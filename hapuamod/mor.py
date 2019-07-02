@@ -272,4 +272,3 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         ShoreY[IntTsects, 1] = np.nan
         ShoreY[IntTsects, 2] = np.nan
         ShoreZ[IntTsects, 1] = np.nan
-    
