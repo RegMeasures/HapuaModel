@@ -12,7 +12,7 @@ import logging
 def updateMorphology(ShoreX, ShoreY, ShoreZ,
                      OutletEndX, OutletEndWidth, OutletEndElev, 
                      RiverElev, RiverWidth, OnlineLagoon, OutletChanIx, 
-                     LagoonWL, OutletWL,
+                     LagoonWL, OutletDep,
                      ChanWidth, ChanDep, ChanDx, ChanFlag, Closed,
                      LST, Bedload, CST_tot, OverwashProp,
                      Dx, Dt, PhysicalPars):
@@ -31,6 +31,12 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     # Locations where an outlet channel exists in the barrier
     # Note not all "OutletPresent" are online/connected to sea...
     OutletPresent = np.where(~np.isnan(ShoreY[:,1]))[0]
+    
+    # Lagoon/outlet water level (to checl for breach)
+    # Calculated before updating bed levels incase this results in temporarily unrealistic water levels
+    WaterLevel = LagoonWL.copy()
+    if not Closed:
+        WaterLevel[OutletChanIx] = (OutletDep[OutletChanIx] + ShoreZ[OutletChanIx,1])
     
     #%% 1D River model morphology
     
@@ -275,8 +281,9 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         ShoreZ[IntTsects, 1] = np.nan
         
     #%% Check for breach
-    WaterLevel = LagoonWL.copy()
-    WaterLevel[OutletChanIx] = OutletWL[OutletChanIx]
+    if Closed:
+        print(WaterLevel)
+        print(ShoreZ[:,0])
     if np.any(ShoreZ[:,0]<WaterLevel):
         Deepest = np.argmax(WaterLevel-ShoreZ[:,0])
         np.info('Lagoon overtopping barrier at X = %f - potential breach' % ShoreX[Deepest])

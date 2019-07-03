@@ -53,9 +53,9 @@ SeaLevel = hm.core.interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartT
                                         RivFlow[0], SeaLevel[0], NumericalPars)
 
 # Store hydraulics and re-generate
-(LagoonWL, LagoonVel, OutletWL, OutletVel, OutletEndDep, OutletEndVel) = \
+(LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, OutletEndVel) = \
     hm.riv.storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, 
-                           ChanFlag, ShoreZ, Closed)
+                           ChanFlag, ShoreZ[:,3], Closed)
 (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
  OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
     hm.riv.assembleChannel(ShoreX, ShoreY, ShoreZ, 
@@ -96,7 +96,7 @@ OldShoreY = ShoreY.copy()
 hm.mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
                         OutletEndX, OutletEndWidth, OutletEndElev, 
                         RiverElev, PhysicalPars['RiverWidth'], OnlineLagoon, 
-                        OutletChanIx, LagoonWL, OutletWL,
+                        OutletChanIx, LagoonWL, OutletDep,
                         ChanWidth, ChanDep, ChanDx, ChanFlag, 
                         Closed, LST, Bedload, CST_tot, OverwashProp,
                         NumericalPars['Dx'], TimePars['MorDt'], PhysicalPars)
@@ -107,7 +107,7 @@ hm.out.newOutFile('test.nc', Config['ModelName'], TimePars['StartTime'],
                   ShoreX, NumericalPars['Dx'], RiverElev, True)
 
 hm.out.writeCurrent('test.nc', TimePars['StartTime'], 
-                    ShoreY, ShoreZ, LagoonWL, LagoonVel, 
+                    ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletDep, OutletVel,
                     np.zeros(ShoreX.size-1), 
                     RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0],
                     OutletEndX, OutletEndElev, OutletEndWidth, 

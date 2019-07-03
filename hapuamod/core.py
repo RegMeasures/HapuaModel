@@ -57,15 +57,15 @@ def run(ModelConfigFile, Overwrite=False):
                                          PhysicalPars['Roughness'], 
                                          RivFlow, SeaLevel, NumericalPars)
     
-    (LagoonWL, LagoonVel, OutletWL, OutletVel, OutletEndDep, OutletEndVel) = \
+    (LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, OutletEndVel) = \
         riv.storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, 
-                            ChanFlag, ShoreZ, Closed)
+                            ChanFlag, ShoreZ[:,3], Closed)
     
     #%% Create output file and write initial conditions
     out.newOutFile(OutputOpts['OutFile'], Config['ModelName'], TimePars['StartTime'], 
                    ShoreX, NumericalPars['Dx'],  RiverElev, Overwrite)
     out.writeCurrent(OutputOpts['OutFile'], TimePars['StartTime'],
-                     ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, OutletVel, 
+                     ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletDep, OutletVel,
                      np.zeros(ShoreX.size-1), np.zeros(ShoreX.size), np.zeros(ShoreX.size), 
                      RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0],
                      OutletEndX, OutletEndElev, OutletEndWidth, 
@@ -101,7 +101,7 @@ def run(ModelConfigFile, Overwrite=False):
                                 OutletEndX, OutletEndWidth, OutletEndElev, 
                                 RiverElev, PhysicalPars['RiverWidth'], 
                                 ChanDep[ChanFlag==0], ChanVel[ChanFlag==0], 
-                                LagoonWL, LagoonVel, OutletWL, OutletVel,
+                                LagoonWL, LagoonVel, OutletDep, OutletVel,
                                 OutletEndDep, OutletEndVel, 
                                 NumericalPars['Dx'], PhysicalPars)
                 
@@ -127,9 +127,9 @@ def run(ModelConfigFile, Overwrite=False):
 #                                                 NumericalPars)
         
         # Store the hydraulics ready to use for initial conditions in the next loop
-        (LagoonWL, LagoonVel, OutletWL, OutletVel, OutletEndDep, OutletEndVel) = \
+        (LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, OutletEndVel) = \
             riv.storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, 
-                                ChanFlag, ShoreZ, Closed)
+                                ChanFlag, ShoreZ[:,3], Closed)
         
         # Calculate bedload transport
         Bedload = riv.calcBedload(ChanElev, ChanWidth, ChanDep, ChanVel, 
@@ -157,7 +157,7 @@ def run(ModelConfigFile, Overwrite=False):
         mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
                              OutletEndX, OutletEndWidth, OutletEndElev, 
                              RiverElev, PhysicalPars['RiverWidth'], OnlineLagoon, 
-                             OutletChanIx, LagoonWL, OutletWL,
+                             OutletChanIx, LagoonWL, OutletDep,
                              ChanWidth, ChanDep, ChanDx, ChanFlag, 
                              Closed, LST, Bedload, CST_tot, OverwashProp,
                              NumericalPars['Dx'], TimePars['MorDt'], 
@@ -168,7 +168,7 @@ def run(ModelConfigFile, Overwrite=False):
         
         # Save outputs
         out.writeCurrent(OutputOpts['OutFile'], MorTime, 
-                         ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, OutletVel,
+                         ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletDep, OutletVel,
                          LST, CST_tot, OverwashProp,
                          RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0],
                          OutletEndX, OutletEndElev, OutletEndWidth, 
