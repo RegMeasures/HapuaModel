@@ -12,6 +12,7 @@ import logging
 def updateMorphology(ShoreX, ShoreY, ShoreZ,
                      OutletEndX, OutletEndWidth, OutletEndElev, 
                      RiverElev, RiverWidth, OnlineLagoon, OutletChanIx, 
+                     LagoonWL, OutletWL,
                      ChanWidth, ChanDep, ChanDx, ChanFlag, Closed,
                      LST, Bedload, CST_tot, OverwashProp,
                      Dx, Dt, PhysicalPars):
@@ -272,3 +273,11 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         ShoreY[IntTsects, 1] = np.nan
         ShoreY[IntTsects, 2] = np.nan
         ShoreZ[IntTsects, 1] = np.nan
+        
+    #%% Check for breach
+    WaterLevel = LagoonWL.copy()
+    WaterLevel[OutletChanIx] = OutletWL[OutletChanIx]
+    if np.any(ShoreZ[:,0]<WaterLevel):
+        Deepest = np.argmax(WaterLevel-ShoreZ[:,0])
+        np.info('Lagoon overtopping barrier at X = %f - potential breach' % ShoreX[Deepest])
+        

@@ -157,7 +157,8 @@ def run(ModelConfigFile, Overwrite=False):
         mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
                              OutletEndX, OutletEndWidth, OutletEndElev, 
                              RiverElev, PhysicalPars['RiverWidth'], OnlineLagoon, 
-                             OutletChanIx, ChanWidth, ChanDep, ChanDx, ChanFlag, 
+                             OutletChanIx, LagoonWL, OutletWL,
+                             ChanWidth, ChanDep, ChanDx, ChanFlag, 
                              Closed, LST, Bedload, CST_tot, OverwashProp,
                              NumericalPars['Dx'], TimePars['MorDt'], 
                              PhysicalPars)
