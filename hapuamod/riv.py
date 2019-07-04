@@ -70,7 +70,7 @@ def solveSteady(ChanDx, ChanElev, ChanWidth, Roughness, Qin, DsWL,
     
     return ChanDep, ChanVel
 
-def solveFullPreissmann(z, B, LagArea, Closed, h, V, 
+def solveFullPreissmann(z, B, LagArea, Closed, h, V, ChanFlag,
                         dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
     """ Solve full S-V eqns for a rectangular channel using preissmann scheme.
         Uses a newton raphson solution to the preissmann discretisation of the 
@@ -108,6 +108,7 @@ def solveFullPreissmann(z, B, LagArea, Closed, h, V,
             V
         
     """
+    
     g = 9.81                    # gravity [m/s^2]
     
     Theta = NumericalPars['Theta']
@@ -118,12 +119,18 @@ def solveFullPreissmann(z, B, LagArea, Closed, h, V,
     N = z.size                  # number of cross-sections
     S_0 = (z[:-1]-z[1:])/dx     # bed slope in each reach between XS [m/m]
     
+    if not Closed:
+        OutXs1 = np.where(ChanFlag == 2)[0][0] + 1
+    else:
+        OutXs1 = N
+    logging.info('OutXs1 = %i, N = %i' % (OutXs1,N))
+    
     # Prevent unexpected errors
     h[h<=0] = 0.0001 # Prevent negative depths
     V[V==0] = 0.0001 # Prevent zero velocities
     
     # Calculate effective width for volume change i.e. total planform area/reach length. 
-    dx2 = np.zeros(z.size)
+    dx2 = np.zeros(N)
     dx2[0] = dx[0]
     dx2[1:-1] = (dx[:-1]+dx[1:])/2
     dx2[-1] = dx[-1]
@@ -144,17 +151,19 @@ def solveFullPreissmann(z, B, LagArea, Closed, h, V,
         A_old = A
         
         # Constant parts of the S-V Equations which can be computed outside the loop
-        # For continuity equation
-        C1 = (h_old[:-1]*Be[:-1] + h_old[1:]*Be[1:] 
-              - 2*(dt/dx)*(1-Theta) * (V_old[1:]*A_old[1:] - V_old[:-1]*A_old[:-1]))
+        # For continuity equation (for river and lagoon)
+        logging.info('size1 = %i' % (h_old[:OutXs1-1].size))
+        logging.info('size2 = %i' % (A_old[1:OutXs1].size))
+        C1 = (h_old[:OutXs1-1]*Be[:OutXs1-1] + h_old[1:OutXs1]*Be[1:OutXs1] 
+              - 2*(dt/dx[:OutXs1-1])*(1-Theta) * (V_old[1:OutXs1]*A_old[1:OutXs1] - V_old[:OutXs1-1]*A_old[:OutXs1-1]))
         
-        # For momentum equation
-        C2 = (V_old[:-1]*A_old[:-1] + V_old[1:]*A_old[1:]
-              -2*Beta*(dt/dx)*(1-Theta) * (V_old[1:]*np.abs(V_old[1:])*A_old[1:]
-                                           - V_old[:-1]*np.abs(V_old[:-1])*A_old[:-1])
-              - g*(dt/dx)*(1-Theta) * (A_old[1:] + A_old[:-1]) * (h_old[1:]-h_old[:-1])
-              + g*dt*(1-Theta) * (A_old[1:]*(S_0 - Sf_old[1:]) 
-                                  + A_old[:-1]*(S_0 - Sf_old[:-1])))
+        # For momentum equation (for river and lagoon)
+        C2 = (V_old[:OutXs1-1]*A_old[:OutXs1-1] + V_old[1:OutXs1]*A_old[1:OutXs1]
+              -2*Beta*(dt/dx[:OutXs1-1])*(1-Theta) * (V_old[1:OutXs1]*np.abs(V_old[1:OutXs1])*A_old[1:OutXs1]
+                                                      - V_old[:OutXs1-1]*np.abs(V_old[:OutXs1-1])*A_old[:OutXs1-1])
+              - g*(dt/dx[:OutXs1-1])*(1-Theta) * (A_old[1:OutXs1] + A_old[:OutXs1-1]) * (h_old[1:OutXs1]-h_old[:OutXs1-1])
+              + g*dt*(1-Theta) * (A_old[1:OutXs1]*(S_0[:OutXs1-1] - Sf_old[1:OutXs1]) 
+                                  + A_old[:OutXs1-1]*(S_0[:OutXs1-1] - Sf_old[:OutXs1-1])))
         
         # Iterative solution
         ItCount = 0
@@ -164,17 +173,26 @@ def solveFullPreissmann(z, B, LagArea, Closed, h, V,
             # Error in Us Bdy
             Err[0] = A[0]*V[0]-Q
             
-            # Error in continuity equation
-            Err[np.arange(1,2*N-1,2)] = (h[:-1]*Be[:-1] + h[1:]*Be[1:]
-                                         + 2*(dt/dx)*Theta * (V[1:]*A[1:] - V[:-1]*A[:-1])) - C1
+            # Error in continuity equation (for river and lagoon)
+            Err[np.arange(1,2*OutXs1-1,2)] = (h[:OutXs1-1]*Be[:OutXs1-1] + h[1:OutXs1]*Be[1:OutXs1]
+                                              + 2*(dt/dx[:OutXs1-1])*Theta * (V[1:OutXs1]*A[1:OutXs1] - V[:OutXs1-1]*A[:OutXs1-1])) - C1
             
-            # Error in momentum equation
-            Err[np.arange(2,2*N-1,2)] = (V[:-1]*A[:-1] + V[1:]*A[1:]
-                                         + 2*Beta*(dt/dx)*Theta * (V[1:]*np.abs(V[1:])*A[1:]
-                                                                   - V[:-1]*np.abs(V[:-1])*A[:-1])
-                                         + g*(dt/dx)*Theta * (A[1:] + A[:-1]) * (h[1:]-h[:-1])
-                                         - g*dt*Theta * (A[1:]*(S_0-Sf[1:]) + A[:-1]*(S_0-Sf[:-1]))
+            # Error in momentum equation (for river and lagoon)
+            Err[np.arange(2,2*OutXs1-1,2)] = (V[:OutXs1-1]*A[:OutXs1-1] + V[1:OutXs1]*A[1:OutXs1]
+                                         + 2*Beta*(dt/dx[:OutXs1-1])*Theta * (V[1:OutXs1]*np.abs(V[1:OutXs1])*A[1:OutXs1]
+                                                                              - V[:OutXs1-1]*np.abs(V[:OutXs1-1])*A[:OutXs1-1])
+                                         + g*(dt/dx[:OutXs1-1])*Theta * (A[1:OutXs1] + A[:OutXs1-1]) * (h[1:OutXs1]-h[:OutXs1-1])
+                                         - g*dt*Theta * (A[1:OutXs1]*(S_0[:OutXs1-1]-Sf[1:OutXs1]) + A[:OutXs1-1]*(S_0[:OutXs1-1]-Sf[:OutXs1-1]))
                                         ) - C2
+            
+            # Error in flow (for quasi-steady outlet channel)
+            Err[np.arange(OutXs1*2-1,2*N-1,2)] = A[OutXs1-1:-1]*V[OutXs1-1:-1] - A[OutXs1:]*V[OutXs1:]
+            
+            # Error in bernoulli (for quasi steady outlet channel)
+            Err[np.arange(OutXs1*2,2*N-1,2)] = (h[OutXs1-1:-1] - h[OutXs1:]
+                                                + V[OutXs1-1:-1]**2 / (2*g) - V[OutXs1:]**2 / (2*g)
+                                                + dx[OutXs1-1:] * (Sf[OutXs1-1:-1] + Sf[OutXs1:]) / 2
+                                                - dx[OutXs1-1:] * S_0[OutXs1-1:])
             
             # Error in Ds Bdy
             if Closed:
@@ -192,35 +210,55 @@ def solveFullPreissmann(z, B, LagArea, Closed, h, V,
             a_banded[1,1] = A[0]
             a_banded[2,0] = V[0]*B[0]
             
-            # Continuity equation derivatives
+            # Continuity equation derivatives (for river and lagoon)
             # d/dh[0]
-            a_banded[3,np.arange(0,2*(N)-2,2)] = Be[:-1] - 2*dt/dx*Theta*V[:-1]*B[:-1]
+            a_banded[3,np.arange(0,2*OutXs1-2,2)] = Be[:OutXs1-1] - 2*dt/dx[:OutXs1-1]*Theta*V[:OutXs1-1]*B[:OutXs1-1]
             # d/dV[0]
-            a_banded[2,np.arange(1,2*(N)-2,2)] = -2*dt/dx*Theta*A[:-1]
+            a_banded[2,np.arange(1,2*OutXs1-2,2)] = -2*dt/dx[:OutXs1-1]*Theta*A[:OutXs1-1]
             # d/dh[1]
-            a_banded[1,np.arange(2,2*(N),2)] = Be[1:] + 2*dt/dx*Theta*V[1:]*B[1:]
+            a_banded[1,np.arange(2,2*OutXs1,2)] = Be[1:OutXs1] + 2*dt/dx[:OutXs1-1]*Theta*V[1:OutXs1]*B[1:OutXs1]
             # d/dV[1]
-            a_banded[0,np.arange(3,2*(N),2)] = 2*dt/dx*Theta*A[1:]
+            a_banded[0,np.arange(3,2*OutXs1,2)] = 2*dt/dx[:OutXs1-1]*Theta*A[1:OutXs1]
             
-            # Momentum equation derivatives
+            # Momentum equation derivatives (for river and lagoon)
             # d/dh[0]
-            a_banded[4,np.arange(0,2*(N)-2,2)] = (V[:-1]*B[:-1] 
-                                                  - 2*Beta*(dt/dx)*Theta*V[:-1]**2*B[:-1]
-                                                  + g*Theta*(dt/dx)*(-2*A[:-1] + B[:-1]*h[1:] - A[1:])
-                                                  - g*dt*Theta*B[:-1]*(S_0+(1/3)*Sf[:-1]))
+            a_banded[4,np.arange(0,2*OutXs1-2,2)] = (V[:OutXs1-1]*B[:OutXs1-1] 
+                                                     - 2*Beta*(dt/dx[:OutXs1-1])*Theta*V[:OutXs1-1]**2*B[:OutXs1-1]
+                                                     + g*Theta*(dt/dx[:OutXs1-1])*(-2*A[:OutXs1-1] + B[:OutXs1-1]*h[1:OutXs1] - A[1:OutXs1])
+                                                     - g*dt*Theta*B[:OutXs1-1]*(S_0[:OutXs1-1]+(1/3)*Sf[:OutXs1-1]))
             # d/dV[0]
-            a_banded[3,np.arange(1,2*(N)-2,2)] = (A[:-1] 
-                                                  - 4*Beta*(dt/dx)*Theta*V[:-1]*A[:-1] 
-                                                  + 2*g*dt*Theta*A[:-1]*Sf[:-1]/V[:-1])
+            a_banded[3,np.arange(1,2*OutXs1-2,2)] = (A[:OutXs1-1] 
+                                                     - 4*Beta*(dt/dx[:OutXs1-1])*Theta*V[:OutXs1-1]*A[:OutXs1-1] 
+                                                     + 2*g*dt*Theta*A[:OutXs1-1]*Sf[:OutXs1-1]/V[:OutXs1-1])
             # d/dh[1]
-            a_banded[2,np.arange(2,2*(N),2)] = (V[1:]*B[1:] 
-                                                + 2*Beta*(dt/dx)*Theta*V[1:]**2*B[1:]
-                                                + g*Theta*(dt/dx)*(2*A[1:] - B[1:]*h[:-1] + A[:-1])
-                                                - g*dt*Theta*B[1:]*(S_0+(1/3)*Sf[1:]))
+            a_banded[2,np.arange(2,2*OutXs1,2)] = (V[1:OutXs1]*B[1:OutXs1] 
+                                                   + 2*Beta*(dt/dx[:OutXs1-1])*Theta*V[1:OutXs1]**2*B[1:OutXs1]
+                                                   + g*Theta*(dt/dx[:OutXs1-1])*(2*A[1:OutXs1] - B[1:OutXs1]*h[:OutXs1-1] + A[:OutXs1-1])
+                                                   - g*dt*Theta*B[1:OutXs1]*(S_0[:OutXs1-1]+(1/3)*Sf[1:OutXs1]))
             # d/dV[1]
-            a_banded[1,np.arange(3,2*(N),2)] = (A[1:] 
-                                                + 4*Beta*dt/dx*Theta*V[1:]*A[1:] 
-                                                + 2*g*dt*Theta*A[1:]*Sf[1:]/V[1:])
+            a_banded[1,np.arange(3,2*OutXs1,2)] = (A[1:OutXs1] 
+                                                   + 4*Beta*dt/dx[:OutXs1-1]*Theta*V[1:OutXs1]*A[1:OutXs1] 
+                                                   + 2*g*dt*Theta*A[1:OutXs1]*Sf[1:OutXs1]/V[1:OutXs1])
+            
+            # Flow derivatives (for outlet channel)
+            # d/dh[0]
+            a_banded[3,np.arange(2*OutXs1-2,2*N-2,2)] = V[OutXs1-1:-1] * B[OutXs1-1:-1]
+            # d/dV[0]
+            a_banded[2,np.arange(2*OutXs1-1,2*N-2,2)] = h[OutXs1-1:-1] * B[OutXs1-1:-1]
+            # d/dh[1]
+            a_banded[1,np.arange(2*OutXs1,2*N,2)] = -V[OutXs1:] * B[OutXs1:]
+            # d/dV[1]
+            a_banded[0,np.arange(2*OutXs1+1,2*N,2)] = -h[OutXs1:] * B[OutXs1:]
+            
+            # Bernuille derivatives (for outlet channel)
+            # d/dh[0]
+            a_banded[4,np.arange(2*OutXs1-2,2*N-2,2)] = 1 - (dx[OutXs1-1:]/3) * Sf[OutXs1-1:-1]/h[OutXs1-1:-1]
+            # d/dV[0]
+            a_banded[3,np.arange(2*OutXs1-1,2*N-2,2)] = -1 - (dx[OutXs1-1:]/3) * Sf[OutXs1:]/h[OutXs1:]
+            # d/dh[1]
+            a_banded[2,np.arange(2*OutXs1,2*N,2)] = V[OutXs1-1:-1]/g + dx[OutXs1-1:] * Sf[OutXs1-1:-1]/V[OutXs1-1:-1]
+            # d/dV[1]
+            a_banded[1,np.arange(2*OutXs1+1,2*N,2)] = V[OutXs1-1:-1]/g + dx[OutXs1-1:] * Sf[OutXs1-1:-1]/V[OutXs1-1:-1]
             
             # Ds Bdy condition derivatives
             if Closed:

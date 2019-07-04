@@ -114,7 +114,7 @@ def run(ModelConfigFile, Overwrite=False):
         
         # try:
         riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed,
-                                ChanDep, ChanVel, ChanDx, 
+                                ChanDep, ChanVel, ChanFlag, ChanDx, 
                                 TimePars['HydDt'], PhysicalPars['Roughness'], 
                                 RivFlow, SeaLevel, NumericalPars)
 #        except Exception as ErrMsg:
