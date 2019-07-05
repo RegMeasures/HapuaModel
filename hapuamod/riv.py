@@ -308,22 +308,14 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
     """
     
     # Find location and orientation of outlet channel
-    if OutletEndX[0]//Dx == OutletEndX[1]//Dx:
-        # Outlet doesn't cross any transects
-        if OutletEndX[0] < OutletEndX[1]:
-            OutletChanIx = np.where(np.logical_and(OutletEndX[0] < ShoreX, 
-                                                   ShoreX < OutletEndX[1]+Dx))[0]
-        else:
-            OutletChanIx = np.where(np.logical_and(OutletEndX[1]-Dx < ShoreX,
-                                                   ShoreX < OutletEndX[0]))[0]
-    elif OutletEndX[0] < OutletEndX[1]:
+    if OutletEndX[0] < OutletEndX[1]:
         # Outlet angles from L to R
-        OutletChanIx = np.where(np.logical_and(OutletEndX[0] < ShoreX, 
-                                               ShoreX < OutletEndX[1]))[0]
+        OutletChanIx = np.where(np.logical_and(OutletEndX[0] <= ShoreX, 
+                                               ShoreX <= OutletEndX[1]))[0]
     else:
         # Outlet from R to L
-        OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] < ShoreX,
-                                                         ShoreX < OutletEndX[0]))[0])
+        OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] <= ShoreX,
+                                                         ShoreX <= OutletEndX[0]))[0])
     OutletWidth = ShoreY[OutletChanIx,1] - ShoreY[OutletChanIx,2]
     
     # Check if closure has occured.
@@ -364,24 +356,19 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
     
     # Assemble the complete channel
     if Closed:
-        ChanDx = np.tile(Dx, RiverElev.size + OnlineLagoon.size - 1)
+        ChanDx = np.full(RiverElev.size + OnlineLagoon.size - 1, Dx)
         ChanFlag = np.concatenate([np.full(RiverElev.size, 0), 
                                    np.full(OnlineLagoon.size, 1)])
         ChanElev = np.concatenate([RiverElev, ShoreZ[OnlineLagoon,3]])
         ChanWidth = np.concatenate([np.tile(RiverWidth, RiverElev.size), 
                                     LagoonWidth[OnlineLagoon]])
     else: # open
-        ChanDx = np.tile(Dx, RiverElev.size + OnlineLagoon.size + OutletChanIx.size + 2)
-        if OutletEndX[0]//Dx == OutletEndX[1]//Dx:
-            # Outlet is straight (i.e. doesn't cross any transects)
-            ChanDx[-3] += abs(OutletEndX[1] - OutletEndX[0])
-        elif OutletEndX[0] < OutletEndX[1]:
+        ChanDx = np.full(RiverElev.size + OnlineLagoon.size + OutletChanIx.size + 2, Dx)
+        if OutletEndX[0] < OutletEndX[1]:
             # Outlet angles from L to R
-            ChanDx[RiverElev.size + OnlineLagoon.size] += Dx - (OutletEndX[0] % Dx)
             ChanDx[-2] += OutletEndX[1] % Dx
         else:
             # Outlet from R to L
-            ChanDx[RiverElev.size + OnlineLagoon.size] += OutletEndX[0] % Dx
             ChanDx[-2] += Dx - (OutletEndX[1] % Dx)
         ChanFlag = np.concatenate([np.full(RiverElev.size, 0), 
                                    np.full(OnlineLagoon.size, 1), 

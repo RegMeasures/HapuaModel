@@ -439,18 +439,29 @@ def loadModel(Config):
     # Set outlet end coordinates (neatly in-between transects to start with!)
     OutletEndX = np.empty([2])
     if np.all(np.logical_not(OutletMask)):
-        # Handle special case that outlet is straight out (or super wide) and didn't intersect any transects
-        OutletEndX[0] = np.mean(OutletCoords2[:,1])
-        OutletEndX[1] = OutletEndX[0]
-        OutletIx = np.where(np.logical_and(OutletEndX[1]-Dx < ShoreX,
-                                           ShoreX < OutletEndX[0]))[0][0]
-        ShoreY[OutletIx,1] = (ShoreY[OutletIx,0] + ShoreY[OutletIx,3])/2 + IniCond['OutletWidth']/2
-        ShoreY[OutletIx,2] = ShoreY[OutletIx,1] - IniCond['OutletWidth']
-    else:
-        OutletEndX[0] = np.max(ShoreX[OutletMask]) + Dx/2
-        OutletEndX[1] = np.min(ShoreX[OutletMask]) - Dx/2
+        # Handle special case that outlet is straight out and didn't intersect any transects
         if OutletToR:
-            OutletEndX = np.flipud(OutletEndX)
+            OutletEndX[0] = Dx * (np.mean(OutletCoords2[:,1])//Dx)
+            OutletEndX[1] = OutletEndX[0] + Dx/2
+        else:
+            OutletEndX[0] = Dx * ((np.mean(OutletCoords2[:,1])//Dx) + 1)
+            OutletEndX[1] = OutletEndX[0] - Dx/2
+        
+        OutletMask = ShoreX == OutletEndX[0]
+        assert np.sum(OutletMask)==1, 'Number of outlet transects for straight outlet not equal to 1 in loadModel'
+        ShoreY[OutletMask,1] = min(ShoreY[OutletMask,0] - PhysicalPars['SpitWidth'], 
+                                   (ShoreY[OutletMask,0] + ShoreY[OutletMask,3])/2 + IniCond['OutletWidth']/2)
+        ShoreY[OutletMask,2] = ShoreY[OutletMask,1] - IniCond['OutletWidth']
+        ShoreY[OutletMask,3] = min(ShoreY[OutletMask,2] + 0.001, ShoreY[OutletMask,3])
+    else:
+        if OutletToR:
+            # Outlet angles from L to R
+            OutletEndX[0] = np.min(ShoreX[OutletMask])
+            OutletEndX[1] = np.max(ShoreX[OutletMask]) + Dx/2
+        else:
+            # Outlet angles from R to L
+            OutletEndX[0] = np.max(ShoreX[OutletMask])
+            OutletEndX[1] = np.min(ShoreX[OutletMask]) - Dx/2
             
     # Set outlet end width
     OutletEndWidth = np.full(2, IniCond['OutletWidth'])

@@ -141,16 +141,16 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     if not Closed:
         if OutletEndX[0] < OutletEndX[1]:
             # Outlet angles from L to R
-            if ShoreX[OutletChanIx[-1]+1] < OutletEndX[1]:
+            if ShoreX[OutletChanIx[-1]+1] <= OutletEndX[1]:
                 Extend = True
-                ExtendMask = np.logical_and(ShoreX[OutletChanIx[-1]] <= ShoreX,
+                ExtendMask = np.logical_and(ShoreX[OutletChanIx[-1]] < ShoreX,
                                             ShoreX <= OutletEndX[1])
                 logging.info('Outlet channel elongated rightwards across transect line x=%f' % ShoreX[ExtendMask][-1])
             else:
                 Extend = False    
         else:
             # Outlet angles from R to L
-            if ShoreX[OutletChanIx[-1]-1] > OutletEndX[1]:
+            if ShoreX[OutletChanIx[-1]-1] >= OutletEndX[1]:
                 Extend = True
                 ExtendMask = np.logical_and(ShoreX[OutletChanIx[-1]] > ShoreX,
                                             ShoreX >= OutletEndX[1])
@@ -171,11 +171,11 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             
             # Update OutletChanIx as it has changed and its used later in this function
             if OutletEndX[0] < OutletEndX[1]:
-                OutletChanIx = np.where(np.logical_and(OutletEndX[0] < ShoreX, 
-                                                       ShoreX < OutletEndX[1]))[0]
+                OutletChanIx = np.where(np.logical_and(OutletEndX[0] <= ShoreX, 
+                                                       ShoreX <= OutletEndX[1]))[0]
             else:
-                OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] < ShoreX,
-                                                                 ShoreX < OutletEndX[0]))[0])
+                OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] <= ShoreX,
+                                                                 ShoreX <= OutletEndX[0]))[0])
         
     
     #%% Check for outlet channel truncation
@@ -192,7 +192,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             TruncationIx = OutletChanIx[ShoreY[OutletChanIx,1] <= ShoreY[OutletChanIx,0]]
             if OutletEndX[0] < OutletEndX[1]:
                 # Outlet angles from L to R
-                OutletEndX[0] = ShoreX[TruncationIx[-1]] + Dx/2
+                OutletEndX[0] = ShoreX[TruncationIx[-1] + 1]
                 if ShoreY[TruncationIx[-1], 3] <= ShoreY[TruncationIx[-1], 4]:
                     logging.info('Extending R end of lagoon via outletchannel to cliffline collision.')
                     Extend = True
@@ -202,7 +202,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                     Extend = False
             else:
                 # Outlet angles from R to L
-                OutletEndX[0] = ShoreX[TruncationIx[0]] - Dx/2 
+                OutletEndX[0] = ShoreX[TruncationIx[0] - 1]
                 if ShoreY[TruncationIx[0], 3] <= ShoreY[TruncationIx[0], 4]:
                     logging.info('Extending L end of lagoon via outletchannel to cliffline collision.')
                     Extend = True
@@ -237,23 +237,12 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     
     # if outlet is open but has only 1 transect then adjust shoreline/lagoonline to preserve it's width when we adjust ShoreY in the next step
     elif not Closed:
-        if OutletEndX[0]//Dx == OutletEndX[1]//Dx:
-            if OutletEndX[0] < OutletEndX[1]:
-                OutletChanIx = np.where(np.logical_and(OutletEndX[0] < ShoreX, 
-                                                       ShoreX < OutletEndX[1]+Dx))[0]
-            else:
-                OutletChanIx = np.where(np.logical_and(OutletEndX[1]-Dx < ShoreX,
-                                                       ShoreX < OutletEndX[0]))[0]
-        else:
-            OutletChanIx = np.where(np.logical_and(np.min(OutletEndX) < ShoreX,
-                                                   ShoreX < np.max(OutletEndX[0])))[0]
         # Preserve channel width by extending into lagoon as required 
         # (not extending into sea as this would mess with LST)
         if ShoreY[OutletChanIx,1] > ShoreY[OutletChanIx,0]:
             ShoreY[OutletChanIx,2] -= ShoreY[OutletChanIx,1] - ShoreY[OutletChanIx,0]
             ShoreY[OutletChanIx,1] = ShoreY[OutletChanIx,0] - 0.0001
         ShoreY[OutletChanIx,3] = min(ShoreY[OutletChanIx,3], ShoreY[OutletChanIx,2]-0.0001)
-            
     
     # Adjust ShoreY where outlet banks intersects coast or lagoon
     # Note this can include offline/disconnected bits of outlet as well as online bits
@@ -328,15 +317,16 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             # Assume breach of width Dx with bed level linearly interpolated 
             # between lagoon level at upstream end and PhysicalPars['MaxOutletElev']
             OutletEndWidth[:] = Dx
-            ShoreZ[BreachIx, 2] = ShoreZ[BreachIx, 0]
             ShoreY[BreachIx,1] = min(ShoreY[BreachIx,0]-PhysicalPars['SpitWidth'],
                                      (ShoreY[BreachIx,0]+ShoreY[BreachIx,3])/2 + Dx/2)
             ShoreY[BreachIx,2] = ShoreY[BreachIx,1] - Dx
-            if OutletEndX[0] < OutletEndX[1]:
-                # Outlet angles from L to R
-                OutletEndElev[0] = 0.25 * PhysicalPars['MaxOutletElev'] + 0.75 * ShoreZ[BreachIx-1,3]
-                ShoreZ[BreachIx,1] = 0.5 * PhysicalPars['MaxOutletElev'] + 0.5 * ShoreZ[BreachIx-1,3]
-                OutletEndElev[1] = 0.75 * PhysicalPars['MaxOutletElev'] + 0.25 * ShoreZ[BreachIx-1,3]
+            OutletEndX[:] = ShoreX[BreachIx]
+            
+            ShoreZ[BreachIx, 2] = ShoreZ[BreachIx, 0]
+            
+            OutletEndElev[0] = 0.25 * PhysicalPars['MaxOutletElev'] + 0.75 * ShoreZ[BreachIx,3]
+            ShoreZ[BreachIx,1] = 0.5 * PhysicalPars['MaxOutletElev'] + 0.5 * ShoreZ[BreachIx,3]
+            OutletEndElev[1] = 0.75 * PhysicalPars['MaxOutletElev'] + 0.25 * ShoreZ[BreachIx,3]
             
         
         
