@@ -32,9 +32,13 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     # Note not all "OutletPresent" are online/connected to sea...
     OutletPresent = np.where(~np.isnan(ShoreY[:,1]))[0]
     
+    # Locations where lagoon width > 0
+    LagoonPresent = ShoreY[:,3] > ShoreY[:,4]
+    
     # Lagoon/outlet water level (to checl for breach)
     # Calculated before updating bed levels incase this results in temporarily unrealistic water levels
-    WaterLevel = LagoonWL.copy()
+    WaterLevel = np.full(ShoreX.size, -9999.9)
+    WaterLevel[LagoonPresent] = LagoonWL[LagoonPresent]
     if not Closed:
         WaterLevel[OutletChanIx] = (OutletDep[OutletChanIx] + ShoreZ[OutletChanIx,1])
     
@@ -184,7 +188,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         # Check for truncation of lagoonward end of outlet channel 
         # (don't check last transect as trucation here would leave 0 transects)
         if np.any(ShoreY[OutletChanIx[:-1],2] <= ShoreY[OutletChanIx[:-1],3]):
-            logging.info('Truncating lagoon end of outlet channel')
+            logging.info('Truncating lagoon end of outlet channel (due to erosion)')
             TruncationIx = OutletChanIx[ShoreY[OutletChanIx,1] <= ShoreY[OutletChanIx,0]]
             if OutletEndX[0] < OutletEndX[1]:
                 # Outlet angles from L to R
@@ -222,7 +226,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         # Not sure what happens if truncation of both ends happens in same timestep???
         # (don't check first transect as trucation here would leave 0 transects)
         if np.any(ShoreY[OutletChanIx[1:],1] >= ShoreY[OutletChanIx[1:],0]):
-            logging.info('Truncating seaward end of outlet channel')
+            logging.info('Truncating seaward end of outlet channel (due to erosion)')
             TruncationIx = OutletChanIx[ShoreY[OutletChanIx,1] >= ShoreY[OutletChanIx,0]]
             if OutletEndX[0] < OutletEndX[1]:
                 # Outlet angles from L to R
@@ -280,11 +284,60 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         ShoreY[IntTsects, 2] = np.nan
         ShoreZ[IntTsects, 1] = np.nan
         
-    #%% Check for breach
-    if Closed:
-        print(WaterLevel)
-        print(ShoreZ[:,0])
-    if np.any(ShoreZ[:,0]<WaterLevel):
-        Deepest = np.argmax(WaterLevel-ShoreZ[:,0])
-        np.info('Lagoon overtopping barrier at X = %f - potential breach' % ShoreX[Deepest])
+    #%% Breaching
+    
+    # Check for breach
+    if np.any(ShoreZ[:,0] < WaterLevel):
+        if Closed:
+            # If lagoon closed then assume any overtopping causes breach, 
+            # and that breach occurs where overtopping is deepest
+            BreachIx = np.argmax(WaterLevel-ShoreZ[:,0])
+            Breach = True
+        else:
+            # If lagoon open then assume overtopping only causes breach if it 
+            # is closer to where river enters lagoon than existing outlet 
+            # (and not on the first transect of the outlet channel as this
+            # would leave a 0-transect outlet)
+            CloserToRiv = np.abs(ShoreX) < np.max(np.abs(OutletEndX))
+            CloserToRiv[OutletChanIx[0]] = False
+            if np.any(ShoreZ[CloserToRiv,0] < WaterLevel[CloserToRiv]):
+                BreachIx = np.argmax((WaterLevel-ShoreZ[:,0]) * CloserToRiv)
+                Breach = True
+    else:
+        Breach = False
+    
+    # Create breach
+    if Breach:
+        if BreachIx in OutletChanIx:
+            # Outlet truncation breach
+            logging.info('Outlet truncation due to overtopping/breach at X = %f' % ShoreX[BreachIx])
+            if OutletEndX[0] < OutletEndX[1]:
+                # Outlet angles from L to R
+                OutletEndX[1] = ShoreX[BreachIx] - Dx/2
+                OutletEndWidth[1] = Dx
+                OutletEndElev[1] = (ShoreZ[BreachIx-1,1] + PhysicalPars['MaxOutletElev'])/2
+            else:
+                # Outlet angles from R to L 
+                OutletEndX[1] = ShoreX[BreachIx] + Dx/2
+                OutletEndWidth[1] = Dx
+                OutletEndElev[1] = (ShoreZ[BreachIx+1,1] + PhysicalPars['MaxOutletElev'])/2
+            # TODO: close sediment balance by putting breach eroded sed onto shore
+        else:
+            # Lagoon breach (i.e. new outlet channel)
+            logging.info('Creation of new outlet channel due to breach caused by overtopping at X = %f' % ShoreX[BreachIx])
+            # Assume breach of width Dx with bed level linearly interpolated 
+            # between lagoon level at upstream end and PhysicalPars['MaxOutletElev']
+            OutletEndWidth[:] = Dx
+            ShoreZ[BreachIx, 2] = ShoreZ[BreachIx, 0]
+            ShoreY[BreachIx,1] = min(ShoreY[BreachIx,0]-PhysicalPars['SpitWidth'],
+                                     (ShoreY[BreachIx,0]+ShoreY[BreachIx,3])/2 + Dx/2)
+            ShoreY[BreachIx,2] = ShoreY[BreachIx,1] - Dx
+            if OutletEndX[0] < OutletEndX[1]:
+                # Outlet angles from L to R
+                OutletEndElev[0] = 0.25 * PhysicalPars['MaxOutletElev'] + 0.75 * ShoreZ[BreachIx-1,3]
+                ShoreZ[BreachIx,1] = 0.5 * PhysicalPars['MaxOutletElev'] + 0.5 * ShoreZ[BreachIx-1,3]
+                OutletEndElev[1] = 0.75 * PhysicalPars['MaxOutletElev'] + 0.25 * ShoreZ[BreachIx-1,3]
+            
+        
+        
         

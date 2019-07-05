@@ -117,7 +117,7 @@ def overtopping(Runup, SeaLevel, ShoreY, ShoreZ, PhysicalPars):
     
     # Barrier width
     OutletPresent = ~np.isnan(ShoreY[:,1])
-    CrestWidth = ShoreY[:,0] - ShoreY[:,3]
+    CrestWidth = np.maximum(ShoreY[:,0] - ShoreY[:,3], 0.001)
     CrestWidth[OutletPresent] = ShoreY[OutletPresent,0] - ShoreY[OutletPresent,1]
     
     # Split sed flux between crest and backshore (except where no lagoon)
