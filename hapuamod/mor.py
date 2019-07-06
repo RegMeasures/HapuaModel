@@ -265,9 +265,10 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     if np.any(LagoonIntersect):
         logging.info('Outlet intersects lagoon at %i transects - adding channel width into lagoon' % np.sum(LagoonIntersect))
         IntTsects = OutletPresent[LagoonIntersect]
-        ShoreY[IntTsects, 3] += ((ShoreY[IntTsects, 1] - ShoreY[IntTsects, 2]) 
-                                 * (ShoreZ[IntTsects, 2] - ShoreZ[IntTsects, 1]) 
-                                 / (ShoreZ[IntTsects, 0] - ShoreZ[IntTsects, 3]))
+        ShoreZ[IntTsects, 3] = (((ShoreY[IntTsects, 1] - ShoreY[IntTsects, 2]) * ShoreZ[IntTsects, 1] 
+                                 + (ShoreY[IntTsects, 3] - ShoreY[IntTsects, 4]) * ShoreZ[IntTsects, 3]) 
+                                / (ShoreY[IntTsects, 1] - ShoreY[IntTsects, 4]))
+        ShoreY[IntTsects, 3] += (ShoreY[IntTsects, 1] - ShoreY[IntTsects, 2]) 
         # Remove outlet channel from transect now it has been dissolved into shoreline
         ShoreY[IntTsects, 1] = np.nan
         ShoreY[IntTsects, 2] = np.nan
@@ -276,12 +277,18 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     #%% Breaching
     
     # Check for breach
-    if np.any(ShoreZ[:,0] < WaterLevel):
+    if np.any(np.logical_and(ShoreY[:,3]>=ShoreY[:,0], ShoreY[:,3]>ShoreY[:,4])):
+        EroTsects = np.where(np.logical_and(ShoreY[:,3]>=ShoreY[:,0], ShoreY[:,3]>ShoreY[:,4]))[0]
+        BreachIx = EroTsects[np.argmin(np.abs(ShoreX[EroTsects]))]
+        Breach = True
+        logging.info('Barrier completely eroded at X = %i' % ShoreX[BreachIx])
+    elif np.any(ShoreZ[:,0] < WaterLevel):
         if Closed:
             # If lagoon closed then assume any overtopping causes breach, 
             # and that breach occurs where overtopping is deepest
             BreachIx = np.argmax(WaterLevel-ShoreZ[:,0])
             Breach = True
+            logging.info('Closed lagoon overtopping at X = %f' % ShoreX[BreachIx])
         else:
             # If lagoon open then assume overtopping only causes breach if it 
             # is closer to where river enters lagoon than existing outlet 
@@ -292,6 +299,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             if np.any(ShoreZ[CloserToRiv,0] < WaterLevel[CloserToRiv]):
                 BreachIx = np.argmax((WaterLevel-ShoreZ[:,0]) * CloserToRiv)
                 Breach = True
+                logging.info('Lagoon overtopping barrier at X = %f' % ShoreX[BreachIx])
     else:
         Breach = False
     
@@ -299,7 +307,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     if Breach:
         if BreachIx in OutletChanIx:
             # Outlet truncation breach
-            logging.info('Outlet truncation due to overtopping/breach at X = %f' % ShoreX[BreachIx])
+            logging.info('Outlet truncation due to breach at X = %f' % ShoreX[BreachIx])
             if OutletEndX[0] < OutletEndX[1]:
                 # Outlet angles from L to R
                 OutletEndX[1] = ShoreX[BreachIx] - Dx/2
@@ -313,7 +321,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             # TODO: close sediment balance by putting breach eroded sed onto shore
         else:
             # Lagoon breach (i.e. new outlet channel)
-            logging.info('Creation of new outlet channel due to breach caused by overtopping at X = %f' % ShoreX[BreachIx])
+            logging.info('Breach/creation of new outlet channel at X = %f' % ShoreX[BreachIx])
             # Assume breach of width Dx with bed level linearly interpolated 
             # between lagoon level at upstream end and PhysicalPars['MaxOutletElev']
             OutletEndWidth[:] = Dx
