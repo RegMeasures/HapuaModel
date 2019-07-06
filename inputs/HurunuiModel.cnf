@@ -65,6 +65,8 @@ BeachSlope = 0.13
 RiverSlope = 0.003
 # Grain size for fluvial sediment transport [m]
 GrainSize = 0.032
+# Critical shields stress for initiation of bedload transport
+CritShieldsStress = 0.03
 # Upstream river length to simulate [m]
 UpstreamLength = 1000
 # River width upstream of hapua [m]
@@ -72,7 +74,7 @@ RiverWidth = 100
 # Fluvial hydraulic roughness (Manning's n) [m^(-1/3).s]
 RoughnessManning = 0.03
 # Width-Depth ratio of eroding channel [dimensionless]
-WidthDepthRatio = 40
+WidthDepthRatio = 30
 # Elevation of top of lagoon backshore [m]
 BackshoreElev = 30
 # Maximum elevation of the downstream end of the outlet channel [m] 
@@ -80,13 +82,13 @@ BackshoreElev = 30
 # cross-section and should be below the minimum sea level.
 MaxOutletElev = -2.0
 # Overtopping coefficient - controls magnitude of overtopping sediment flux [s^-1]
-OT_coef = 0.0005
+OT_coef = 0.0002
 # Overtopping exponent (recommended value = 2)
 OT_exp = 2
 # Overwash proportion coefficient
 OwProp_coef = 10
 # Crest height and width of 'new' barrier created by longshore transport across river mouth [m]
-SpitHeight = 2.5
+SpitHeight = 2
 SpitWidth = 10
 # Threshold width for setting outlet channel to closed [m]
 MinOutletWidth = 0.5
@@ -115,5 +117,5 @@ OutFile = 'HurunuiModelOutputs.nc'
 # Interval (model time) at which info will be logged during simulation [s]
 LogInt = 3600
 # Interval to update plots (zero means no plotting will occur) [s]
-PlotInt = 3600
+PlotInt = 7200
 

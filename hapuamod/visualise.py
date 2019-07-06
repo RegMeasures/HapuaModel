@@ -316,7 +316,7 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None):
         QsLine, = QsAx.plot(D2, Bedload*3600, 'k-')
         QsAx.set_ylabel(r'Bedload [$\mathrm{m^3/hr}$]')
         QsAx.set_xlabel('Distance downstream [m]')
-        QsAx.set_ylim([0,30])
+        QsAx.set_ylim([0,50])
         QsAx.grid(axis='x', which='both', linestyle=':')
     
     # Compile outputs

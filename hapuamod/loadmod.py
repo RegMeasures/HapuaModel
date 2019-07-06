@@ -331,6 +331,7 @@ def loadModel(Config):
                     'BeachSlope': float(Config['PhysicalParameters']['BeachSlope']),
                     'RiverSlope': float(Config['PhysicalParameters']['RiverSlope']),
                     'GrainSize': float(Config['PhysicalParameters']['GrainSize']),
+                    'CritShieldsStress': float(Config['PhysicalParameters']['CritShieldsStress']),
                     'UpstreamLength': float(Config['PhysicalParameters']['UpstreamLength']),
                     'RiverWidth': float(Config['PhysicalParameters']['RiverWidth']),
                     'Roughness': float(Config['PhysicalParameters']['RoughnessManning']),
