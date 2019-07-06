@@ -43,7 +43,7 @@ plt.plot((ShoreX[0:-1]+ShoreX[1:])/2, LST)
                            np.zeros(ShoreX.size), np.zeros(ShoreX.size),
                            np.zeros(2), np.zeros(2), NumericalPars['Dx'],
                            PhysicalPars)
-hm.visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx)
+hm.visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx)
     
 # Steady state hydraulics
 RivFlow = hm.core.interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']])).values

@@ -59,8 +59,8 @@ def mapView(ShoreX, ShoreY, Origin, ShoreNormDir):
     # tidy up the plot
     plt.axis('equal')
 
-def modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx, ShoreZ=None,
-              WavePower=None, EDir_h=0, LST=None, CST=None, 
+def modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, 
+              ShoreZ=None, WavePower=None, EDir_h=0, LST=None, CST=None, 
               WaveScaling=0.01, CstScaling=0.00005, LstScaling=0.0001,
               QuiverWidth=0.002):
     """ Map the current model state in model coordinates
@@ -93,12 +93,13 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx, ShoreZ=None,
     
     # Create dummy lines
     ShoreLine,  = PlanAx.plot(ShoreX, ShoreY[:,0], 'g-', label='Shore')
-    OutletLine, = PlanAx.plot(ShoreX, ShoreY[:,1], 'r-', label='Outlet')
+    OutletLine, = PlanAx.plot(ShoreX, ShoreY[:,1], 'r-', label='Outlet', zorder = 10)
+    ChannelLine, = PlanAx.plot(ShoreX, ShoreY[:,1], '-x', label='Channel', color='grey')
     LagoonLine, = PlanAx.plot(ShoreX, ShoreY[:,3], 'c-', label='Lagoon')
     CliffLine,  = PlanAx.plot(ShoreX, ShoreY[:,4], 'k-', label='Cliff')
     RiverLine,  = PlanAx.plot([0,0], [-100,-300], 'b-', label='River')
     if not ShoreZ is None:
-        CrestLine, = VertAx.plot(ShoreX, ShoreY[:,0], 'k-', label='Barrier crest')
+        CrestLine, = VertAx.plot(ShoreX, ShoreZ[:,0], 'k-', label='Barrier crest')
     
     if not WavePower is None:
         WaveArrow = PlanAx.arrow(0,200,100,100)
@@ -125,8 +126,9 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx, ShoreZ=None,
     
     # Compile output variable
     ModelFig = {'PlanFig':PlanFig, 'PlanAx':PlanAx, 'ShoreLine':ShoreLine, 
-                'OutletLine':OutletLine, 'LagoonLine':LagoonLine, 
-                'CliffLine':CliffLine, 'RiverLine':RiverLine}
+                'OutletLine':OutletLine, 'ChannelLine':ChannelLine,
+                'LagoonLine':LagoonLine, 'CliffLine':CliffLine, 
+                'RiverLine':RiverLine}
     if not ShoreZ is None:
         ModelFig['CrestLine'] = CrestLine
     if not WavePower is None:
@@ -138,31 +140,56 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletChanIx, ShoreZ=None,
         ModelFig['CstQuiver'] = CstQuiver
     
     # Update plot with correct data
-    updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx, 
-                    ShoreZ=ShoreZ, WavePower=WavePower, EDir_h=EDir_h, 
-                    LST=LST, CST=CST)
+    updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth, 
+                    OutletChanIx, ShoreZ=ShoreZ, WavePower=WavePower, 
+                    EDir_h=EDir_h, LST=LST, CST=CST)
     
     return ModelFig
 
-def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx, Closed=False, 
+def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth, 
+                    OutletChanIx, Closed=False, 
                     ShoreZ=None, WavePower=None, EDir_h=0, LST=None, CST=None):
     
-    # Calculate outlet plotting position
-    OutletX = np.tile(ShoreX,[2,1]).flatten()
-    OutletY = ShoreY[:,[1,2]].transpose().flatten()
-    if not Closed:
-        # Join the end of the (online) outlet channel to the shore/lagoon line
-        OutletX = np.append(OutletX,
-                            [np.nan, 
-                             ShoreX[OutletChanIx[0]], OutletEndX[0], ShoreX[OutletChanIx[0]],
-                             np.nan,
-                             ShoreX[OutletChanIx[-1]], OutletEndX[1], ShoreX[OutletChanIx[-1]]])
-        OutletY = np.append(OutletY,
-                            [np.nan, 
-                             ShoreY[OutletChanIx[0],1], np.interp(OutletEndX[0],ShoreX,ShoreY[:,3]), ShoreY[OutletChanIx[0],2],
-                             np.nan,
-                             ShoreY[OutletChanIx[-1],1], np.interp(OutletEndX[1],ShoreX,ShoreY[:,0]), ShoreY[OutletChanIx[-1],2]])
+    # Channel (online and offline) plotting position
+    ChannelX = np.tile(ShoreX, 2)
+    ChannelY = np.asarray([ShoreY[:,1], ShoreY[:,2]])
     
+    # Calculate online outlet plotting position
+    if Closed:
+        OutletX = np.nan
+        OutletY = np.nan
+    else:
+        
+        if OutletEndX[0] < OutletEndX[1]:
+            # Outlet angkles L to R
+            L_Ok = ShoreX[OutletChanIx] < (OutletEndX[1] - OutletEndWidth[1]/2)
+            R_Ok = ShoreX[OutletChanIx] > (OutletEndX[0] + OutletEndWidth[0]/2)
+            OutletY = np.concatenate([[np.interp(OutletEndX[0] - OutletEndWidth[0]/2, ShoreX, ShoreY[:,3])],
+                                      ShoreY[OutletChanIx[L_Ok],1], 
+                                      [np.interp(OutletEndX[1] - OutletEndWidth[1]/2, ShoreX, ShoreY[:,0]),
+                                       np.nan,
+                                       np.interp(OutletEndX[0] + OutletEndWidth[0]/2, ShoreX, ShoreY[:,3])],
+                                      ShoreY[OutletChanIx[R_Ok],2], 
+                                      [np.interp(OutletEndX[1] + OutletEndWidth[1]/2, ShoreX, ShoreY[:,0])]])
+        else:
+            # Outlet angkles R to L
+            L_Ok = ShoreX[OutletChanIx] < (OutletEndX[0] - OutletEndWidth[0]/2)
+            R_Ok = ShoreX[OutletChanIx] > (OutletEndX[1] + OutletEndWidth[1]/2)
+            OutletY = np.concatenate([[np.interp(OutletEndX[0] - OutletEndWidth[0]/2, ShoreX, ShoreY[:,3])],
+                                      ShoreY[OutletChanIx[L_Ok],2], 
+                                      [np.interp(OutletEndX[1] - OutletEndWidth[1]/2, ShoreX, ShoreY[:,0]),
+                                       np.nan,
+                                       np.interp(OutletEndX[0] + OutletEndWidth[0]/2, ShoreX, ShoreY[:,3])],
+                                      ShoreY[OutletChanIx[R_Ok],1], 
+                                      [np.interp(OutletEndX[1] + OutletEndWidth[1]/2, ShoreX, ShoreY[:,0])]])
+        OutletX = np.concatenate([[OutletEndX[0] - OutletEndWidth[0]/2],
+                                  ShoreX[OutletChanIx[L_Ok]],
+                                  [OutletEndX[1] - OutletEndWidth[1]/2,
+                                   np.nan,
+                                   OutletEndX[0] + OutletEndWidth[0]/2],
+                                  ShoreX[OutletChanIx[R_Ok]],
+                                  [OutletEndX[1] + OutletEndWidth[1]/2]])
+        
     # Calculate river plotting position
     RiverY = ShoreY[ShoreX==0,4]
     
@@ -177,6 +204,7 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletChanIx, Closed=F
     
     # Update the lines
     ModelFig['ShoreLine'].set_data(ShoreX, ShoreY[:,0])
+    ModelFig['ChannelLine'].set_data(ChannelX, ChannelY)
     ModelFig['OutletLine'].set_data(OutletX, OutletY)
     ModelFig['LagoonLine'].set_data(ShoreX, ShoreY[:,3])
     ModelFig['CliffLine'].set_data(ShoreX, ShoreY[:,4])

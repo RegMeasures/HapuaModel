@@ -82,7 +82,7 @@ def run(ModelConfigFile, Overwrite=False):
         LsLines = visualise.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, 
                                         np.zeros(ChanElev.size-1))
         BdyFig = visualise.BdyCndFig(OutputTs)
-        ModelFig = visualise.modelView(ShoreX, ShoreY, OutletEndX, 
+        ModelFig = visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth,
                                        OutletChanIx, ShoreZ=ShoreZ, 
                                        WavePower=0, EDir_h=0, 
                                        LST=np.zeros(ShoreX.size-1),
@@ -192,7 +192,8 @@ def run(ModelConfigFile, Overwrite=False):
                                             Bedload)
                 visualise.updateBdyCndFig(BdyFig, OutputTs)
                 visualise.updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, 
-                                          OutletChanIx, Closed=Closed, ShoreZ=ShoreZ, 
+                                          OutletEndWidth, OutletChanIx, 
+                                          Closed=Closed, ShoreZ=ShoreZ, 
                                           WavePower=WavePower, EDir_h=EDir_h, 
                                           LST=LST, CST=CST_tot)
                 PlotTime += OutputOpts['PlotInt']
