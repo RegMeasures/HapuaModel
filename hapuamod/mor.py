@@ -277,6 +277,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     #%% Breaching
     
     # Check for breach
+    Breach = False
     if np.any(np.logical_and(ShoreY[:,3]>=ShoreY[:,0], ShoreY[:,3]>ShoreY[:,4])):
         EroTsects = np.where(np.logical_and(ShoreY[:,3]>=ShoreY[:,0], ShoreY[:,3]>ShoreY[:,4]))[0]
         BreachIx = EroTsects[np.argmin(np.abs(ShoreX[EroTsects]))]
@@ -300,8 +301,6 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                 BreachIx = np.argmax((WaterLevel-ShoreZ[:,0]) * CloserToRiv)
                 Breach = True
                 logging.info('Lagoon overtopping barrier at X = %f' % ShoreX[BreachIx])
-    else:
-        Breach = False
     
     # Create breach
     if Breach:
