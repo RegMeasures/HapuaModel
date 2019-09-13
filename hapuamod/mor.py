@@ -76,7 +76,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     
     # Update lagoon and outlet channel bank positions
     # Note: River upstream of lagoon has fixed width - all morpho change is on bed
-    LagoonBankElev = ShoreZ[:,0]
+    LagoonBankElev = ShoreZ[:,0].copy()
     LagoonBankElev[OutletPresent] = ShoreZ[OutletPresent, 2]
     ShoreY[OnlineLagoon,3] -= (BankEro[LagXS]/2) / ((LagoonBankElev[OnlineLagoon] - ShoreZ[OnlineLagoon,3]) * Dx)
     ShoreY[OnlineLagoon,4] += (BankEro[LagXS]/2) / ((PhysicalPars['BackshoreElev'] - ShoreZ[OnlineLagoon,3]) * Dx)
@@ -124,7 +124,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     CrestWidth = ShoreY[:,0] - ShoreY[:,3]
     CrestWidth[OutletPresent] = ShoreY[OutletPresent,0] - ShoreY[OutletPresent,1]
     
-    BackBarHeight = ShoreZ[:,0] - ShoreZ[:,3]
+    BackBarHeight = (ShoreZ[:,0] - ShoreZ[:,3])
     BackBarHeight[OutletPresent] = ShoreZ[OutletPresent,0] - ShoreZ[OutletPresent,1]
     
     # Accumulation of sediment on top of the barrier
@@ -165,8 +165,10 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             ShoreY[ExtendMask,2] = ShoreY[ExtendMask,1] - OutletEndWidth[1]
             # Bed level of new outlet section  = end bed level
             ShoreZ[ExtendMask,1] = OutletEndElev[1]
-            # Barrier height of inner barrier = PhysicalPars['SpitHeight']
-            ShoreZ[ExtendMask,2] = PhysicalPars['SpitHeight']
+            # Barrier height of inner barrier = Barrier height of old outer barrier
+            ShoreZ[ExtendMask,2] = ShoreZ[ExtendMask,0]
+            # Barrier height of outer barrier = PhysicalPars['SpitHeight']
+            ShoreZ[ExtendMask,0] = PhysicalPars['SpitHeight']
             # TODO: Modify Barrier height of outer barrier ?????
             
             # Update OutletChanIx as it has changed and its used later in this function

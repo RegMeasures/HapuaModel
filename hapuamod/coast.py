@@ -122,7 +122,7 @@ def overtopping(Runup, SeaLevel, ShoreY, ShoreZ, PhysicalPars):
     
     # Split sed flux between crest and backshore (except where no lagoon)
     NoLagoon = ShoreY[:,3] <= ShoreY[:,4]
-    OverwashProp = np.minimum(PhysicalPars['OwProp_coef'] * OP / CrestWidth, 1.)
+    OverwashProp = np.maximum(np.minimum(PhysicalPars['OwProp_coef'] * (OP-PhysicalPars['MinOpForOw']) / CrestWidth, 1.),0.)
     OverwashProp[NoLagoon] = 0.0
     
     # Checks

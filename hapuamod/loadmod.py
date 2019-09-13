@@ -341,6 +341,7 @@ def loadModel(Config):
                     'OT_coef': float(Config['PhysicalParameters']['OT_coef']),
                     'OT_exp': float(Config['PhysicalParameters']['OT_exp']),
                     'OwProp_coef': float(Config['PhysicalParameters']['OwProp_coef']),
+                    'MinOpForOw': float(Config['PhysicalParameters']['MinOpForOw']),
                     'SpitHeight': float(Config['PhysicalParameters']['SpitHeight']),
                     'SpitWidth': float(Config['PhysicalParameters']['SpitWidth']),
                     'MinOutletWidth': float(Config['PhysicalParameters']['MinOutletWidth'])}
