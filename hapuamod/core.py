@@ -69,7 +69,7 @@ def run(ModelConfigFile, Overwrite=False):
                      np.zeros(ShoreX.size-1), np.zeros(ShoreX.size), np.zeros(ShoreX.size), 
                      RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0],
                      OutletEndX, OutletEndElev, OutletEndWidth, 
-                     OutletEndDep, OutletEndVel)
+                     OutletEndDep, OutletEndVel, Closed)
     
     #%% Set up variables to hold output timeseries
     OutputTs = pd.DataFrame(list(zip([RivFlow],[RivFlow],[SeaLevel])),
@@ -172,7 +172,7 @@ def run(ModelConfigFile, Overwrite=False):
                          LST, CST_tot, OverwashProp,
                          RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0],
                          OutletEndX, OutletEndElev, OutletEndWidth, 
-                         OutletEndDep, OutletEndVel)
+                         OutletEndDep, OutletEndVel, Closed)
         OutputTs = OutputTs.append(pd.DataFrame(list(zip([RivFlow[-1]],
                                                          [ChanDep[-1]*ChanVel[-1]*ChanWidth[-1]],
                                                          [SeaLevel[-1]])),

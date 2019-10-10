@@ -215,9 +215,15 @@ def newOutFile(FileName, ModelName, StartTime,
     
     # Outlet end velocity
     OutletEndVelVar = NcFile.createVariable('outlet_end_vel', np.float32, 
-                                          (TimeDim.name, EndsDim.name))
+                                            (TimeDim.name, EndsDim.name))
     OutletEndVelVar.units = 'm/s'
     OutletEndVelVar.long_name = 'Outlet end velocity'
+    
+    # Closed/open status
+    OutletClosedVar = NcFile.createVariable('outlet_closed', 'i1', 
+                                            TimeDim.name)
+    OutletClosedVar.units = ''
+    OutletClosedVar.long_name = 'Outlet status: true=closed, false=open'
     
     # Close netCDF file
     NcFile.close()
@@ -227,7 +233,7 @@ def writeCurrent(FileName, CurrentTime,
                  LST, CST, OverwashProp,
                  RiverElev, RiverDep, RiverVel,
                  OutletEndX, OutletEndElev, OutletEndWidth, 
-                 OutletEndDep, OutletEndVel):
+                 OutletEndDep, OutletEndVel, Closed):
     """ Write hapuamod outputs for current timestep to netCDF 
     
     """
@@ -273,5 +279,6 @@ def writeCurrent(FileName, CurrentTime,
     NcFile.variables['outlet_end_z'][TimeIx,:] = OutletEndElev
     NcFile.variables['outlet_end_wl'][TimeIx,:] = OutletEndElev + OutletEndDep[0:2]
     NcFile.variables['outlet_end_vel'][TimeIx,:] = OutletEndVel[0:2]
+    NcFile.variables['outlet_closed'][TimeIx] = Closed
     
     NcFile.close()
