@@ -9,14 +9,14 @@ import pandas as pd
 import numpy as np
 
 # import local modules
-from hapuamod import loadmod
-from hapuamod import riv
-from hapuamod import coast
-from hapuamod import mor
-from hapuamod import visualise
-from hapuamod import out
+from . import loadmod
+from . import riv
+from . import coast
+from . import mor
+from . import visualise
+from . import out
 
-def run(ModelConfigFile, Overwrite=False):
+def main(ModelConfigFile, Overwrite=False):
     """ Main hapuamod run script
     
     Parameters:
@@ -197,10 +197,6 @@ def run(ModelConfigFile, Overwrite=False):
                                           WavePower=WavePower, EDir_h=EDir_h, 
                                           LST=LST, CST=CST_tot)
                 PlotTime += OutputOpts['PlotInt']
-        
-        
-        
-    return(OutputTs)
     
 def interpolate_at(Df, New_idxs):
     """ Linearly interpolate dataframe for specified index values

@@ -12,15 +12,9 @@ hapuamod contains functions grouped into several sub-modules:
     coast     1-line shoreline model
     riv       1D river model
     core      Core model simulation functions
+    mor       Morphology updating
+    out       Writing outputs to netCDF
+    animate   Producing animations of model outputs
     
 hapuamod requires: numpy, pandas, matplotlib, configobj, os, shapefile
 """
-
-import hapuamod.loadmod
-import hapuamod.geom
-import hapuamod.visualise
-import hapuamod.coast
-import hapuamod.riv
-import hapuamod.core
-import hapuamod.mor
-import hapuamod.out

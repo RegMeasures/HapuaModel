@@ -1,4 +1,5 @@
-import hapuamod as hm
+from hapuamod.core import main
 
 ModelConfigFile = 'inputs\HurunuiModel.cnf'
-OutputTs = hm.core.run(ModelConfigFile, True)
+
+main(ModelConfigFile, True)
