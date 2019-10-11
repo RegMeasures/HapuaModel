@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+""" 
+"""
 
 # Import standard packages
 import netCDF4
@@ -6,19 +8,18 @@ import numpy as np
 import os
 import logging
 import argparse
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib import animation
 import matplotlib.pyplot as plt
 
 # import local modules
 from hapuamod import visualise
 
-ResultsFile = 'HurunuiModelOutputs.nc'
-
-StartTimestep = 0
-EndTimestep = []
-
 def readTimestep(NcFile, TimeIx):
     NTransects = NcFile.dimensions['transect_x'].size
+    
+    ShoreX = NcFile.variables['transect_x'][:]
     
     # ShoreY
     ShoreY = np.empty((NTransects, 5))
@@ -57,37 +58,47 @@ def readTimestep(NcFile, TimeIx):
         OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] <= ShoreX,
                                                          ShoreX <= OutletEndX[0]))[0])
     
-    return(ShoreY, OutletEndX, OutletEndWidth, OutletChanIx,
+    return(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx,
            ShoreZ, WavePower, EDir_h, LST, CST, Closed)
     
-def animate(TimeIx):
+def animate(TimeIx, NcFile, ModelFig):
     logging.info('Animating timestep no %i' % TimeIx)
-    (ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, 
+    (ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, 
      ShoreZ, WavePower, EDir_h, LST, CST, Closed) = readTimestep(NcFile, TimeIx)
     visualise.updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth, 
                               OutletChanIx, Closed=Closed, 
                               ShoreZ=None, WavePower=None, EDir_h=0, LST=None, CST=None)
     #return [ModelFig['ChannelLine'], ModelFig['ShoreLine']]
     
-def main(ResultsFile, AnimationFile, StartTimestep, EndTimestep):
-    # Main function for creating an animation of hapuamod results
+def main(ResultsFile, AnimationFile, StartTimestep=0, EndTimestep=[]):
+    """ Main function for creating an animation of hapuamod results
+        
+        main(ResultsFile, AnimationFile, StartTimestep, EndTimestep)
+        
+        Parameters:
+            ResultsFile (str): Filename of the netCDF file containing model 
+                               results
+            AnimationFile (str): Filename of the movie file to create (*.mp4 
+                                 seems to work but other formats may be 
+                                 possible?)
+            StartTimestep (int): First output timestep to animate 
+            EndTimestep (int): Last output timestep to animate 
+    """
     
     # open netcdf file for reading
     logging.info('Reading data from %s' % ResultsFile)
     NcFile = netCDF4.Dataset(ResultsFile, mode='r', format='NETCDF4_CLASSIC') 
     
-    # set default start and end-timesteps
+    # set default end-timestep
     if not EndTimestep:
         EndTimestep = NcFile.dimensions['time'].size
     elif EndTimestep > NcFile.dimensions['time'].size:
         EndTimestep = NcFile.dimensions['time'].size
         logging.warning('EndTimestep exceeds number of timesteps in output file. EndTimestep has been reset to %i.' % EndTimestep)
-    
-    # read in static data
-    ShoreX = NcFile.variables['transect_x'][:]
+    logging.info('Generating animation for timesteps %i to %i' % (StartTimestep, EndTimestep))
     
     # read in first timestep
-    (ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, 
+    (ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, 
      ShoreZ, WavePower, EDir_h, LST, CST, Closed) = readTimestep(NcFile, StartTimestep)
     
     # Set up initial figure
@@ -98,7 +109,9 @@ def main(ResultsFile, AnimationFile, StartTimestep, EndTimestep):
     FigToAnimate = ModelFig['PlanFig']
     
     # Set up animation function
-    ani = animation.FuncAnimation(FigToAnimate, animate, frames=range(StartTimestep,EndTimestep), interval=500)
+    ani = animation.FuncAnimation(FigToAnimate, animate, 
+                                  frames=range(StartTimestep,EndTimestep), 
+                                  fargs=(NcFile, ModelFig), interval=500)
     
     # Run the animation and save to a file
     ani.save(AnimationFile, fps=30)
@@ -108,10 +121,19 @@ def main(ResultsFile, AnimationFile, StartTimestep, EndTimestep):
     plt.close(FigToAnimate)
 
 if __name__ == "__main__":
+    # Set up logging
+    RootLogger = logging.getLogger()
+    RootLogger.setLevel(logging.INFO)
+    
+    ConsoleHandler = logging.StreamHandler()
+    ConsoleHandler.setLevel(logging.INFO)
+    RootLogger.addHandler(ConsoleHandler)
+    
+    # Parse arguments from commandline
     Parser = argparse.ArgumentParser(description='Generate animations from HapuaMod netCDF output file')
     Parser.add_argument('ResultsFile', help='HapuaMod netCDF formatted results file', type=str)
     Parser.add_argument('AnimationFile', help='mp4 video output file', type=str)
-    Parser.add_argument('-s', '--StartTimestep', type=int, 
+    Parser.add_argument('-s', '--StartTimestep', type=int, default=0,
                         help='Optional timestep number to start animation from (integer)')
     Parser.add_argument('-e', '--EndTimestep', type=int, 
                         help='Optional timestep number to end animation at (integer)')

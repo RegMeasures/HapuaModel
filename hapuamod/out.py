@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+""" Sub-module of hapuamod containing functions to write model outputs to 
+    netCDF file.
+"""
 
 # Import standard packages
 import netCDF4
