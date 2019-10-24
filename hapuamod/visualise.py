@@ -62,7 +62,7 @@ def mapView(ShoreX, ShoreY, Origin, ShoreNormDir):
 def modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, 
               ShoreZ=None, WavePower=None, EDir_h=0, LST=None, CST=None, 
               WaveScaling=0.01, CstScaling=0.00005, LstScaling=0.0001,
-              QuiverWidth=0.002):
+              QuiverWidth=0.002, AreaOfInterest=None):
     """ Map the current model state in model coordinates
     
         Parameters:
@@ -89,7 +89,12 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx,
     else:
         PlanFig, PlanAx = plt.subplots(figsize=[10,5])
     
+    # Set the field of view
     PlanAx.axis('equal')
+    if not AreaOfInterest is None:
+        assert len(AreaOfInterest) == 4, 'AreaOfInterest must be given as four parameters (Xmin, Xmax, Ymin, Ymax)'
+        PlanAx.set_xlim(AreaOfInterest[0], AreaOfInterest[1])
+        PlanAx.set_ylim(AreaOfInterest[2], AreaOfInterest[3])
     
     # Create dummy lines
     ShoreLine,  = PlanAx.plot(ShoreX, ShoreY[:,0], 'g-', label='Shore')
