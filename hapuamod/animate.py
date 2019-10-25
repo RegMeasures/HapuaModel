@@ -4,8 +4,6 @@
 
 # Import standard packages
 import netCDF4
-import numpy as np
-import os
 import logging
 import argparse
 import matplotlib
@@ -14,57 +12,14 @@ from matplotlib import animation
 import matplotlib.pyplot as plt
 
 # import local modules
-from hapuamod import visualise
-
-def readTimestep(NcFile, TimeIx):
-    NTransects = NcFile.dimensions['transect_x'].size
-    
-    ShoreX = NcFile.variables['transect_x'][:]
-    
-    # ShoreY
-    ShoreY = np.empty((NTransects, 5))
-    ShoreY[:,0] = NcFile.variables['shoreline_y'][TimeIx,:]
-    ShoreY[:,1] = NcFile.variables['outlet_bank1_y'][TimeIx,:]
-    ShoreY[:,2] = NcFile.variables['outlet_bank2_y'][TimeIx,:]
-    ShoreY[:,3] = NcFile.variables['lagoon_y'][TimeIx,:]
-    ShoreY[:,4] = NcFile.variables['cliff_y'][TimeIx,:]
-    
-    OutletEndX = NcFile.variables['outlet_end_x'][TimeIx,:]
-    OutletEndWidth = NcFile.variables['outlet_end_width'][TimeIx,:]
-    Closed = bool(NcFile.variables['outlet_closed'][TimeIx])
-    
-    # ShoreZ
-    ShoreZ=np.empty((NTransects, 4))
-    ShoreZ[:,0] = NcFile.variables['barrier_crest_z'][TimeIx,:]
-    ShoreZ[:,1] = NcFile.variables['outlet_bed_z'][TimeIx,:]
-    ShoreZ[:,2] = NcFile.variables['inner_barrier_crest_z'][TimeIx,:]
-    ShoreZ[:,3] = NcFile.variables['lagoon_bed_z'][TimeIx,:]
-    
-    WavePower=None
-    EDir_h=0
-    LST = NcFile.variables['lst'][TimeIx,:] / 3600
-    CST = NcFile.variables['cst'][TimeIx,:] / 3600
-    
-    # Calculate OutletChanIx
-    if Closed:
-        # Outlet closed
-        OutletChanIx = np.empty(0)
-    elif OutletEndX[0] < OutletEndX[1]:
-        # Outlet angles from L to R
-        OutletChanIx = np.where(np.logical_and(OutletEndX[0] <= ShoreX, 
-                                               ShoreX <= OutletEndX[1]))[0]
-    else:
-        # Outlet from R to L
-        OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] <= ShoreX,
-                                                         ShoreX <= OutletEndX[0]))[0])
-    
-    return(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx,
-           ShoreZ, WavePower, EDir_h, LST, CST, Closed)
+from . import visualise
+from . import out
     
 def animate(TimeIx, NcFile, ModelFig):
     logging.info('Animating timestep no %i' % TimeIx)
-    (ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, 
-     ShoreZ, WavePower, EDir_h, LST, CST, Closed) = readTimestep(NcFile, TimeIx)
+    (ShoreX, ShoreY, ShoreZ, 
+     OutletEndX, OutletEndWidth, OutletEndElev, OutletChanIx,
+     WavePower, EDir_h, LST, CST, Closed, RiverElev) = out.readTimestep(NcFile, TimeIx)
     visualise.updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth, 
                               OutletChanIx, Closed=Closed, 
                               ShoreZ=None, WavePower=None, EDir_h=0, LST=None, CST=None)
@@ -106,8 +61,9 @@ def main(ResultsFile, AnimationFile, StartTimestep=0, EndTimestep=None,
     logging.info('Generating animation for timesteps %i to %i' % (StartTimestep, EndTimestep))
     
     # read in first timestep
-    (ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, 
-     ShoreZ, WavePower, EDir_h, LST, CST, Closed) = readTimestep(NcFile, StartTimestep)
+    (ShoreX, ShoreY, ShoreZ, 
+     OutletEndX, OutletEndWidth, OutletEndElev, OutletChanIx,
+     WavePower, EDir_h, LST, CST, Closed, RiverElev) = out.readTimestep(NcFile, StartTimestep)
     
     # Set up initial figure
     ModelFig = visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, 
@@ -124,7 +80,7 @@ def main(ResultsFile, AnimationFile, StartTimestep=0, EndTimestep=None,
                                   interval=1000/FrameRate)
     
     # Run the animation and save to a file
-    ani.save(AnimationFile, fps=30)
+    ani.save(AnimationFile, fps=FrameRate)
     
     ani.event_source.stop()
     del ani
@@ -163,9 +119,15 @@ if __name__ == "__main__":
                              'parameters in model co-ordinates in the format ' +
                              '"Xmin Xmax Ymin Ymax"')
     ArgsIn = Parser.parse_args()
+    
+    # Convert AreaOfInterest (if specified) into a tuple 
+    if not ArgsIn.AreaOfInterest is None:
+        ArgsIn.AreaOfInterest = tuple(ArgsIn.AreaOfInterest)
+    
+    # Run main animation function with specified arguments
     main(ArgsIn.ResultsFile, ArgsIn.AnimationFile, 
          StartTimestep = ArgsIn.StartTimestep, 
          EndTimestep = ArgsIn.EndTimestep, 
          ResampleInt = ArgsIn.ResampleInt, 
          FrameRate = ArgsIn.FrameRate,
-         AreaOfInterest = tuple(ArgsIn.AreaOfInterest))
+         AreaOfInterest = ArgsIn.AreaOfInterest)

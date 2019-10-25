@@ -33,10 +33,9 @@ def main(ModelConfigFile, Overwrite=False):
     RootLogger.addHandler(ConsoleHandler)
     
     #%% Load the model
-    Config = loadmod.readConfig(ModelConfigFile)
-    (FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, ShoreX, ShoreY, ShoreZ, 
-     RiverElev, OutletEndX, OutletEndWidth, OutletEndElev,
-     TimePars, PhysicalPars, NumericalPars, OutputOpts) = loadmod.loadModel(Config)
+    (ModelName, FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, ShoreX, 
+     ShoreY, ShoreZ, RiverElev, OutletEndX, OutletEndWidth, OutletEndElev,
+     TimePars, PhysicalPars, NumericalPars, OutputOpts) = loadmod.loadModel(ModelConfigFile)
     
     #%% Generate initial conditions for river model
     RivFlow = interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']])).values
@@ -62,8 +61,9 @@ def main(ModelConfigFile, Overwrite=False):
                             ChanFlag, ShoreZ[:,3], Closed)
     
     #%% Create output file and write initial conditions
-    out.newOutFile(OutputOpts['OutFile'], Config['ModelName'], TimePars['StartTime'], 
-                   ShoreX, NumericalPars['Dx'],  RiverElev, Overwrite)
+    out.newOutFile(OutputOpts['OutFile'], ModelName, TimePars['StartTime'], 
+                   ShoreX, NumericalPars['Dx'],  RiverElev, 
+                   Origin, ShoreNormDir, Overwrite)
     out.writeCurrent(OutputOpts['OutFile'], TimePars['StartTime'],
                      ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletDep, OutletVel,
                      np.zeros(ShoreX.size-1), np.zeros(ShoreX.size), np.zeros(ShoreX.size), 
