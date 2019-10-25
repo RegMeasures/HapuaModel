@@ -3,6 +3,8 @@
 # import standard packages
 import matplotlib.pyplot as plt
 import numpy as np
+from pandas.plotting import register_matplotlib_converters
+register_matplotlib_converters()
 
 # import local packages
 from hapuamod import geom
