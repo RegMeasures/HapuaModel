@@ -83,7 +83,8 @@ def main(ModelConfigFile, Overwrite=False):
                                         np.zeros(ChanElev.size-1))
         BdyFig = visualise.BdyCndFig(OutputTs)
         ModelFig = visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth,
-                                       OutletChanIx, ShoreZ=ShoreZ, 
+                                       OutletChanIx, PhysicalPars['RiverWidth'],
+                                       ShoreZ=ShoreZ, 
                                        WavePower=0, EDir_h=0, 
                                        LST=np.zeros(ShoreX.size-1),
                                        CST=np.zeros(ShoreX.size))
