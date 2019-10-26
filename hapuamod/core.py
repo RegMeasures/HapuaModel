@@ -63,7 +63,8 @@ def main(ModelConfigFile, Overwrite=False):
     #%% Create output file and write initial conditions
     out.newOutFile(OutputOpts['OutFile'], ModelName, TimePars['StartTime'], 
                    ShoreX, NumericalPars['Dx'],  RiverElev, 
-                   Origin, ShoreNormDir, Overwrite)
+                   Origin, ShoreNormDir, PhysicalPars['RiverWidth'],
+                   Overwrite)
     out.writeCurrent(OutputOpts['OutFile'], TimePars['StartTime'],
                      ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletDep, OutletVel,
                      np.zeros(ShoreX.size-1), np.zeros(ShoreX.size), np.zeros(ShoreX.size), 

@@ -12,11 +12,12 @@ import logging
 
 def newOutFile(FileName, ModelName, StartTime,
                ShoreX, Dx, RiverElev, 
-               Origin, ShoreNormDir,
+               Origin, ShoreNormDir, RiverWidth,
                Overwrite=False):
     """ Create new netCDF output file for hapuamod results
     
         newOutFile(FileName, ModelName, ShoreX, Dx, RiverElev, 
+                   Origin, ShoreNormDir, RiverWidth,
                    StartTime, Overwrite=False)
     
         Parameters:
@@ -28,6 +29,7 @@ def newOutFile(FileName, ModelName, StartTime,
             RiverElev
             Origin
             ShoreNormDir
+            RiverWidth
             Overwrite(boolean): Automatically overwrite netCDF file without 
                 prompting (optional, default=False).
     """
@@ -63,6 +65,7 @@ def newOutFile(FileName, ModelName, StartTime,
     NcFile.ModelOriginX = Origin[0]
     NcFile.ModelOriginY = Origin[1]
     NcFile.ModelOrientation = np.rad2deg(ShoreNormDir)
+    NcFile.RiverWidth = RiverWidth
     
     # create coordinate variables
     XVar = NcFile.createVariable(XDim.name, np.float32, (XDim.name,))

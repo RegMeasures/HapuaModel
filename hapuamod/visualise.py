@@ -72,8 +72,17 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, RiverWid
             ShoreY
             OutletEndX
             OutletChanIx
+            RiverWidth
+            ShoreZ (optional)
             WavePower (optional)
-            LST (Optional)
+            EDir_h (optional)
+            LST (optional)
+            CST (optional)
+            WaveScaling (optional, defalt = 0.01)
+            CstScaling (optional, default = 0.00005)
+            LstScaling (optional, default = 0.0001)
+            QuiverWidth (optional, default = 0.002)
+            AreaOfInterest (optional)
             
         Returns:
             ModelFig (dict): handles for the various parts of the plot. Used as
@@ -105,33 +114,38 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, RiverWid
         PlanAx.set_ylim(np.nanmin(ShoreY), np.nanmax(ShoreY))
     
     # Create dummy lines
-    WaterFill, = PlanAx.fill(ShoreX, ShoreY[:,3], 'lightskyblue')
-    ShoreLine,  = PlanAx.plot(ShoreX, ShoreY[:,0], 'g-', label='Shore')
-    OutletLine, = PlanAx.plot(ShoreX, ShoreY[:,1], 'r-', label='Outlet', zorder = 10)
-    ChannelLine, = PlanAx.plot(ShoreX, ShoreY[:,1], '-x', label='Channel', color='grey')
-    LagoonLine, = PlanAx.plot(ShoreX, ShoreY[:,3], 'c-', label='Lagoon')
-    CliffLine,  = PlanAx.plot(ShoreX, ShoreY[:,4], 'k-', label='Cliff')
+    WaterFill,   = PlanAx.fill(ShoreX, ShoreY[:,3], 'lightskyblue', label='Water', zorder=0)
+    CliffFill,   = PlanAx.fill(ShoreX, ShoreY[:,4], fill=False, hatch = '/', label='Cliff', zorder=1)
+    ShoreLine,   = PlanAx.plot(ShoreX, ShoreY[:,0], 'k-', label='Shore', zorder=4)
+    ShoreDots,   = PlanAx.plot(ShoreX, ShoreY[:,0], 'k.', label='Shore', color='grey', zorder=3)
+    OutletLine,  = PlanAx.plot(ShoreX, ShoreY[:,1], 'k-', label='Outlet bank', zorder=5)
+    ChannelLine, = PlanAx.plot(ShoreX, ShoreY[:,1], '-x', label='Channel', color='grey', zorder=2)
+    LagoonLine,  = PlanAx.plot(ShoreX, ShoreY[:,3], 'k-', label='Lagoon', zorder=6)
+    CliffLine,   = PlanAx.plot(ShoreX, ShoreY[:,4], 'k-', label='Cliff', zorder=7)
+    RiverLine,   = PlanAx.plot([0, 0], [-1000, 0], 'k-', label='River bank', zorder=8)
     if not ShoreZ is None:
         CrestLine, = VertAx.plot(ShoreX, ShoreZ[:,0], 'k-', label='Barrier crest')
     
     if not WavePower is None:
-        WaveArrow = PlanAx.arrow(0,200,100,100)
+        WaveArrow = PlanAx.arrow(0,200,100,100, zorder=11)
     
     if not LST is None:
         LstQuiver = PlanAx.quiver((ShoreX[:-1]+ShoreX[1:])/2, 
                                   (ShoreY[:-1,0]+ShoreY[1:,0])/2, 
                                   LST, np.zeros(LST.size),
                                   scale=LstScaling, width=QuiverWidth,
-                                  scale_units='x', units='width')
+                                  scale_units='x', units='width', 
+                                  color='red', zorder=9)
     
     if not CST is None:
         CstQuiver = PlanAx.quiver(ShoreX, ShoreY[:,0], 
                                   np.zeros(CST.size), -CST, 
                                   scale=CstScaling, width=QuiverWidth,
-                                  scale_units='x', units='width')
+                                  scale_units='x', units='width', 
+                                  color='red', zorder=10)
     
     # Add some labels
-    PlanAx.legend()
+    #PlanAx.legend()
     PlanAx.set_xlabel('Model X-coordinate (m)')
     PlanAx.set_ylabel('Model Y-coordinate (m)')
     if not ShoreZ is None:
@@ -141,7 +155,9 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, RiverWid
     ModelFig = {'PlanFig':PlanFig, 'PlanAx':PlanAx, 'ShoreLine':ShoreLine, 
                 'OutletLine':OutletLine, 'ChannelLine':ChannelLine,
                 'LagoonLine':LagoonLine, 'CliffLine':CliffLine, 
-                'WaterFill':WaterFill, 'RiverWidth':RiverWidth}
+                'WaterFill':WaterFill, 'RiverWidth':RiverWidth,
+                'ShoreDots':ShoreDots, 'RiverLine':RiverLine,
+                'CliffFill':CliffFill}
     if not ShoreZ is None:
         ModelFig['CrestLine'] = CrestLine
     if not WavePower is None:
@@ -163,16 +179,101 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
                     OutletChanIx, Closed=False, 
                     ShoreZ=None, WavePower=None, EDir_h=0, LST=None, CST=None):
     
+    RiverWidth = ModelFig['RiverWidth']
+    
+    # Prep the bits of the plotting which are the same whether the outlet is closed or not:
+    
     # Channel (online and offline) plotting position
     ChannelX = np.tile(ShoreX, 2)
     ChannelY = np.asarray([ShoreY[:,1], ShoreY[:,2]])
     
-    # Calculate online outlet plotting position
+    # Cliff
+    CliffToL = ShoreX <= (-RiverWidth/2)
+    CliffToR = ShoreX >= (RiverWidth/2)
+    CliffToLX  = np.hstack([ShoreX[CliffToL], -RiverWidth/2])
+    CliffToRX  = np.hstack([RiverWidth/2, ShoreX[CliffToR]])
+    CliffLineX = np.hstack([CliffToLX, np.nan, CliffToRX])
+    CliffToLY  = np.hstack([ShoreY[CliffToL, 4], np.interp(-RiverWidth/2, ShoreX, ShoreY[:,4])])
+    CliffToRY  = np.hstack([np.interp(RiverWidth/2, ShoreX, ShoreY[:,4]), ShoreY[CliffToR, 4]])
+    CliffLineY = np.hstack([CliffToLY, np.nan, CliffToRY])
+    
+    # River
+    RiverLbX = np.ones(2) * -RiverWidth/2
+    RiverRbX = np.ones(2) * RiverWidth/2
+    RiverLineX = np.hstack([RiverLbX, np.nan, RiverRbX])
+    RiverLbY = np.hstack([-5000.0, CliffToLY[-1]])
+    RiverRbY = np.hstack([-5000.0, CliffToRY[0]])
+    RiverLineY = np.hstack([RiverLbY, np.nan, RiverRbY])
+    
+    # Cliff hatch polygon
+    CliffHatchX = np.hstack([CliffToLX,             # Cliff LHS
+                             np.flipud(RiverLbX),   # River LB
+                             CliffToLX[[0,0]],      # LH Edge of domain
+                             np.nan,                # Break to separate L and R polygons
+                             CliffToRX[[-1,-1]],    # RH Edge of domain
+                             RiverRbX,              # River RB
+                             CliffToRX])            # Cliff RHS
+    CliffHatchY = np.hstack([CliffToLY,             # Cliff LHS
+                             np.flipud(RiverLbY),   # River LB
+                             -5000.0, CliffToLY[0], # LH Edge of domain
+                             np.nan,                # Break to separate L and R polygons
+                             CliffToRX[-1],-5000.0, # RH Edge of domain
+                             RiverRbY,              # River RB
+                             CliffToRY])            # Cliff RHS
+    
+    # Wave arrow plotting position
+    if not WavePower is None:
+        if (-np.pi/2) < EDir_h < (np.pi/2):
+            ArrLength = WavePower
+        else:
+            ArrLength = 0.01
+        ArrWidth = np.maximum((ArrLength * ModelFig['WaveScaling'])/10, 0.001)
+        WaveX = -np.sin(EDir_h) * ArrLength * ModelFig['WaveScaling']
+        WaveY = -np.cos(EDir_h) * ArrLength * ModelFig['WaveScaling']
+    
+    # Prep the bits of the plotting which depend on whether the outlet is closed or not...
+    
     if Closed:
+        # Outlet plotting position
         OutletX = np.nan
         OutletY = np.nan
-    else:
         
+        # Shoreline
+        ShoreLineX = ShoreX
+        ShoreLineY = ShoreY[:,0]
+        ShoreDotsX = np.nan
+        ShoreDotsY = np.nan
+        
+        # BarrierBackshore
+        LagoonLineX = ShoreX
+        LagoonLineY = ShoreY[:,3]
+        
+        # Water polygon
+        WaterX = np.hstack([LagoonLineX,            # Lagoon backshore
+                            np.flipud(CliffToRX),   # Cliff RHS
+                            np.flipud(RiverRbX),    # River RB
+                            RiverLbX,               # River LB
+                            np.flipud(CliffToLX),   # Cliff LHS
+                            LagoonLineX[0],         # Close the loop
+                            np.nan,                 # Break to separate sea and lagoon polygons
+                            ShoreLineX,             # Coast
+                            ShoreX[[-1,0]],         # Offshore
+                            ShoreLineX[0]])         # Close the loop
+    
+        WaterY = np.hstack([LagoonLineY,            # Lagoon backshore
+                            np.flipud(CliffToRY),   # Cliff RHS
+                            np.flipud(RiverRbY),    # River RB
+                            RiverLbY,               # River LB
+                            np.flipud(CliffToLY),   # Cliff LHS
+                            LagoonLineY[0],         # Close the loop
+                            np.nan,                 # Break to separate sea and lagoon polygons
+                            ShoreLineY,             # Coast
+                            5000.0, 5000.0,         # Offshore
+                            ShoreLineY[0]])         # Close the loop
+        
+    else: # Outlet open
+        
+        # Outlet plotting position
         if OutletEndX[0] < OutletEndX[1]:
             # Outlet angkles L to R
             L_Ok = ShoreX[OutletChanIx] < (OutletEndX[1] - OutletEndWidth[1]/2)
@@ -195,67 +296,74 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
                                    np.interp(OutletEndX[1] + OutletEndWidth[1]/2, ShoreX, ShoreY[:,0])])
         OutletY = np.hstack([OutletLbY, np.nan, OutletRbY])
         OutletLbX = np.hstack([OutletEndX[0] - OutletEndWidth[0]/2,
-                             ShoreX[OutletChanIx[L_Ok]],
-                             OutletEndX[1] - OutletEndWidth[1]/2])
+                               ShoreX[OutletChanIx[L_Ok]],
+                               OutletEndX[1] - OutletEndWidth[1]/2])
         OutletRbX = np.hstack([OutletEndX[0] + OutletEndWidth[0]/2,
                                ShoreX[OutletChanIx[R_Ok]],
                                OutletEndX[1] + OutletEndWidth[1]/2])
         OutletX = np.hstack([OutletLbX, np.nan, OutletRbX])
     
-    # Calculate water fill boundary
-    LagoonTransects = ~(np.isnan(ShoreY[:,3]))
-    LagoonToL = np.logical_and(LagoonTransects, ShoreX <= (OutletEndX[0] - OutletEndWidth[0]/2))
-    LagoonToR = np.logical_and(LagoonTransects, ShoreX >= (OutletEndX[0] + OutletEndWidth[0]/2))
-    ShoreToL = ShoreX <= (OutletEndX[1] - OutletEndWidth[1]/2)
-    ShoreToR = ShoreX >= (OutletEndX[0] - OutletEndWidth[0]/2)
-    RiverWidth = ModelFig['RiverWidth']
-    CliffToL = np.logical_and(LagoonTransects, ShoreX <= (-RiverWidth/2))
-    CliffToR = np.logical_and(LagoonTransects, ShoreX >= (RiverWidth/2))
-    WaterX = np.hstack([ShoreX[LagoonToR],   
-                        np.flipud(ShoreX[CliffToR]), 
-                        RiverWidth/2, RiverWidth/2, 
-                        -RiverWidth/2, -RiverWidth/2,
-                        np.flipud(ShoreX[CliffToL]), 
-                        ShoreX[LagoonToL],   
-                        OutletLbX,
-                        np.flipud(ShoreX[ShoreToL]),
-                        ShoreX[[0,-1]],
-                        np.flipud(ShoreX[ShoreToR]),
-                        OutletRbX,
-                        ShoreX[LagoonToR][0]])
-    WaterY = np.hstack([ShoreY[LagoonToR,3], 
-                        np.flipud(ShoreY[CliffToR,4]), 
-                        np.interp(RiverWidth/2, ShoreX, ShoreY[:,4]), 
-                        -1000, -1000,
-                        np.interp(-RiverWidth/2, ShoreX, ShoreY[:,4]), 
-                        np.flipud(ShoreY[CliffToL,4]), 
-                        ShoreY[LagoonToL,3], 
-                        OutletLbY,
-                        np.flipud(ShoreY[ShoreToL,0]),
-                        1000.0,1000.0,
-                        np.flipud(ShoreY[ShoreToR,0]),
-                        OutletRbY,
-                        ShoreY[LagoonToR,3][0]])  
+        # Some useful masks for the transects
+        LagoonToL = ShoreX <= (OutletEndX[0] - OutletEndWidth[0]/2)
+        LagoonToR = ShoreX >= (OutletEndX[0] + OutletEndWidth[0]/2)
+        ShoreToL = ShoreX <= (OutletEndX[1] - OutletEndWidth[1]/2)
+        ShoreToR = ShoreX >= (OutletEndX[0] - OutletEndWidth[0]/2)
+        ShoreInChan = ~np.logical_or(ShoreToL, ShoreToR)
     
-    # Caluculate wave arrow plotting position
-    if not WavePower is None:
-        if (-np.pi/2) < EDir_h < (np.pi/2):
-            ArrLength = WavePower
-        else:
-            ArrLength = 0.01
-        ArrWidth = np.maximum((ArrLength * ModelFig['WaveScaling'])/10, 0.001)
-        WaveX = -np.sin(EDir_h) * ArrLength * ModelFig['WaveScaling']
-        WaveY = -np.cos(EDir_h) * ArrLength * ModelFig['WaveScaling']
+        # Shoreline
+        ShoreToLX  = np.hstack([ShoreX[ShoreToL], OutletLbX[-1]])
+        ShoreToRX  = np.hstack([OutletRbX[-1], ShoreX[ShoreToR]])
+        ShoreLineX = np.hstack([ShoreToLX, np.nan, ShoreToRX])
+        ShoreToLY  = np.hstack([ShoreY[ShoreToL,0], OutletLbY[-1]])
+        ShoreToRY  = np.hstack([OutletRbY[-1], ShoreY[ShoreToR,0]])
+        ShoreLineY = np.hstack([ShoreToLY, np.nan, ShoreToRY])
+        
+        ShoreDotsX = ShoreX[ShoreInChan]
+        ShoreDotsY = ShoreY[ShoreInChan,0]
+        
+        # BarrierBackshore
+        LagoonToLX  = np.hstack([ShoreX[LagoonToL], OutletLbX[0]])
+        LagoonToRX  = np.hstack([OutletRbX[0], ShoreX[LagoonToR]])
+        LagoonLineX = np.hstack([LagoonToLX, np.nan, LagoonToRX])
+        LagoonToLY  = np.hstack([ShoreY[LagoonToL, 3], OutletLbY[0]])
+        LagoonToRY  = np.hstack([OutletRbY[0], ShoreY[LagoonToR, 3]])
+        LagoonLineY = np.hstack([LagoonToLY, np.nan, LagoonToRY])
     
-
+        # Water polygon
+        WaterX = np.hstack([LagoonToRX,             # Lagoon backshore RHS
+                            np.flipud(CliffToRX),   # Cliff RHS
+                            np.flipud(RiverRbX),    # River RB
+                            RiverLbX,               # River LB
+                            np.flipud(CliffToLX),   # Cliff LHS
+                            LagoonToLX,             # Lagoon backshore LHS
+                            OutletLbX,              # Outlet channel LB
+                            np.flipud(ShoreToLX),   # Coast LHS
+                            ShoreX[[0,-1]],         # Offshore
+                            np.flipud(ShoreToRX),   # Coast RHS
+                            np.flipud(OutletRbX)])  # Outlet channel RB
     
-    # Update the lines
-    ModelFig['ShoreLine'].set_data(ShoreX, ShoreY[:,0])
+        WaterY = np.hstack([LagoonToRY,             # Lagoon backshore RHS
+                            np.flipud(CliffToRY),   # Cliff RHS
+                            np.flipud(RiverRbY),    # River RB
+                            RiverLbY,               # River LB
+                            np.flipud(CliffToLY),   # Cliff LHS
+                            LagoonToLY,             # Lagoon backshore LHS
+                            OutletLbY,              # Outlet channel LB
+                            np.flipud(ShoreToLY),   # Coast LHS
+                            5000.0, 5000.0,         # Offshore
+                            np.flipud(ShoreToRY),   # Coast RHS
+                            np.flipud(OutletRbY)])  # Outlet channel RB
+    
+    # Update the lines etc
+    ModelFig['ShoreLine'].set_data(ShoreLineX, ShoreLineY)
+    ModelFig['ShoreDots'].set_data(ShoreDotsX, ShoreDotsY)
     ModelFig['ChannelLine'].set_data(ChannelX, ChannelY)
     ModelFig['OutletLine'].set_data(OutletX, OutletY)
-    ModelFig['LagoonLine'].set_data(ShoreX, ShoreY[:,3])
-    ModelFig['CliffLine'].set_data(ShoreX, ShoreY[:,4])
+    ModelFig['LagoonLine'].set_data(LagoonLineX, LagoonLineY)
+    ModelFig['CliffLine'].set_data(CliffLineX, CliffLineY)
+    ModelFig['RiverLine'].set_data(RiverLineX, RiverLineY)
     ModelFig['WaterFill'].set_xy(np.vstack([WaterX, WaterY]).T)
+    ModelFig['CliffFill'].set_xy(np.vstack([CliffHatchX, CliffHatchY]).T)
     
     if not ShoreZ is None:
         ModelFig['CrestLine'].set_data(ShoreX, ShoreZ[:,0])
@@ -263,7 +371,8 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
     if not WavePower is None:
         ModelFig['WaveArrow'].remove()
         ModelFig['WaveArrow'] = ModelFig['PlanAx'].arrow(0, 200, WaveX, WaveY,
-                                                         width=ArrWidth)
+                                                         width=ArrWidth, 
+                                                         zorder=11)
     if not LST is None:
         LstScale = ModelFig['LstQuiver'].scale
         LstWidth = ModelFig['LstQuiver'].width
@@ -272,7 +381,8 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
                                                           (ShoreY[:-1,0]+ShoreY[1:,0])/2, 
                                                           LST, np.zeros(LST.size),
                                                           scale=LstScale, width=LstWidth,
-                                                          scale_units='x', units='width')
+                                                          scale_units='x', units='width',
+                                                          color='red', zorder=9)
     
     if not CST is None:
         CstScale = ModelFig['CstQuiver'].scale
@@ -281,7 +391,8 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
         ModelFig['CstQuiver'] = ModelFig['PlanAx'].quiver(ShoreX, ShoreY[:,0], 
                                                           np.zeros(ShoreX.size), -CST, 
                                                           scale=CstScale, width=CstWidth,
-                                                          scale_units='x', units='width')
+                                                          scale_units='x', units='width',
+                                                          color='red', zorder=10)
     
     # Redraw
     ModelFig['PlanFig'].canvas.draw()

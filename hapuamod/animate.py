@@ -66,7 +66,8 @@ def main(ResultsFile, AnimationFile, StartTimestep=0, EndTimestep=None,
      WavePower, EDir_h, LST, CST, Closed, RiverElev) = out.readTimestep(NcFile, StartTimestep)
     
     # Set up initial figure
-    ModelFig = visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, 100,
+    RiverWidth = NcFile.RiverWidth
+    ModelFig = visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, RiverWidth,
                                    ShoreZ=None, WavePower=None, EDir_h=0, LST=None, CST=None, 
                                    WaveScaling=0.01, CstScaling=0.00005, LstScaling=0.0001,
                                    QuiverWidth=0.002, AreaOfInterest=AreaOfInterest)
