@@ -521,4 +521,33 @@ def calcBedload(z, B, h, V, dx, PhysicalPars, Psi):
     Qs_reach = (1-Psi)*Qs_node[:-1] + Psi*Qs_node[1:]
     
     return(Qs_reach)
+
+def storeBedload(Bedload, NTransects, OnlineLagoon, OutletChanIx, 
+                 ChanFlag, Closed):
+    """ Extract lagoon/outlet hydraulic conditions.
+        
+        (LagoonBedload, OutletBedload, OutletEndBedload) = \
+            storeBedload(Bedload, NTransects, OnlineLagoon, OutletChanIx, 
+                         ChanFlag, Closed)
+        
+        The river bedload calculations are carried out on a merged channel
+        which includes the river upstream of the lagoon, the online part of
+        lagoon itself, and the outlet channel. This function extracts the 
+        bedload in the lagoon and outlet channel and stores them in the
+        shore parallel model schematisation. This is necessary for saving the 
+        bedload transpor trate into the output netCDF file.
+    """
     
+    # Lagoon Bedload
+    LagoonBedload = np.zeros(NTransects)
+    LagoonBedload[OnlineLagoon] = Bedload[ChanFlag[:-1]==1]
+    
+    # Outlet Bedload
+    OutletBedload = np.zeros(NTransects)
+    if Closed:
+        OutletEndBedload = np.zeros(2)
+    else:        
+        OutletBedload[OutletChanIx] = Bedload[ChanFlag[:-1]==3]
+        OutletEndBedload = Bedload[ChanFlag[:-1]==2]
+    
+    return (LagoonBedload, OutletBedload, OutletEndBedload)

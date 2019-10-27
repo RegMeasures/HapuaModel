@@ -154,17 +154,27 @@ def newOutFile(FileName, ModelName, StartTime,
     LagoonVelVar.units = 'm/s'
     LagoonVelVar.long_name = 'Mean lagoon velocity at each transect (+ve = outflowing i.e. towards outlet channel)'
     
+    # Lagoon bedload transport
+    LagoonBedloadVar = NcFile.createVariable('lagoon_bedload', np.float32, (TimeDim.name, XDim.name))
+    LagoonBedloadVar.units = 'm3(bulk including voids)/s'
+    LagoonBedloadVar.long_name = 'bedlaod transport in lagoon at each transect (+ve = outflowing i.e. towards outlet channel)'
+    
     # Outlet water level
     OutletWlVar = NcFile.createVariable('outlet_wl', np.float32, 
                                           (TimeDim.name, XDim.name))
     OutletWlVar.units = 'm'
     OutletWlVar.long_name = 'Outlet water level at each transect'
     
-    # Outlet velosity
+    # Outlet velocity
     OutletVelVar = NcFile.createVariable('outlet_vel', np.float32, 
                                           (TimeDim.name, XDim.name))
     OutletVelVar.units = 'm/s'
     OutletVelVar.long_name = 'Mean outlet channel velocity at each transect (+ve = outflowing i.e. towards sea)'
+    
+    # Outlet bedload transport
+    OutletBedloadVar = NcFile.createVariable('outlet_bedload', np.float32, (TimeDim.name, XDim.name))
+    OutletBedloadVar.units = 'm3(bulk including voids)/s'
+    OutletBedloadVar.long_name = 'bedlaod transport in outlet channel at each transect (+ve = outflowing i.e. towards sea)'
         
     # Longshore transport
     LstVar = NcFile.createVariable('lst', np.float32, (TimeDim.name, XSegDim.name))
@@ -176,9 +186,12 @@ def newOutFile(FileName, ModelName, StartTime,
     CstVar.units = 'm3/hour'
     CstVar.long_name = 'cross-shore transport rate from the shore face to the barrier at each transect'
     
+    # Overwash proportion
     OWVar = NcFile.createVariable('overwash_proportion', np.float32, (TimeDim.name, XDim.name))
     OWVar.units = '0 to 1'
     OWVar.long_name = 'proportion of cross-shore transport going over barrier to backshore (as opposed to onto barrier crest)'
+    
+    
     
     #%% Create river variables
     
@@ -199,6 +212,12 @@ def newOutFile(FileName, ModelName, StartTime,
                                         (TimeDim.name, RivDim.name))
     RiverVelVar.units = 'm/s'
     RiverVelVar.long_name = 'River cross-section mean velocity'
+    
+    # Bedload transport
+    RiverBedloadVar = NcFile.createVariable('river_bedload', np.float32, 
+                                            (TimeDim.name, RivDim.name))
+    RiverBedloadVar.units = 'm3(bulk including voids)/s'
+    RiverBedloadVar.long_name = 'River cross-section bedload transport'
     
     #%% Create outlet end variables
     
@@ -230,7 +249,12 @@ def newOutFile(FileName, ModelName, StartTime,
     OutletEndVelVar = NcFile.createVariable('outlet_end_vel', np.float32, 
                                             (TimeDim.name, EndsDim.name))
     OutletEndVelVar.units = 'm/s'
-    OutletEndVelVar.long_name = 'Outlet end velocity'
+    OutletEndVelVar.long_name = 'Outlet end velocity (+ve = outflowing i.e. towards sea)'
+    
+    # Outlet end bedload transport
+    OutletEndBedloadVar = NcFile.createVariable('outlet_end_bedload', np.float32, (TimeDim.name, EndsDim.name))
+    OutletEndBedloadVar.units = 'm3(bulk including voids)/s'
+    OutletEndBedloadVar.long_name = 'bedlaod transport at outlet channel ends (+ve = outflowing i.e. towards sea)'
     
     # Closed/open status
     OutletClosedVar = NcFile.createVariable('outlet_closed', 'i1', 
@@ -242,11 +266,12 @@ def newOutFile(FileName, ModelName, StartTime,
     NcFile.close()
 
 def writeCurrent(FileName, CurrentTime,
-                 ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletDep, OutletVel,
+                 ShoreY, ShoreZ, LagoonWL, LagoonVel, LagoonBedload, 
+                 OutletDep, OutletVel, OutletBedload, 
                  LST, CST, OverwashProp,
-                 RiverElev, RiverDep, RiverVel,
+                 RiverElev, RiverDep, RiverVel, RiverBedload,
                  OutletEndX, OutletEndElev, OutletEndWidth, 
-                 OutletEndDep, OutletEndVel, Closed):
+                 OutletEndDep, OutletEndVel, OutletEndBedload, Closed):
     """ Write hapuamod outputs for current timestep to netCDF 
     
     """
@@ -273,8 +298,10 @@ def writeCurrent(FileName, CurrentTime,
     
     NcFile.variables['lagoon_wl'][TimeIx,:] = LagoonWL
     NcFile.variables['lagoon_vel'][TimeIx,:] = LagoonVel
+    NcFile.variables['lagoon_bedload'][TimeIx,:] = LagoonBedload
     NcFile.variables['outlet_wl'][TimeIx,:] = OutletDep + ShoreZ[:,1]
     NcFile.variables['outlet_vel'][TimeIx,:] = OutletVel
+    NcFile.variables['outlet_bedload'][TimeIx,:] = OutletBedload
     
     NcFile.variables['cst'][TimeIx,:] = CST*3600
     NcFile.variables['overwash_proportion'][TimeIx,:] = OverwashProp
@@ -285,6 +312,7 @@ def writeCurrent(FileName, CurrentTime,
     NcFile.variables['river_bed_z'][TimeIx,:] = RiverElev
     NcFile.variables['river_wl'][TimeIx,:] = RiverElev + RiverDep
     NcFile.variables['river_vel'][TimeIx,:] = RiverVel
+    NcFile.variables['river_bedload'][TimeIx,:] = RiverBedload
     
     # Append new data to outlet end variables
     NcFile.variables['outlet_end_x'][TimeIx,:] = OutletEndX

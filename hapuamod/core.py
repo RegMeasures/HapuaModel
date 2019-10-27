@@ -66,11 +66,12 @@ def main(ModelConfigFile, Overwrite=False):
                    Origin, ShoreNormDir, PhysicalPars['RiverWidth'],
                    Overwrite)
     out.writeCurrent(OutputOpts['OutFile'], TimePars['StartTime'],
-                     ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletDep, OutletVel,
+                     ShoreY, ShoreZ, LagoonWL, LagoonVel, np.zeros(ShoreX.size), 
+                     OutletDep, OutletVel, np.zeros(ShoreX.size), 
                      np.zeros(ShoreX.size-1), np.zeros(ShoreX.size), np.zeros(ShoreX.size), 
-                     RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0],
+                     RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0], np.zeros(RiverElev.size),
                      OutletEndX, OutletEndElev, OutletEndWidth, 
-                     OutletEndDep, OutletEndVel, Closed)
+                     OutletEndDep, OutletEndVel, np.zeros(2), Closed)
     
     #%% Set up variables to hold output timeseries
     OutputTs = pd.DataFrame(list(zip([RivFlow],[RivFlow],[SeaLevel])),
@@ -92,8 +93,8 @@ def main(ModelConfigFile, Overwrite=False):
     
     #%% Main timestepping loop
     MorTime = TimePars['StartTime']
-    LogTime = TimePars['StartTime']
-    PlotTime = TimePars['StartTime']
+    LogTime = TimePars['StartTime'] + OutputOpts['LogInt']
+    PlotTime = TimePars['StartTime'] + OutputOpts['PlotInt']
     while MorTime <= TimePars['EndTime']:
         
         # Re-assemble the combined river channel incase it has evolved
@@ -138,6 +139,11 @@ def main(ModelConfigFile, Overwrite=False):
                                   ChanDx, PhysicalPars, NumericalPars['Psi'])
         assert Bedload.size == ChanElev.size-1
         
+        # If it is an output or plotting timestep then put bedload into model co-ordinates
+        (LagoonBedload, OutletBedload, OutletEndBedload) = \
+            riv.storeBedload(Bedload, ShoreX.size, OnlineLagoon, OutletChanIx, 
+                             ChanFlag, Closed)
+        
         # Calculate longshore transport
         WavesAtT = interpolate_at(WaveTs, pd.DatetimeIndex([MorTime]))
         EDir_h = WavesAtT.EDir_h[0]
@@ -170,11 +176,12 @@ def main(ModelConfigFile, Overwrite=False):
         
         # Save outputs
         out.writeCurrent(OutputOpts['OutFile'], MorTime, 
-                         ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletDep, OutletVel,
+                         ShoreY, ShoreZ, LagoonWL, LagoonVel, LagoonBedload,
+                         OutletDep, OutletVel, OutletBedload,
                          LST, CST_tot, OverwashProp,
-                         RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0],
+                         RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0], Bedload[ChanFlag[:-1]==0],
                          OutletEndX, OutletEndElev, OutletEndWidth, 
-                         OutletEndDep, OutletEndVel, Closed)
+                         OutletEndDep, OutletEndVel, OutletEndBedload, Closed)
         OutputTs = OutputTs.append(pd.DataFrame(list(zip([RivFlow[-1]],
                                                          [ChanDep[-1]*ChanVel[-1]*ChanWidth[-1]],
                                                          [SeaLevel[-1]])),
