@@ -6,11 +6,9 @@ from hapuamod import loadmod, visualise, coast, riv, core, mor, out
 
 #%% Test model load (particularly geometry processing)
 ModelConfigFile = 'inputs\HurunuiModel.cnf'
-Config = loadmod.readConfig(ModelConfigFile)
-(FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, 
- ShoreX, ShoreY, ShoreZ, RiverElev, 
- OutletEndX, OutletEndWidth, OutletEndElev,
- TimePars, PhysicalPars, NumericalPars, OutputOpts) = loadmod.loadModel(Config)
+(ModelName, FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, ShoreX, 
+ ShoreY, ShoreZ, RiverElev, OutletEndX, OutletEndWidth, OutletEndElev,
+ TimePars, PhysicalPars, NumericalPars, OutputOpts) = loadmod.loadModel(ModelConfigFile)
 
 plt.figure()
 visualise.mapView(ShoreX, ShoreY, Origin, ShoreNormDir)
@@ -42,7 +40,7 @@ plt.plot((ShoreX[0:-1]+ShoreX[1:])/2, LST)
                         np.zeros(ShoreX.size), np.zeros(ShoreX.size),
                         np.zeros(2), np.zeros(2), NumericalPars['Dx'],
                         PhysicalPars)
-visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx)
+visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, PhysicalPars['RiverWidth'])
     
 # Steady state hydraulics
 RivFlow = core.interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']])).values
@@ -102,15 +100,17 @@ mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
 plt.plot(ShoreX, (ShoreY[:,0]-OldShoreY[:,0]))
 
 #%% Create output netcdf file and write initial condition
-out.newOutFile('test.nc', Config['ModelName'], TimePars['StartTime'], 
-               ShoreX, NumericalPars['Dx'], RiverElev, True)
-
-out.writeCurrent('test.nc', TimePars['StartTime'], 
-                 ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletDep, OutletVel,
-                 np.zeros(ShoreX.size-1), 
-                 RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0],
+out.newOutFile('test.nc', ModelName, TimePars['StartTime'], 
+               ShoreX, NumericalPars['Dx'],  RiverElev, 
+               Origin, ShoreNormDir, PhysicalPars['RiverWidth'],
+               False)
+out.writeCurrent('test.nc', TimePars['StartTime'],
+                 ShoreY, ShoreZ, LagoonWL, LagoonVel, np.zeros(ShoreX.size), 
+                 OutletDep, OutletVel, np.zeros(ShoreX.size), 
+                 np.zeros(ShoreX.size-1), np.zeros(ShoreX.size), np.zeros(ShoreX.size), 
+                 RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0], np.zeros(RiverElev.size),
                  OutletEndX, OutletEndElev, OutletEndWidth, 
-                 OutletEndDep, OutletEndVel)
+                 OutletEndDep, OutletEndVel, np.zeros(2), Closed)
 
 #%% Test core timestepping
 ModelConfigFile = 'inputs\HurunuiModel.cnf'

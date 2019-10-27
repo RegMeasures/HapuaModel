@@ -161,7 +161,7 @@ def main(ModelConfigFile, Overwrite=False):
         MorTime += TimePars['MorDt']
         
         # If it is an output or plotting timestep then put bedload into model co-ordinates
-        if MorTime >= OutTime or MorTime >= PlotTime:
+        if MorTime >= OutTime or (LivePlot and MorTime >= PlotTime):
             (LagoonBedload, OutletBedload, OutletEndBedload) = \
                 riv.storeBedload(Bedload, ShoreX.size, OnlineLagoon, OutletChanIx, 
                                  ChanFlag, Closed)

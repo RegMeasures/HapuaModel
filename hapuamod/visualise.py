@@ -527,14 +527,14 @@ def BdyCndFig(OutputTs):
     
     # Flow plots
     QAx = Fig.subplots()
-    QInLine, = QAx.plot(OutputTs.index, OutputTs.Qin, 'b-')
-    QOutLine, = QAx.plot(OutputTs.index, OutputTs.Qout, 'r-')
+    QInLine, = QAx.plot(OutputTs.index.to_numpy(), OutputTs.Qin, 'b-')
+    QOutLine, = QAx.plot(OutputTs.index.to_numpy(), OutputTs.Qout, 'r-')
     QAx.autoscale_view(tight = False)
     QAx.set_ylabel('Flow [$\mathrm{m^3/s}$]')
     
     # Sea level plot
     WlAx = QAx.twinx()
-    DsWlLine, = WlAx.plot(OutputTs.index, OutputTs.SeaLevel, 'g-')
+    DsWlLine, = WlAx.plot(OutputTs.index.to_numpy(), OutputTs.SeaLevel, 'g-')
     WlAx.set_ylim([-1,3])
     WlAx.set_ylabel('Water level [m]')
     
