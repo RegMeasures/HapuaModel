@@ -141,8 +141,9 @@ def loadModel(ModelConfigFile):
         OutputOpts (dict):
             OutFile (string): filename for writing model outputs to 
                 (netCDF file)
-            LogInt (pd.Timedelta): 
-            PlotInt (pd.Timedelta): 
+            OutInt (pd.Timedelta): output interval for writing to netCDF file
+            LogInt (pd.Timedelta): interval for writing progress to console/log
+            PlotInt (pd.Timedelta): interval for plotting (0 = no plotting)
     """
     
     #%% Read the main config file
@@ -388,6 +389,7 @@ def loadModel(ModelConfigFile):
 
     #%% Read output options
     OutputOpts = {'OutFile': Config['OutputOptions']['OutFile'],
+                  'OutInt': pd.Timedelta(seconds=float(Config['OutputOptions']['OutInt'])),
                   'LogInt': pd.Timedelta(seconds=float(Config['OutputOptions']['LogInt'])),
                   'PlotInt': pd.Timedelta(seconds=float(Config['OutputOptions']['PlotInt']))}
     

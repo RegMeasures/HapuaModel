@@ -93,6 +93,7 @@ def main(ModelConfigFile, Overwrite=False):
     
     #%% Main timestepping loop
     MorTime = TimePars['StartTime']
+    OutTime = TimePars['StartTime'] + OutputOpts['OutInt']
     LogTime = TimePars['StartTime'] + OutputOpts['LogInt']
     PlotTime = TimePars['StartTime'] + OutputOpts['PlotInt']
     while MorTime <= TimePars['EndTime']:
@@ -139,11 +140,6 @@ def main(ModelConfigFile, Overwrite=False):
                                   ChanDx, PhysicalPars, NumericalPars['Psi'])
         assert Bedload.size == ChanElev.size-1
         
-        # If it is an output or plotting timestep then put bedload into model co-ordinates
-        (LagoonBedload, OutletBedload, OutletEndBedload) = \
-            riv.storeBedload(Bedload, ShoreX.size, OnlineLagoon, OutletChanIx, 
-                             ChanFlag, Closed)
-        
         # Calculate longshore transport
         WavesAtT = interpolate_at(WaveTs, pd.DatetimeIndex([MorTime]))
         EDir_h = WavesAtT.EDir_h[0]
@@ -161,6 +157,15 @@ def main(ModelConfigFile, Overwrite=False):
         (CST_tot, OverwashProp) = coast.overtopping(Runup, SeaLevel[-1], ShoreY, 
                                                     ShoreZ, PhysicalPars)
         
+        # increment time
+        MorTime += TimePars['MorDt']
+        
+        # If it is an output or plotting timestep then put bedload into model co-ordinates
+        if MorTime >= OutTime or MorTime >= PlotTime:
+            (LagoonBedload, OutletBedload, OutletEndBedload) = \
+                riv.storeBedload(Bedload, ShoreX.size, OnlineLagoon, OutletChanIx, 
+                                 ChanFlag, Closed)
+                
         # Update morphology
         mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
                              OutletEndX, OutletEndWidth, OutletEndElev, 
@@ -171,22 +176,23 @@ def main(ModelConfigFile, Overwrite=False):
                              NumericalPars['Dx'], TimePars['MorDt'], 
                              PhysicalPars)
         
-        # increment time
-        MorTime += TimePars['MorDt']
+        
         
         # Save outputs
-        out.writeCurrent(OutputOpts['OutFile'], MorTime, 
-                         ShoreY, ShoreZ, LagoonWL, LagoonVel, LagoonBedload,
-                         OutletDep, OutletVel, OutletBedload,
-                         LST, CST_tot, OverwashProp,
-                         RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0], Bedload[ChanFlag[:-1]==0],
-                         OutletEndX, OutletEndElev, OutletEndWidth, 
-                         OutletEndDep, OutletEndVel, OutletEndBedload, Closed)
-        OutputTs = OutputTs.append(pd.DataFrame(list(zip([RivFlow[-1]],
-                                                         [ChanDep[-1]*ChanVel[-1]*ChanWidth[-1]],
-                                                         [SeaLevel[-1]])),
-                                                columns=['Qin','Qout','SeaLevel'],
-                                                index=pd.DatetimeIndex([MorTime])))
+        if MorTime >= OutTime:
+            out.writeCurrent(OutputOpts['OutFile'], MorTime, 
+                             ShoreY, ShoreZ, LagoonWL, LagoonVel, LagoonBedload,
+                             OutletDep, OutletVel, OutletBedload,
+                             LST, CST_tot, OverwashProp,
+                             RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0], Bedload[ChanFlag[:-1]==0],
+                             OutletEndX, OutletEndElev, OutletEndWidth, 
+                             OutletEndDep, OutletEndVel, OutletEndBedload, Closed)
+            OutputTs = OutputTs.append(pd.DataFrame(list(zip([RivFlow[-1]],
+                                                             [ChanDep[-1]*ChanVel[-1]*ChanWidth[-1]],
+                                                             [SeaLevel[-1]])),
+                                                    columns=['Qin','Qout','SeaLevel'],
+                                                    index=pd.DatetimeIndex([MorTime])))
+            OutTime += OutputOpts['OutInt']
         
         # updates to user
         if MorTime >= LogTime:
