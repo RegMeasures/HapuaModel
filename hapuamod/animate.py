@@ -86,7 +86,7 @@ def main(ResultsFile, AnimationFile, StartTimestep=0, EndTimestep=None,
     ani.event_source.stop()
     del ani
     plt.close(FigToAnimate)
-    netCDF4.Dataset.close()
+    NcFile.close()
 
 if __name__ == "__main__":
     # Set up logging

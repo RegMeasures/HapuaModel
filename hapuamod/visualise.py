@@ -307,7 +307,7 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
         LagoonToL = ShoreX <= (OutletEndX[0] - OutletEndWidth[0]/2)
         LagoonToR = ShoreX >= (OutletEndX[0] + OutletEndWidth[0]/2)
         ShoreToL = ShoreX <= (OutletEndX[1] - OutletEndWidth[1]/2)
-        ShoreToR = ShoreX >= (OutletEndX[0] - OutletEndWidth[0]/2)
+        ShoreToR = ShoreX >= (OutletEndX[1] - OutletEndWidth[1]/2)
         ShoreInChan = ~np.logical_or(ShoreToL, ShoreToR)
     
         # Shoreline
