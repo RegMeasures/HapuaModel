@@ -65,7 +65,7 @@ def loadModel(ModelConfigFile):
                 0: Shoreline
                 1: Seaward side of outlet channel (nan if no outlet at profile)
                 2: Lagoonward edge of outlet channel (or nan)
-                3: Seaward edge of lagoon (nan if beyond lagoon extent)
+                3: Seaward edge of lagoon (same as cliff if beyond lagoon extent)
                 4: Cliff toe position
         ShoreZ (np.ndarray(float64)): elevation of aspects of cross-shore 
             profile at transects with x-coordinates given by ShoreX (m). The 

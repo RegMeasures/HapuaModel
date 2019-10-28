@@ -177,7 +177,7 @@ except:
     logging.exception('Unsteady solution for test 3 failed after %i timesteps' % OutputTs3.index[-1]) 
 
 # Reporting
-BdyFig = vis.BdyCndFig(OutputTs3)
+BdyFig = vis.bdyCndFig(OutputTs3)
 BdyFig[0].suptitle('Test 3: Unsteady downstream boundary')
 BdyFig[0].savefig('Test03_TimeSeries.png')
 plt.close(BdyFig[0])
@@ -232,7 +232,7 @@ except:
     logging.exception('Unsteady solution for test 4 failed after %i timesteps' % OutputTs4.index[-1]) 
 
 # Reporting
-BdyFig = vis.BdyCndFig(OutputTs4)
+BdyFig = vis.bdyCndFig(OutputTs4)
 BdyFig[0].suptitle('Test 4: Lagoon Storage')
 BdyFig[0].savefig('Test04_TimeSeries.png')
 plt.close(BdyFig[0])
@@ -288,7 +288,7 @@ except:
 
 # Reporting
 #    vis.updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel)
-BdyFig = vis.BdyCndFig(OutputTs5)
+BdyFig = vis.bdyCndFig(OutputTs5)
 BdyFig[0].suptitle('Test 5: Reverse flow')
 BdyFig[0].savefig('Test05_TimeSeries.png')
 plt.close(BdyFig[0])
@@ -347,7 +347,7 @@ except:
     logging.exception('Unsteady solution for test 6 failed after %i timesteps' % OutputTs6.index[-1]) 
 
 # Reporting
-BdyFig = vis.BdyCndFig(OutputTs6)
+BdyFig = vis.bdyCndFig(OutputTs6)
 BdyFig[0].suptitle('Test 6: Flow profile through constriction')
 BdyFig[0].savefig('Test06_TimeSeries.png')
 plt.close(BdyFig[0])
@@ -419,7 +419,7 @@ except:
     logging.exception('Unsteady solution for test 7 failed after %i timesteps' % OutputTs7.index[-1]) 
 
 # Reporting
-BdyFig = vis.BdyCndFig(OutputTs7)
+BdyFig = vis.bdyCndFig(OutputTs7)
 BdyFig[0].suptitle('Test 7: Trans-critical flow through constriction')
 BdyFig[0].savefig('Test07_TimeSeries.png')
 plt.close(BdyFig[0])
@@ -492,7 +492,7 @@ except:
     logging.exception('Unsteady solution for test 8 failed after %i timesteps' % OutputTs8.index[-1]) 
 
 # Reporting
-BdyFig = vis.BdyCndFig(OutputTs8)
+BdyFig = vis.bdyCndFig(OutputTs8)
 BdyFig[0].suptitle('Test 8: Dynamic supercritical flow')
 BdyFig[0].savefig('Test08_TimeSeries.png')
 plt.close(BdyFig[0])
@@ -568,7 +568,7 @@ except:
     logging.exception('Unsteady solution for test 9 failed after %i timesteps' % OutputTs8.index[-1]) 
 
 # Reporting
-BdyFig = vis.BdyCndFig(OutputTs8)
+BdyFig = vis.bdyCndFig(OutputTs8)
 BdyFig[0].suptitle('Test 9: Shallow overflow (i.e. breach commencing)')
 BdyFig[0].savefig('Test09_TimeSeries.png')
 plt.close(BdyFig[0])
@@ -633,7 +633,7 @@ except:
     logging.exception('Unsteady solution for test 10 failed after %i timesteps' % OutputTs4.index[-1]) 
 
 # Reporting
-BdyFig = vis.BdyCndFig(OutputTs4)
+BdyFig = vis.bdyCndFig(OutputTs4)
 BdyFig[0].suptitle('Test 10: Closed outlet')
 BdyFig[0].savefig('Test10_TimeSeries.png')
 plt.close(BdyFig[0])

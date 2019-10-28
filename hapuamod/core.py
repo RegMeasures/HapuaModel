@@ -83,7 +83,7 @@ def main(ModelConfigFile, Overwrite=False):
     if LivePlot:
         LsLines = visualise.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, 
                                         np.zeros(ChanElev.size-1))
-        BdyFig = visualise.BdyCndFig(OutputTs)
+        BdyFig = visualise.bdyCndFig(OutputTs)
         ModelFig = visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth,
                                        OutletChanIx, PhysicalPars['RiverWidth'],
                                        ShoreZ=ShoreZ, 

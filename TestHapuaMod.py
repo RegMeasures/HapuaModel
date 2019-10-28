@@ -79,6 +79,17 @@ riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed,
                         RivFlow, SeaLevel, NumericalPars)
 plt.plot(ChanDist, ChanDep+ChanElev, 'r:')
 
+#%% Test transect plot
+BeachSlope = PhysicalPars['BeachSlope']
+BackshoreElev = PhysicalPars['BackshoreElev']
+ClosureDepth = PhysicalPars['ClosureDepth']
+BeachTopElev = PhysicalPars['SpitHeight']
+TransectId = np.where(ShoreX == -300)[0][0]
+
+TransectFig = visualise.newTransectFig(ShoreY, ShoreZ, LagoonWL, OutletDep, 
+                                       SeaLevel, BeachSlope, BackshoreElev, 
+                                       ClosureDepth, BeachTopElev, TransectId)
+
 #%% Runup/overtopping
 WavePeriod = WaveTs.WavePeriod[0]
 Hs_offshore = WaveTs.Hsig_Offshore[0]

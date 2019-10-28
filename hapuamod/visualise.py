@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+""" Sub-module of hapuamod containing functions to plot aspects of hapuamod.
+"""
 
 # import standard packages
 import matplotlib.pyplot as plt
@@ -307,7 +309,7 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
         LagoonToL = ShoreX <= (OutletEndX[0] - OutletEndWidth[0]/2)
         LagoonToR = ShoreX >= (OutletEndX[0] + OutletEndWidth[0]/2)
         ShoreToL = ShoreX <= (OutletEndX[1] - OutletEndWidth[1]/2)
-        ShoreToR = ShoreX >= (OutletEndX[1] - OutletEndWidth[1]/2)
+        ShoreToR = ShoreX >= (OutletEndX[1] + OutletEndWidth[1]/2)
         ShoreInChan = ~np.logical_or(ShoreToL, ShoreToR)
     
         # Shoreline
@@ -522,7 +524,113 @@ def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep,
     LongSecFig[0].canvas.draw()
     LongSecFig[0].canvas.flush_events()
 
-def BdyCndFig(OutputTs):
+def newTransectFig(ShoreY, ShoreZ, LagoonWL, OutletDep, SeaLevel, 
+                   BeachSlope, BackshoreElev, ClosureDepth, BeachTopElev,
+                   TransectId):
+    """ Create a plot of a specified transect line through the hapua
+        
+        TransectFig = newTransectFig(ShoreY, ShoreZ, LagoonWL, OutletDep, 
+                                     SeaLevel, BeachSlope, BackshoreElev, 
+                                     ClosureDepth, BeachTopElev, TransectId)
+        
+        Note: for this function SeaLevel should be a float rather than an 
+              array.
+    """
+    
+    # Create a new figure window
+    TransFig, TransAx = plt.subplots(figsize=[10,5])
+    
+    # Add some dummy lines
+    GroundLine, = TransAx.plot([ShoreY[TransectId,4], ShoreY[TransectId,0]+(ClosureDepth/BeachSlope)], 
+                               [BackshoreElev, -ClosureDepth], 'k-', zorder=3)
+    GroundFill, = TransAx.fill([0.,1.,1.,0.], [0.,1.,0.,0.], 'lightgrey', label='Gravel', zorder=2)
+    WaterLine,  = TransAx.plot([0.,0.5],[0.,0.5], '-', color='steelblue', zorder=1)
+    WaterFill,  = TransAx.fill([0.,0.,0.5,0.], [0.,0.5,0.5,0.], 'lightskyblue', label='Water', zorder=0)
+    
+    # Compile output variable
+    TransectFig = {'TransFig':TransFig, 'TransAx':TransAx, 
+                   'GroundLine':GroundLine, 'GroundFill':GroundFill, 
+                   'WaterLine':WaterLine, 'WaterFill':WaterFill,
+                   'BeachSlope': BeachSlope, 'BackshoreElev':BackshoreElev, 
+                   'ClosureDepth':ClosureDepth, 'BeachTopElev':BeachTopElev,
+                   'TransectId':TransectId}
+    
+    # Update lines
+    updateTransectFig(TransectFig, ShoreY, ShoreZ, 
+                      LagoonWL, OutletDep, SeaLevel)
+    
+    return TransectFig
+
+def updateTransectFig(TransectFig, ShoreY, ShoreZ, 
+                      LagoonWL, OutletDep, SeaLevel):
+    """ Update an existing TransectFig with new data
+    """
+    
+    TransectId = TransectFig['TransectId']
+    ClosureDepth = TransectFig['ClosureDepth']
+    BackshoreElev = TransectFig['BackshoreElev']
+    BeachSlope = TransectFig['BeachSlope']
+    BeachTopElev = TransectFig['BeachTopElev']
+    
+    # Crop to specified transect
+    TransY = ShoreY[TransectId,:].squeeze()
+    TransZ = ShoreZ[TransectId,:].squeeze()
+    TransLagWL = LagoonWL[TransectId]
+    TransOutletWL = OutletDep[TransectId] + TransZ[3]
+    
+    # Build GroundLine and WaterFill data from sea to cliff...
+    
+    # Seabed to toe of beach
+    GroundLineX = [1000.0, TransY[0] + (BeachTopElev + ClosureDepth) / BeachSlope]
+    GroundLineY = [-ClosureDepth, -ClosureDepth]
+    WaterLineX = [1000.0]
+    WaterLineY = [SeaLevel]
+    
+    # Beach face and front edge of barrier
+    # TODO: if aligned with seaward end of outlet channel...?
+    GroundLineX.extend(TransY[[0,0]])
+    GroundLineY.extend([BeachTopElev, TransZ[0]])
+    WaterLineX.append(TransY[0])
+    WaterLineY.append(SeaLevel)
+    
+    # Top of barrier
+    # TODO: if aligned with lagoon end of outlet channel...?
+    if np.isnan(TransY[2]):
+        GroundLineX.append(TransY[3])
+        GroundLineY.append(TransZ[0])
+    else:
+        GroundLineX.extend(TransY[[1,1,2,2,3]])
+        GroundLineY.extend(TransZ[[0,1,1,2,2]])
+        WaterLineX.extend(TransY[[1,2]])
+        WaterLineY.extend([TransOutletWL, TransOutletWL])
+    
+    # Lagoon
+    if not TransY[3] == TransY[4]:
+        GroundLineX.extend(TransY[[3,4]])
+        GroundLineY.extend(TransZ[[3,3]])
+        WaterLineX.extend(TransY[[3,4]])
+        WaterLineY.extend([TransLagWL, TransLagWL])
+    
+    # Cliff
+    # TODO: if aligned with river?
+    GroundLineX.extend([TransY[4], -1000.0])
+    GroundLineY.extend([BackshoreElev, BackshoreElev])
+    
+    # GroundFill data
+    GroundFillX = GroundLineX + [GroundLineX[-1], GroundLineX[0], GroundLineX[0]]
+    GroundFillY = GroundLineY + [-100.0, -100.0, GroundLineY[0]]
+    
+    # WaterFill data
+    WaterFillX = WaterLineX + [WaterLineX[-1], WaterLineX[0], WaterLineX[0]]
+    WaterFillY = WaterLineY + [-100.0, -100.0, WaterLineY[0]]
+    
+    # Update the lines etc
+    TransectFig['GroundLine'].set_data(GroundLineX, GroundLineY)
+    TransectFig['GroundFill'].set_xy(np.vstack([GroundFillX, GroundFillY]).T)
+    TransectFig['WaterLine'].set_data(WaterLineX, WaterLineY)
+    TransectFig['WaterFill'].set_xy(np.vstack([WaterFillX, WaterFillY]).T)
+
+def bdyCndFig(OutputTs):
     Fig = plt.figure(figsize=(9,3))
     
     # Flow plots
