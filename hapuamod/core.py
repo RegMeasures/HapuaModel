@@ -24,14 +24,6 @@ def main(ModelConfigFile, Overwrite=False):
             the main model config file.
     """
     
-    #%% Set up logging
-    RootLogger = logging.getLogger()
-    RootLogger.setLevel(logging.INFO)
-    
-    ConsoleHandler = logging.StreamHandler()
-    ConsoleHandler.setLevel(logging.INFO)
-    RootLogger.addHandler(ConsoleHandler)
-    
     #%% Load the model
     (ModelName, FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, ShoreX, 
      ShoreY, ShoreZ, RiverElev, OutletEndX, OutletEndWidth, OutletEndElev,

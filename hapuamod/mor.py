@@ -35,7 +35,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     # Locations where lagoon width > 0
     LagoonPresent = ShoreY[:,3] > ShoreY[:,4]
     
-    # Lagoon/outlet water level (to checl for breach)
+    # Lagoon/outlet water level (to check for breach)
     # Calculated before updating bed levels incase this results in temporarily unrealistic water levels
     WaterLevel = np.full(ShoreX.size, -9999.9)
     WaterLevel[LagoonPresent] = LagoonWL[LagoonPresent]
