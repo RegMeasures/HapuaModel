@@ -12,7 +12,7 @@ import logging
 
 def newOutFile(FileName, ModelName, StartTime,
                ShoreX, Dx, RiverElev, 
-               Origin, ShoreNormDir, RiverWidth,
+               Origin, ShoreNormDir, PhysicalPars,
                Overwrite=False):
     """ Create new netCDF output file for hapuamod results
     
@@ -65,7 +65,11 @@ def newOutFile(FileName, ModelName, StartTime,
     NcFile.ModelOriginX = Origin[0]
     NcFile.ModelOriginY = Origin[1]
     NcFile.ModelOrientation = np.rad2deg(ShoreNormDir)
-    NcFile.RiverWidth = RiverWidth
+    NcFile.RiverWidth = PhysicalPars['RiverWidth']
+    NcFile.BeachSlope = PhysicalPars['BeachSlope']
+    NcFile.BackshoreElev = PhysicalPars['BackshoreElev']
+    NcFile.ClosureDepth = PhysicalPars['ClosureDepth']
+    NcFile.BeachTopElev = PhysicalPars['BeachTopElev']
     
     # create coordinate variables
     XVar = NcFile.createVariable(XDim.name, np.float32, (XDim.name,))
@@ -87,6 +91,17 @@ def newOutFile(FileName, ModelName, StartTime,
     TimeVar.units = 'seconds since %s' % StartTime.strftime('%Y-%m-%d')
     TimeVar.calendar = 'standard'
     TimeVar.long_name = 'Model output times'
+    
+    #%% create boundary condition variables
+    SeaLevelVar = NcFile.createVariable('sea_level', np.float32, 
+                                        (TimeDim.name,))
+    SeaLevelVar.units = 'm'
+    SeaLevelVar.long_name = 'Sea level'
+    
+    RiverFlowVar = NcFile.createVariable('river_flow', np.float32, 
+                                         (TimeDim.name,))
+    RiverFlowVar.units = 'm3/s'
+    RiverFlowVar.long_name = 'River flow upstream of hapua'
     
     #%% create shore-transect data variables
     
@@ -265,7 +280,7 @@ def newOutFile(FileName, ModelName, StartTime,
     # Close netCDF file
     NcFile.close()
 
-def writeCurrent(FileName, CurrentTime,
+def writeCurrent(FileName, CurrentTime, SeaLevel, RivFlow,
                  ShoreY, ShoreZ, LagoonWL, LagoonVel, LagoonBedload, 
                  OutletDep, OutletVel, OutletBedload, 
                  LST, CST, OverwashProp,
@@ -273,7 +288,17 @@ def writeCurrent(FileName, CurrentTime,
                  OutletEndX, OutletEndElev, OutletEndWidth, 
                  OutletEndDep, OutletEndVel, OutletEndBedload, Closed):
     """ Write hapuamod outputs for current timestep to netCDF 
-    
+        
+        writeCurrent(FileName, CurrentTime, SeaLevel, RivFlow,
+                     ShoreY, ShoreZ, LagoonWL, LagoonVel, LagoonBedload, 
+                     OutletDep, OutletVel, OutletBedload, 
+                     LST, CST, OverwashProp,
+                     RiverElev, RiverDep, RiverVel, RiverBedload,
+                     OutletEndX, OutletEndElev, OutletEndWidth, 
+                     OutletEndDep, OutletEndVel, OutletEndBedload, Closed)
+        
+        Note: For this function boundary condition data should be supplied as 
+              single floats rather than arrays/dataframes as used elsewhere.
     """
     
     # Open netCDF file for appending
@@ -283,6 +308,10 @@ def writeCurrent(FileName, CurrentTime,
     TimeVar = NcFile.variables['time']
     TimeIx = TimeVar.size
     TimeVar[TimeIx] = netCDF4.date2num(CurrentTime, TimeVar.units)
+    
+    # Append data to boundary condition variables
+    NcFile.variables['sea_level'][TimeIx] = SeaLevel
+    NcFile.variables['river_flow'][TimeIx] = RivFlow
     
     # Append new data to shore transect variables
     NcFile.variables['shoreline_y'][TimeIx,:] = ShoreY[:,0]
@@ -327,11 +356,14 @@ def writeCurrent(FileName, CurrentTime,
 def readTimestep(NcFile, TimeIx):
     """ Extract model results for a specific timestep from netcdf file
         
-        (ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, ShoreZ, 
+        (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
+         OutletEndX, OutletEndWidth, OutletEndElev, OutletChanIx,
          WavePower, EDir_h, LST, CST, Closed, RiverElev) = readTimestep(NcFile, TimeIx)
     """
     
     NTransects = NcFile.dimensions['transect_x'].size
+    
+    SeaLevel = NcFile.variables['sea_level'][TimeIx]
     
     ShoreX = NcFile.variables['transect_x'][:]
     
@@ -343,17 +375,20 @@ def readTimestep(NcFile, TimeIx):
     ShoreY[:,3] = NcFile.variables['lagoon_y'][TimeIx,:]
     ShoreY[:,4] = NcFile.variables['cliff_y'][TimeIx,:]
     
-    OutletEndX = NcFile.variables['outlet_end_x'][TimeIx,:].squeeze()
-    OutletEndWidth = NcFile.variables['outlet_end_width'][TimeIx,:].squeeze()
-    OutletEndElev = NcFile.variables['outlet_end_z'][TimeIx,:].squeeze()
-    Closed = bool(NcFile.variables['outlet_closed'][TimeIx])
-    
     # ShoreZ
     ShoreZ=np.empty((NTransects, 4))
     ShoreZ[:,0] = NcFile.variables['barrier_crest_z'][TimeIx,:]
     ShoreZ[:,1] = NcFile.variables['outlet_bed_z'][TimeIx,:]
     ShoreZ[:,2] = NcFile.variables['inner_barrier_crest_z'][TimeIx,:]
     ShoreZ[:,3] = NcFile.variables['lagoon_bed_z'][TimeIx,:]
+    
+    LagoonWL = NcFile.variables['lagoon_wl'][TimeIx,:]
+    OutletWL = NcFile.variables['outlet_wl'][TimeIx,:]
+    
+    OutletEndX = NcFile.variables['outlet_end_x'][TimeIx,:].squeeze()
+    OutletEndWidth = NcFile.variables['outlet_end_width'][TimeIx,:].squeeze()
+    OutletEndElev = NcFile.variables['outlet_end_z'][TimeIx,:].squeeze()
+    Closed = bool(NcFile.variables['outlet_closed'][TimeIx])
     
     WavePower=None
     EDir_h=0
@@ -375,7 +410,7 @@ def readTimestep(NcFile, TimeIx):
         OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] <= ShoreX,
                                                          ShoreX <= OutletEndX[0]))[0])
     
-    return(ShoreX, ShoreY, ShoreZ, 
+    return(SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
            OutletEndX, OutletEndWidth, OutletEndElev, OutletChanIx,
            WavePower, EDir_h, LST, CST, Closed, RiverElev)
     

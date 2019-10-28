@@ -524,24 +524,36 @@ def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep,
     LongSecFig[0].canvas.draw()
     LongSecFig[0].canvas.flush_events()
 
-def newTransectFig(ShoreY, ShoreZ, LagoonWL, OutletDep, SeaLevel, 
+def newTransectFig(ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, SeaLevel, 
                    BeachSlope, BackshoreElev, ClosureDepth, BeachTopElev,
-                   TransectId):
+                   TransectX):
     """ Create a plot of a specified transect line through the hapua
         
-        TransectFig = newTransectFig(ShoreY, ShoreZ, LagoonWL, OutletDep, 
+        TransectFig = newTransectFig(ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
                                      SeaLevel, BeachSlope, BackshoreElev, 
-                                     ClosureDepth, BeachTopElev, TransectId)
+                                     ClosureDepth, BeachTopElev, TransectX)
         
         Note: for this function SeaLevel should be a float rather than an 
               array.
     """
     
+    # Find index of closest transect to TransectX
+    assert ShoreX[0] <= TransectX <= ShoreX[-1], 'TransectX must be within the range of X in the model domain (%.1f to %.1f)' % (ShoreX[0], ShoreX[-1])
+    TransectIx = np.argmin(np.abs(ShoreX - TransectX))
+    
     # Create a new figure window
     TransFig, TransAx = plt.subplots(figsize=[10,5])
+    if TransectX < 0:
+        LeftRight = 'Transect through hapua %.0fm to left of river' % abs(ShoreX[TransectIx])
+    elif TransectX == 0:
+        LeftRight = 'Transect through hapua in line with river'
+    else:
+        LeftRight = 'Transect through hapua %.0fm to right of river' % abs(ShoreX[TransectIx])
+    TransAx.set_title(LeftRight, loc='left')
     
     # Add some dummy lines
-    GroundLine, = TransAx.plot([ShoreY[TransectId,4], ShoreY[TransectId,0]+(ClosureDepth/BeachSlope)], 
+    GroundLine, = TransAx.plot([ShoreY[TransectIx,4], ShoreY[TransectIx,0] + 
+                                (BeachTopElev + ClosureDepth) / BeachSlope], 
                                [BackshoreElev, -ClosureDepth], 'k-', zorder=3)
     GroundFill, = TransAx.fill([0.,1.,1.,0.], [0.,1.,0.,0.], 'lightgrey', label='Gravel', zorder=2)
     WaterLine,  = TransAx.plot([0.,0.5],[0.,0.5], '-', color='steelblue', zorder=1)
@@ -553,30 +565,30 @@ def newTransectFig(ShoreY, ShoreZ, LagoonWL, OutletDep, SeaLevel,
                    'WaterLine':WaterLine, 'WaterFill':WaterFill,
                    'BeachSlope': BeachSlope, 'BackshoreElev':BackshoreElev, 
                    'ClosureDepth':ClosureDepth, 'BeachTopElev':BeachTopElev,
-                   'TransectId':TransectId}
+                   'TransectIx':TransectIx}
     
     # Update lines
     updateTransectFig(TransectFig, ShoreY, ShoreZ, 
-                      LagoonWL, OutletDep, SeaLevel)
+                      LagoonWL, OutletWL, SeaLevel)
     
     return TransectFig
 
 def updateTransectFig(TransectFig, ShoreY, ShoreZ, 
-                      LagoonWL, OutletDep, SeaLevel):
+                      LagoonWL, OutletWL, SeaLevel):
     """ Update an existing TransectFig with new data
     """
     
-    TransectId = TransectFig['TransectId']
+    TransectIx = TransectFig['TransectIx']
     ClosureDepth = TransectFig['ClosureDepth']
     BackshoreElev = TransectFig['BackshoreElev']
     BeachSlope = TransectFig['BeachSlope']
     BeachTopElev = TransectFig['BeachTopElev']
     
     # Crop to specified transect
-    TransY = ShoreY[TransectId,:].squeeze()
-    TransZ = ShoreZ[TransectId,:].squeeze()
-    TransLagWL = LagoonWL[TransectId]
-    TransOutletWL = OutletDep[TransectId] + TransZ[3]
+    TransY = ShoreY[TransectIx,:].squeeze()
+    TransZ = ShoreZ[TransectIx,:].squeeze()
+    TransLagWL = LagoonWL[TransectIx]
+    TransOutletWL = OutletWL[TransectIx]
     
     # Build GroundLine and WaterFill data from sea to cliff...
     

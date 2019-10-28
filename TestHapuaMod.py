@@ -83,12 +83,12 @@ plt.plot(ChanDist, ChanDep+ChanElev, 'r:')
 BeachSlope = PhysicalPars['BeachSlope']
 BackshoreElev = PhysicalPars['BackshoreElev']
 ClosureDepth = PhysicalPars['ClosureDepth']
-BeachTopElev = PhysicalPars['SpitHeight']
-TransectId = np.where(ShoreX == -300)[0][0]
+BeachTopElev = PhysicalPars['BeachTopElev']
+OutletWL = OutletDep + ShoreZ[:,1]
 
-TransectFig = visualise.newTransectFig(ShoreY, ShoreZ, LagoonWL, OutletDep, 
+TransectFig = visualise.newTransectFig(ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
                                        SeaLevel, BeachSlope, BackshoreElev, 
-                                       ClosureDepth, BeachTopElev, TransectId)
+                                       ClosureDepth, BeachTopElev, -300)
 
 #%% Runup/overtopping
 WavePeriod = WaveTs.WavePeriod[0]
@@ -115,7 +115,7 @@ out.newOutFile('test.nc', ModelName, TimePars['StartTime'],
                ShoreX, NumericalPars['Dx'],  RiverElev, 
                Origin, ShoreNormDir, PhysicalPars['RiverWidth'],
                False)
-out.writeCurrent('test.nc', TimePars['StartTime'],
+out.writeCurrent('test.nc', TimePars['StartTime'], SeaLevel[-1], RivFlow[-1],
                  ShoreY, ShoreZ, LagoonWL, LagoonVel, np.zeros(ShoreX.size), 
                  OutletDep, OutletVel, np.zeros(ShoreX.size), 
                  np.zeros(ShoreX.size-1), np.zeros(ShoreX.size), np.zeros(ShoreX.size), 

@@ -86,7 +86,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         ShoreY[OutletChanIx,2] += (BankEro[OutXS[1:-1]]/2) / ((ShoreZ[OutletChanIx,2] - ShoreZ[OutletChanIx,1]) * Dx)
         
         OutletEndWidth[0] -= BankEro[OutEndXS[0]-1] / ((ShoreZ[OutletChanIx[0],0] - OutletEndElev[0]) * Dx)
-        OutletEndWidth[1] -= BankEro[OutEndXS[1]-1] / ((PhysicalPars['SpitHeight'] - OutletEndElev[1]) * PhysicalPars['SpitWidth'])
+        OutletEndWidth[1] -= BankEro[OutEndXS[1]-1] / ((PhysicalPars['BeachTopElev'] - OutletEndElev[1]) * PhysicalPars['SpitWidth'])
         
         # Put sediment discharged from outlet onto shoreline 
         # TODO improve sediment distribution...
@@ -107,7 +107,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             ShoreY[OutletRbShoreIx,0] -= (LST[OutletRbShoreIx-1] * Dt.seconds 
                                           / (ShorefaceHeight[OutletRbShoreIx] * Dx))
             WidthReduction = ((LST[OutletRbShoreIx-1] * Dt.seconds) 
-                              / ((PhysicalPars['SpitHeight'] - OutletEndElev[1]) * PhysicalPars['SpitWidth']))
+                              / ((PhysicalPars['BeachTopElev'] - OutletEndElev[1]) * PhysicalPars['SpitWidth']))
             OutletEndWidth[1] -= WidthReduction
             OutletEndX[1] += WidthReduction/2
         else:
@@ -115,7 +115,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             ShoreY[OutletRbShoreIx-1,0] += (LST[OutletRbShoreIx-1] * Dt.seconds 
                                             / (ShorefaceHeight[OutletRbShoreIx-1] * Dx))
             WidthReduction = ((-LST[OutletRbShoreIx-1] * Dt.seconds) 
-                              / ((PhysicalPars['SpitHeight'] - OutletEndElev[1]) * PhysicalPars['SpitWidth']))
+                              / ((PhysicalPars['BeachTopElev'] - OutletEndElev[1]) * PhysicalPars['SpitWidth']))
             OutletEndWidth[1] -= WidthReduction
             OutletEndX[1] -= WidthReduction/2
         
@@ -167,8 +167,8 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             ShoreZ[ExtendMask,1] = OutletEndElev[1]
             # Barrier height of inner barrier = Barrier height of old outer barrier
             ShoreZ[ExtendMask,2] = ShoreZ[ExtendMask,0]
-            # Barrier height of outer barrier = PhysicalPars['SpitHeight']
-            ShoreZ[ExtendMask,0] = PhysicalPars['SpitHeight']
+            # Barrier height of outer barrier = PhysicalPars['BeachTopElev']
+            ShoreZ[ExtendMask,0] = PhysicalPars['BeachTopElev']
             # TODO: Modify Barrier height of outer barrier ?????
             
             # Update OutletChanIx as it has changed and its used later in this function

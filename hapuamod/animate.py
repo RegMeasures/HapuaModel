@@ -15,9 +15,9 @@ import matplotlib.pyplot as plt
 from . import visualise
 from . import out
     
-def animate(TimeIx, NcFile, ModelFig):
+def animateMap(TimeIx, NcFile, ModelFig):
     logging.info('Animating timestep no %i' % TimeIx)
-    (ShoreX, ShoreY, ShoreZ, 
+    (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
      OutletEndX, OutletEndWidth, OutletEndElev, OutletChanIx,
      WavePower, EDir_h, LST, CST, Closed, RiverElev) = out.readTimestep(NcFile, TimeIx)
     visualise.updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth, 
@@ -25,8 +25,16 @@ def animate(TimeIx, NcFile, ModelFig):
                               ShoreZ=None, WavePower=None, EDir_h=0, LST=None, CST=None)
     #return [ModelFig['ChannelLine'], ModelFig['ShoreLine']]
     
+def animateTransect(TimeIx, NcFile, TransectFig):
+    logging.info('Animating timestep no %i' % TimeIx)
+    (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
+     OutletEndX, OutletEndWidth, OutletEndElev, OutletChanIx,
+     WavePower, EDir_h, LST, CST, Closed, RiverElev) = out.readTimestep(NcFile, TimeIx)
+    visualise.updateTransectFig(TransectFig, ShoreY, ShoreZ, 
+                                LagoonWL, OutletWL, SeaLevel)
+    
 def main(ResultsFile, AnimationFile, StartTimestep=0, EndTimestep=None, 
-         ResampleInt=1, FrameRate=5, AreaOfInterest=None):
+         ResampleInt=1, FrameRate=5, AreaOfInterest=None, TransectX=None):
     """ Main function for creating an animation of hapuamod results
         
         main(ResultsFile, AnimationFile, StartTimestep, EndTimestep)
@@ -46,6 +54,8 @@ def main(ResultsFile, AnimationFile, StartTimestep=0, EndTimestep=None,
             AreaOfInterest (tuple): Area to zoom plot to. Specified in model 
                                     co-ordinates in the format 
                                     "(Xmin, Xmax, Ymin, Ymax)" (Optional)
+            TransectX (float): If specified then plot transect closest to 
+                               specified X value instead of map view (optional)
     """
     
     # open netcdf file for reading
@@ -61,25 +71,49 @@ def main(ResultsFile, AnimationFile, StartTimestep=0, EndTimestep=None,
     logging.info('Generating animation for timesteps %i to %i' % (StartTimestep, EndTimestep))
     
     # read in first timestep
-    (ShoreX, ShoreY, ShoreZ, 
+    (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
      OutletEndX, OutletEndWidth, OutletEndElev, OutletChanIx,
      WavePower, EDir_h, LST, CST, Closed, RiverElev) = out.readTimestep(NcFile, StartTimestep)
     
-    # Set up initial figure
-    RiverWidth = NcFile.RiverWidth
-    ModelFig = visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, RiverWidth,
-                                   ShoreZ=None, WavePower=None, EDir_h=0, LST=None, CST=None, 
-                                   WaveScaling=0.01, CstScaling=0.00005, LstScaling=0.0001,
-                                   QuiverWidth=0.002, AreaOfInterest=AreaOfInterest)
-    FigToAnimate = ModelFig['PlanFig']
-    
-    # Set up animation function
-    ani = animation.FuncAnimation(FigToAnimate, animate, 
-                                  frames=range(StartTimestep, EndTimestep, 
-                                               ResampleInt), 
-                                  fargs=(NcFile, ModelFig), 
-                                  interval=1000/FrameRate)
-    
+    if TransectX is None:
+        # Map view animation
+        logging.info('Animating map view')
+        
+        # Set up initial figure
+        RiverWidth = NcFile.RiverWidth
+        ModelFig = visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, RiverWidth,
+                                       ShoreZ=None, WavePower=None, EDir_h=0, LST=None, CST=None, 
+                                       WaveScaling=0.01, CstScaling=0.00005, LstScaling=0.0001,
+                                       QuiverWidth=0.002, AreaOfInterest=AreaOfInterest)
+        FigToAnimate = ModelFig['PlanFig']
+        
+        # Set up animation function
+        ani = animation.FuncAnimation(FigToAnimate, animateMap, 
+                                      frames=range(StartTimestep, EndTimestep, 
+                                                   ResampleInt), 
+                                      fargs=(NcFile, ModelFig), 
+                                      interval=1000/FrameRate)
+    else:
+        # Transect animation
+        logging.info('Animating transect closest to X = %.1f' % TransectX)
+        
+        # Set up initial figure
+        BeachSlope = NcFile.BeachSlope
+        BackshoreElev = NcFile.BackshoreElev
+        ClosureDepth = NcFile.ClosureDepth
+        BeachTopElev = NcFile.BeachTopElev
+        TransectFig = visualise.newTransectFig(ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
+                                               SeaLevel, BeachSlope, BackshoreElev, 
+                                               ClosureDepth, BeachTopElev, TransectX)
+        FigToAnimate = TransectFig['TransFig']
+        
+        # Set up the animation function
+        ani = animation.FuncAnimation(FigToAnimate, animateTransect, 
+                                      frames=range(StartTimestep, EndTimestep, 
+                                                   ResampleInt), 
+                                      fargs=(NcFile, TransectFig), 
+                                      interval=1000/FrameRate)
+        
     # Run the animation and save to a file
     ani.save(AnimationFile, fps=FrameRate)
     
@@ -120,6 +154,10 @@ if __name__ == "__main__":
                              'animation to. The area should be specified as 4 ' +
                              'parameters in model co-ordinates in the format ' +
                              '"Xmin Xmax Ymin Ymax"')
+    Parser.add_argument('-t', '--TransectX', type=float, default=None,
+                        help='If specified then plot transect closest to ' +
+                              'specified X coordinate, optional - default = ' +
+                              'plot map view (float)')
     ArgsIn = Parser.parse_args()
     
     # Convert AreaOfInterest (if specified) into a tuple 
@@ -132,4 +170,5 @@ if __name__ == "__main__":
          EndTimestep = ArgsIn.EndTimestep, 
          ResampleInt = ArgsIn.ResampleInt, 
          FrameRate = ArgsIn.FrameRate,
-         AreaOfInterest = ArgsIn.AreaOfInterest)
+         AreaOfInterest = ArgsIn.AreaOfInterest,
+         TransectX = ArgsIn.TransectX)

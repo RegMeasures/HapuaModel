@@ -90,7 +90,7 @@ OwProp_coef = 10
 # Minimum overtopping potential for overwash to initiate
 MinOpForOw = 0.0
 # Crest height and width of 'new' barrier created by longshore transport across river mouth [m]
-SpitHeight = 2
+BeachTopElev = 2
 SpitWidth = 10
 # Threshold width for setting outlet channel to closed [m]
 MinOutletWidth = 1.0

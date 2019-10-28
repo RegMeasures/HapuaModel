@@ -119,6 +119,13 @@ def loadModel(ModelConfigFile):
             OT_coef (float): Overtopping coefficient
             OT_exp (float): Overtopping exponent
             OwProp_coef (float): Overwash proportion coefficient
+            MinOpForOw (float):
+            BeachTopElev (float): Crest height of 'new' barrier created by 
+                longshore transport across river mouth. also used as the 
+                elevation of the transition from sloped beach to vertical 
+                barrier front when plotting [m]
+            SpitWidth (float): Crest width of 'new' barrier created by 
+                longshore transport across river mouth [m]
             MinOutletWidth (float): Threshold width to trigger outlet closure
             K2coef (float): Calculated from other inputs for use in calculation
                 of longshore transport rate. K2 = K / (RhoSed - RhoSea) * g * (1 - VoidRatio))
@@ -365,7 +372,7 @@ def loadModel(ModelConfigFile):
                     'OT_exp': float(Config['PhysicalParameters']['OT_exp']),
                     'OwProp_coef': float(Config['PhysicalParameters']['OwProp_coef']),
                     'MinOpForOw': float(Config['PhysicalParameters']['MinOpForOw']),
-                    'SpitHeight': float(Config['PhysicalParameters']['SpitHeight']),
+                    'BeachTopElev': float(Config['PhysicalParameters']['BeachTopElev']),
                     'SpitWidth': float(Config['PhysicalParameters']['SpitWidth']),
                     'MinOutletWidth': float(Config['PhysicalParameters']['MinOutletWidth'])}
 

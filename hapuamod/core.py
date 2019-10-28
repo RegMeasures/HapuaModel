@@ -63,9 +63,10 @@ def main(ModelConfigFile, Overwrite=False):
     #%% Create output file and write initial conditions
     out.newOutFile(OutputOpts['OutFile'], ModelName, TimePars['StartTime'], 
                    ShoreX, NumericalPars['Dx'],  RiverElev, 
-                   Origin, ShoreNormDir, PhysicalPars['RiverWidth'],
+                   Origin, ShoreNormDir, PhysicalPars,
                    Overwrite)
-    out.writeCurrent(OutputOpts['OutFile'], TimePars['StartTime'],
+    out.writeCurrent(OutputOpts['OutFile'], TimePars['StartTime'], 
+                     SeaLevel[-1], RivFlow[-1],
                      ShoreY, ShoreZ, LagoonWL, LagoonVel, np.zeros(ShoreX.size), 
                      OutletDep, OutletVel, np.zeros(ShoreX.size), 
                      np.zeros(ShoreX.size-1), np.zeros(ShoreX.size), np.zeros(ShoreX.size), 
@@ -180,7 +181,7 @@ def main(ModelConfigFile, Overwrite=False):
         
         # Save outputs
         if MorTime >= OutTime:
-            out.writeCurrent(OutputOpts['OutFile'], MorTime, 
+            out.writeCurrent(OutputOpts['OutFile'], MorTime, SeaLevel[-1], RivFlow[-1],
                              ShoreY, ShoreZ, LagoonWL, LagoonVel, LagoonBedload,
                              OutletDep, OutletVel, OutletBedload,
                              LST, CST_tot, OverwashProp,
