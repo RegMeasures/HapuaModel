@@ -204,7 +204,7 @@ def loadModel(ModelConfigFile):
                      (DatetimeOfInterest.strftime("%b %d %Y %H:%M:%S"), 
                       netCDF4.num2date(NcFile.variables['time'][TimeIx][0], NcFile.variables['time'].units).strftime("%b %d %Y %H:%M:%S")))
         
-        (ShoreX, ShoreY, ShoreZ, 
+        (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
          OutletEndX, OutletEndWidth, OutletEndElev, OutletChanIx,
          WavePower, EDir_h, LST, CST, Closed, RiverElev, 
          ModelTime) = out.readTimestep(NcFile, TimeIx)

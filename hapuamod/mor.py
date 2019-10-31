@@ -30,7 +30,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     
     # Locations where an outlet channel exists in the barrier
     # Note not all "OutletPresent" are online/connected to sea...
-    OutletPresent = np.where(~np.isnan(ShoreY[:,1]))[0]
+    OutletPresent = ~np.isnan(ShoreY[:,1])
     
     # Locations where lagoon width > 0
     LagoonPresent = ShoreY[:,3] > ShoreY[:,4]
@@ -248,33 +248,31 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     
     # Adjust ShoreY where outlet banks intersects coast or lagoon
     # Note this can include offline/disconnected bits of outlet as well as online bits
-    ShoreIntersect = ShoreY[OutletPresent,0] < ShoreY[OutletPresent,1]
+    ShoreIntersect = ~np.greater(ShoreY[:,0], ShoreY[:,1], where=~np.isnan(ShoreY[:,1]))
     if np.any(ShoreIntersect):
         logging.info('Outlet intersects shoreline at %i transects - filling outlet with sediment from shoreface' % np.sum(ShoreIntersect))
-        IntTsects = OutletPresent[ShoreIntersect]
-        ShoreY[IntTsects, 0] -= ((ShoreY[IntTsects, 1] - ShoreY[IntTsects, 2]) 
-                                 * (ShoreZ[IntTsects, 2] - ShoreZ[IntTsects, 1]) 
-                                 / (ShoreZ[IntTsects, 2] + PhysicalPars['ClosureDepth']))
+        ShoreY[ShoreIntersect, 0] -= ((ShoreY[ShoreIntersect, 1] - ShoreY[ShoreIntersect, 2]) 
+                                      * (ShoreZ[ShoreIntersect, 2] - ShoreZ[ShoreIntersect, 1]) 
+                                      / (ShoreZ[ShoreIntersect, 2] + PhysicalPars['ClosureDepth']))
         # Remove outlet channel from transect now it has been dissolved into shoreline
-        ShoreY[IntTsects, 1] = np.nan
-        ShoreY[IntTsects, 2] = np.nan
-        ShoreZ[IntTsects, 1] = np.nan
+        ShoreY[ShoreIntersect, 1] = np.nan
+        ShoreY[ShoreIntersect, 2] = np.nan
+        ShoreZ[ShoreIntersect, 1] = np.nan
         # Remove inner barrier now there's no outlet in the transect
-        ShoreZ[IntTsects, 0] = ShoreZ[IntTsects, 2]
-        ShoreZ[IntTsects, 2] = np.nan
+        ShoreZ[ShoreIntersect, 0] = ShoreZ[ShoreIntersect, 2]
+        ShoreZ[ShoreIntersect, 2] = np.nan
     
-    LagoonIntersect = ShoreY[OutletPresent,2] < ShoreY[OutletPresent,3]
+    LagoonIntersect = ~np.greater(ShoreY[:,2], ShoreY[:,3], where=~np.isnan(ShoreY[:,1]))
     if np.any(LagoonIntersect):
         logging.info('Outlet intersects lagoon at %i transects - adding channel width into lagoon' % np.sum(LagoonIntersect))
-        IntTsects = OutletPresent[LagoonIntersect]
-        ShoreZ[IntTsects, 3] = (((ShoreY[IntTsects, 1] - ShoreY[IntTsects, 2]) * ShoreZ[IntTsects, 1] 
-                                 + (ShoreY[IntTsects, 3] - ShoreY[IntTsects, 4]) * ShoreZ[IntTsects, 3]) 
-                                / (ShoreY[IntTsects, 1] - ShoreY[IntTsects, 4]))
-        ShoreY[IntTsects, 3] += (ShoreY[IntTsects, 1] - ShoreY[IntTsects, 2]) 
+        ShoreZ[LagoonIntersect, 3] = (((ShoreY[LagoonIntersect, 1] - ShoreY[LagoonIntersect, 2]) * ShoreZ[LagoonIntersect, 1] 
+                                      + (ShoreY[LagoonIntersect, 3] - ShoreY[LagoonIntersect, 4]) * ShoreZ[LagoonIntersect, 3]) 
+                                      / (ShoreY[LagoonIntersect, 1] - ShoreY[LagoonIntersect, 4]))
+        ShoreY[LagoonIntersect, 3] += (ShoreY[LagoonIntersect, 1] - ShoreY[LagoonIntersect, 2]) 
         # Remove outlet channel from transect now it has been dissolved into shoreline
-        ShoreY[IntTsects, 1] = np.nan
-        ShoreY[IntTsects, 2] = np.nan
-        ShoreZ[IntTsects, 1] = np.nan
+        ShoreY[LagoonIntersect, 1] = np.nan
+        ShoreY[LagoonIntersect, 2] = np.nan
+        ShoreZ[LagoonIntersect, 1] = np.nan
         
     #%% Breaching
     
