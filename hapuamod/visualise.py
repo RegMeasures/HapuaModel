@@ -66,7 +66,7 @@ def mapView(ShoreX, ShoreY, Origin, ShoreNormDir):
 def modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, RiverWidth,
               ShoreZ=None, WavePower=None, EDir_h=0, LST=None, CST=None, 
               WaveScaling=0.01, CstScaling=0.00005, LstScaling=0.0001,
-              QuiverWidth=0.002, AreaOfInterest=None):
+              QuiverWidth=0.002, AreaOfInterest=None, PlotTime=None):
     """ Map the current model state in model coordinates
     
         Parameters:
@@ -173,13 +173,14 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, RiverWid
     # Update plot with correct data
     updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth, 
                     OutletChanIx, ShoreZ=ShoreZ, WavePower=WavePower, 
-                    EDir_h=EDir_h, LST=LST, CST=CST)
+                    EDir_h=EDir_h, LST=LST, CST=CST, PlotTime=PlotTime)
     
     return ModelFig
 
 def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth, 
                     OutletChanIx, Closed=False, 
-                    ShoreZ=None, WavePower=None, EDir_h=0, LST=None, CST=None):
+                    ShoreZ=None, WavePower=None, EDir_h=0, LST=None, CST=None,
+                    PlotTime=None):
     
     RiverWidth = ModelFig['RiverWidth']
     
@@ -396,6 +397,9 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
                                                           scale_units='x', units='width',
                                                           color='red', zorder=10)
     
+    if not PlotTime is None:
+        ModelFig['PlanAx'].set_title(PlotTime.strftime('%d/%m/%y %H:%M'), loc='right')
+    
     # Redraw
     ModelFig['PlanFig'].canvas.draw()
     ModelFig['PlanFig'].canvas.flush_events()
@@ -526,7 +530,7 @@ def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep,
 
 def newTransectFig(ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, SeaLevel, 
                    BeachSlope, BackshoreElev, ClosureDepth, BeachTopElev,
-                   TransectX):
+                   TransectX, PlotTime=None):
     """ Create a plot of a specified transect line through the hapua
         
         TransectFig = newTransectFig(ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
@@ -574,7 +578,7 @@ def newTransectFig(ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, SeaLevel,
     return TransectFig
 
 def updateTransectFig(TransectFig, ShoreY, ShoreZ, 
-                      LagoonWL, OutletWL, SeaLevel):
+                      LagoonWL, OutletWL, SeaLevel, PlotTime=None):
     """ Update an existing TransectFig with new data
     """
     
@@ -641,6 +645,13 @@ def updateTransectFig(TransectFig, ShoreY, ShoreZ,
     TransectFig['GroundFill'].set_xy(np.vstack([GroundFillX, GroundFillY]).T)
     TransectFig['WaterLine'].set_data(WaterLineX, WaterLineY)
     TransectFig['WaterFill'].set_xy(np.vstack([WaterFillX, WaterFillY]).T)
+    
+    if not PlotTime is None:
+        TransectFig['TransAx'].set_title(PlotTime.strftime('%d/%m/%y %H:%M'), loc='right')
+    
+    # Redraw
+    TransectFig['TransFig'].canvas.draw()
+    TransectFig['TransFig'].canvas.flush_events()
 
 def bdyCndFig(OutputTs):
     Fig = plt.figure(figsize=(9,3))

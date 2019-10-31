@@ -19,19 +19,23 @@ def animateMap(TimeIx, NcFile, ModelFig):
     logging.info('Animating timestep no %i' % TimeIx)
     (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
      OutletEndX, OutletEndWidth, OutletEndElev, OutletChanIx,
-     WavePower, EDir_h, LST, CST, Closed, RiverElev) = out.readTimestep(NcFile, TimeIx)
+     WavePower, EDir_h, LST, CST, Closed, RiverElev,
+     ModelTime) = out.readTimestep(NcFile, TimeIx)
     visualise.updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth, 
                               OutletChanIx, Closed=Closed, 
-                              ShoreZ=None, WavePower=None, EDir_h=0, LST=None, CST=None)
+                              ShoreZ=None, WavePower=None, EDir_h=0, LST=None, 
+                              CST=None, PlotTime=ModelTime)
     #return [ModelFig['ChannelLine'], ModelFig['ShoreLine']]
     
 def animateTransect(TimeIx, NcFile, TransectFig):
     logging.info('Animating timestep no %i' % TimeIx)
     (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
      OutletEndX, OutletEndWidth, OutletEndElev, OutletChanIx,
-     WavePower, EDir_h, LST, CST, Closed, RiverElev) = out.readTimestep(NcFile, TimeIx)
+     WavePower, EDir_h, LST, CST, Closed, RiverElev,
+     ModelTime) = out.readTimestep(NcFile, TimeIx)
     visualise.updateTransectFig(TransectFig, ShoreY, ShoreZ, 
-                                LagoonWL, OutletWL, SeaLevel)
+                                LagoonWL, OutletWL, SeaLevel,
+                                PlotTime=ModelTime)
     
 def main(ResultsFile, AnimationFile, StartTimestep=0, EndTimestep=None, 
          ResampleInt=1, FrameRate=5, AreaOfInterest=None, TransectX=None):
@@ -73,7 +77,8 @@ def main(ResultsFile, AnimationFile, StartTimestep=0, EndTimestep=None,
     # read in first timestep
     (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
      OutletEndX, OutletEndWidth, OutletEndElev, OutletChanIx,
-     WavePower, EDir_h, LST, CST, Closed, RiverElev) = out.readTimestep(NcFile, StartTimestep)
+     WavePower, EDir_h, LST, CST, Closed, RiverElev,
+     ModelTime) = out.readTimestep(NcFile, StartTimestep)
     
     if TransectX is None:
         # Map view animation

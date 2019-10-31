@@ -206,7 +206,8 @@ def loadModel(ModelConfigFile):
         
         (ShoreX, ShoreY, ShoreZ, 
          OutletEndX, OutletEndWidth, OutletEndElev, OutletChanIx,
-         WavePower, EDir_h, LST, CST, Closed, RiverElev) = out.readTimestep(NcFile, TimeIx)
+         WavePower, EDir_h, LST, CST, Closed, RiverElev, 
+         ModelTime) = out.readTimestep(NcFile, TimeIx)
         
         Origin = np.array([NcFile.ModelOriginX, NcFile.ModelOriginY])
         ShoreNormDir = np.deg2rad(NcFile.ModelOrientation)

@@ -358,7 +358,8 @@ def readTimestep(NcFile, TimeIx):
         
         (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
          OutletEndX, OutletEndWidth, OutletEndElev, OutletChanIx,
-         WavePower, EDir_h, LST, CST, Closed, RiverElev) = readTimestep(NcFile, TimeIx)
+         WavePower, EDir_h, LST, CST, Closed, RiverElev, 
+         ModelTime) = readTimestep(NcFile, TimeIx)
     """
     
     NTransects = NcFile.dimensions['transect_x'].size
@@ -366,6 +367,9 @@ def readTimestep(NcFile, TimeIx):
     SeaLevel = NcFile.variables['sea_level'][TimeIx]
     
     ShoreX = NcFile.variables['transect_x'][:]
+    
+    ModelTime = netCDF4.num2date(NcFile.variables['time'][TimeIx],
+                                 NcFile.variables['time'].units)
     
     # ShoreY
     ShoreY = np.empty((NTransects, 5))
@@ -412,7 +416,7 @@ def readTimestep(NcFile, TimeIx):
     
     return(SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
            OutletEndX, OutletEndWidth, OutletEndElev, OutletChanIx,
-           WavePower, EDir_h, LST, CST, Closed, RiverElev)
+           WavePower, EDir_h, LST, CST, Closed, RiverElev, ModelTime)
     
 def closestTimeIx(NcFile, DatetimeOfInterest):
     """ Find result file timestep index closest to desired datetime value
