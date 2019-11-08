@@ -135,7 +135,8 @@ def main(ResultsFile, AnimationFile, StartTimestep=0, EndTimestep=None,
         BeachTopElev = NcFile.BeachTopElev
         TransectFig = visualise.newTransectFig(ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
                                                SeaLevel, BeachSlope, BackshoreElev, 
-                                               ClosureDepth, BeachTopElev, TransectX)
+                                               ClosureDepth, BeachTopElev, TransectX, 
+                                               AreaOfInterest=AreaOfInterest)
         FigToAnimate = TransectFig['TransFig']
         
         # Set up the animation function

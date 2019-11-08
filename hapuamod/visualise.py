@@ -547,7 +547,7 @@ def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep,
 
 def newTransectFig(ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, SeaLevel, 
                    BeachSlope, BackshoreElev, ClosureDepth, BeachTopElev,
-                   TransectX, PlotTime=None):
+                   TransectX, PlotTime=None, AreaOfInterest=None):
     """ Create a plot of a specified transect line through the hapua
         
         TransectFig = newTransectFig(ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
@@ -571,6 +571,12 @@ def newTransectFig(ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, SeaLevel,
     else:
         LeftRight = 'Transect through hapua %.0fm to right of river' % abs(ShoreX[TransectIx])
     TransAx.set_title(LeftRight, loc='left')
+    
+    # Set the field of view
+    if not AreaOfInterest is None:
+        assert len(AreaOfInterest) == 4, 'AreaOfInterest must be given as four parameters (Xmin, Xmax, Ymin, Ymax)'
+        TransAx.set_xlim(AreaOfInterest[0], AreaOfInterest[1])
+        TransAx.set_ylim(AreaOfInterest[2], AreaOfInterest[3])
     
     # Add some dummy lines
     GroundLine, = TransAx.plot([ShoreY[TransectIx,4], ShoreY[TransectIx,0] + 
