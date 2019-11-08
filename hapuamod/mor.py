@@ -29,7 +29,11 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     ShorefaceHeight = PhysicalPars['ClosureDepth'] + ShoreZ[:,0]
     
     # Locations where an outlet channel exists in the barrier
-    # Note not all "OutletPresent" are online/connected to sea...
+    # Note: 
+    #   - Not all "OutletPresent" are online/connected to sea...
+    #   - Some locations where "OutletPresent" have a zero widht outlet (i.e. 
+    #     just a discontinuity between front and back barrier height where
+    #     there used to  be an outlet channel).
     OutletPresent = ~np.isnan(ShoreY[:,1])
     
     # Locations where lagoon width > 0
@@ -136,6 +140,46 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     
     # Erosion of sediment off the shoreface (don't move ends)
     ShoreY[1:-1,0] -= CST_tot[1:-1] * Dt.seconds / ShorefaceHeight[1:-1]
+    
+    #%% Check if outlet channel (online or offline) has closed due to overwash and adjust to prevent negative width channel
+    if np.any(ShoreY[OutletPresent,1] < ShoreY[OutletPresent,2]):
+        logging.info('Overwashing occuring into closed channel in barrier - redistributing overwash onto barrier top')
+        # Find locations where the outlet channel width is negative after applying overwash
+        NegativeOutletWidth = np.zeros(ShoreX.size, dtype=bool)
+        NegativeOutletWidth[OutletPresent] = ShoreY[OutletPresent,1] < ShoreY[OutletPresent,2]
+        
+        # Quantify how much we need to move to fix things while retaining mass balance
+        WidthToMove = ShoreY[NegativeOutletWidth,2] - ShoreY[NegativeOutletWidth,1]
+        VolToMove = WidthToMove * BackBarHeight[NegativeOutletWidth]
+        
+        # Where to move it depends on whether the barrier is higher in front or behind the closed outlet channel
+        VolUntilLevel = ShoreZ[NegativeOutletWidth,2] - ShoreZ[NegativeOutletWidth,0]
+        PutSedAtFront = VolUntilLevel > 0
+        PutSedAtBack = VolUntilLevel < 0
+        VolUntilLevel[PutSedAtFront] *= CrestWidth[NegativeOutletWidth][PutSedAtFront]
+        VolUntilLevel[PutSedAtBack] *= -(ShoreY[NegativeOutletWidth,2][PutSedAtBack] - 
+                                         ShoreY[NegativeOutletWidth,3][PutSedAtBack])
+        assert np.all(VolUntilLevel > 0), "Vol until level should not be negative"
+        LeveledSections = VolToMove > VolUntilLevel
+        
+        # Update the barrier morphology
+        ShoreY[NegativeOutletWidth,1] += WidthToMove
+        ShoreZ[NegativeOutletWidth,0][PutSedAtFront] += VolToMove[PutSedAtFront] / CrestWidth[NegativeOutletWidth][PutSedAtFront]
+        ShoreZ[NegativeOutletWidth,2][PutSedAtBack] += VolToMove[PutSedAtBack] / (ShoreY[NegativeOutletWidth,2][PutSedAtBack] - 
+                                                                                  ShoreY[NegativeOutletWidth,3][PutSedAtBack])
+        if np.any(LeveledSections):
+            for XcoordOfSec in ShoreX[NegativeOutletWidth][LeveledSections]:
+                logging.info('Overwash into closed channel has leveled barrier at X = %f. Removing channel from model.' % XcoordOfSec)
+            ShoreY[NegativeOutletWidth,1][LeveledSections] = np.nan
+            ShoreY[NegativeOutletWidth,2][LeveledSections] = np.nan
+            ShoreZ[NegativeOutletWidth,0][LeveledSections] = (np.maximum(ShoreZ[NegativeOutletWidth,0][LeveledSections],
+                                                                         ShoreZ[NegativeOutletWidth,2][LeveledSections]) + 
+                                                              (VolToMove[LeveledSections] - VolUntilLevel[LeveledSections]) /
+                                                              (ShoreY[NegativeOutletWidth,0][LeveledSections] - 
+                                                               ShoreY[NegativeOutletWidth,3][LeveledSections]))
+            ShoreZ[NegativeOutletWidth,1][LeveledSections] = np.nan
+            ShoreZ[NegativeOutletWidth,2][LeveledSections] = np.nan
+    
     
     #%% Check if d/s end of outlet channel has migrated across a transect line and adjust as necessary...
     if not Closed:

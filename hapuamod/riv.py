@@ -323,6 +323,7 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
         OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] <= ShoreX,
                                                          ShoreX <= OutletEndX[0]))[0])
     OutletWidth = ShoreY[OutletChanIx,1] - ShoreY[OutletChanIx,2]
+    OutletWidth[np.isnan(OutletWidth)] = 0.
     
     # Check if closure has occured.
     Closed = np.any(OutletWidth<=PhysicalPars['MinOutletWidth']) | np.any(OutletEndWidth<=PhysicalPars['MinOutletWidth'])

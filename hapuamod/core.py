@@ -41,7 +41,7 @@ def main(ModelConfigFile, Overwrite=False):
                             np.zeros(RiverElev.size), np.zeros(RiverElev.size),
                             np.zeros(ShoreX.size), np.zeros(ShoreX.size), 
                             np.zeros(ShoreX.size), np.zeros(ShoreX.size),
-                            np.zeros(2), np.zeros(2), NumericalPars['Dx'],
+                            np.zeros(3), np.zeros(3), NumericalPars['Dx'],
                             PhysicalPars)
     
     (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
