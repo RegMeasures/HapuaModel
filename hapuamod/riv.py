@@ -307,6 +307,12 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
                 end?
     """
     
+    # Handle the postprocessing situation when we don't have (or need) a dummy XS in the sea
+    if OutletEndDep.size == 2:
+        OutletEndDep = np.append(OutletEndDep, np.nan)
+    if OutletEndVel.size == 2:
+        OutletEndVel = np.append(OutletEndVel, np.nan)
+    
     # Find location and orientation of outlet channel
     if OutletEndX[0] < OutletEndX[1]:
         # Outlet angles from L to R
@@ -395,12 +401,12 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
                                   LagoonWL[OnlineLagoon]-ShoreZ[OnlineLagoon,3],
                                   [OutletEndDep[0]], 
                                   OutletDep[OutletChanIx], 
-                                  OutletEndDep[-2:]])
+                                  OutletEndDep[1:]])
         ChanVel = np.concatenate([RivVel,
                                   LagoonVel[OnlineLagoon],
                                   [OutletEndVel[0]], 
                                   OutletVel[OutletChanIx], 
-                                  OutletEndVel[-2:]])
+                                  OutletEndVel[1:]])
     # If depth is missing then interpolate it
     DepNan = np.isnan(ChanDep)
     if np.any(DepNan):

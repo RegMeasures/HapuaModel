@@ -537,8 +537,9 @@ def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep,
         LongSecFig['RivFig'].suptitle(PlotTime.strftime('%d/%m/%y %H:%M'))
     
     # Update flow axis scaling
-    LongSecFig['FlowAx'].relim()
-    LongSecFig['FlowAx'].autoscale_view(tight = False)
+    Qmin = min(0.,np.nanmin(Q))
+    Qmax = np.nanmax(Q)
+    LongSecFig['FlowAx'].set_ylim(Qmin, Qmax + 0.1*(Qmax-Qmin))
     
     # Redraw
     LongSecFig['RivFig'].canvas.draw()
