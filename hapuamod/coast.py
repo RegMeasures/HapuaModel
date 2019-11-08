@@ -2,6 +2,7 @@
 
 # import standard packages
 import numpy as np
+import logging
 
 def longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, Wlen_h, EDir_h, PhysicalPars):
     """ Calculates longshore transport rate for each shore segment
@@ -109,19 +110,24 @@ def overtopping(Runup, SeaLevel, ShoreY, ShoreZ, PhysicalPars):
             OverwashProp = proportion of CST_tot overwashing at each transect
         
     """
+    
+    
     # Overtopping potential
     OP = np.maximum(Runup + SeaLevel - ShoreZ[:,0], 0.0)
     
     # Total sed flux
     CST_tot = PhysicalPars['OT_coef'] * OP**PhysicalPars['OT_exp']
     
-    # Barrier width
+    # Mask of where there is outlet channel present within the barrier (channel not necessarily online)
     OutletPresent = ~np.isnan(ShoreY[:,1])
+    
+    # Barrier width
     CrestWidth = np.maximum(ShoreY[:,0] - ShoreY[:,3], 0.001)
     CrestWidth[OutletPresent] = ShoreY[OutletPresent,0] - ShoreY[OutletPresent,1]
     
-    # Split sed flux between crest and backshore (except where no lagoon)
+    # Split sed flux between crest and backshore (except where no lagoon/outlet)
     NoLagoon = ShoreY[:,3] <= ShoreY[:,4]
+    NoLagoon[OutletPresent] = False
     OverwashProp = np.maximum(np.minimum(PhysicalPars['OwProp_coef'] * (OP-PhysicalPars['MinOpForOw']) / CrestWidth, 1.),0.)
     OverwashProp[NoLagoon] = 0.0
     
