@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-""" 
+""" Functions to generate animations from HapuaMod netCDF output file
 """
 
 # Import standard packages
@@ -14,13 +14,18 @@ import matplotlib.pyplot as plt
 # import local modules
 from . import visualise
 from . import out
+from . import riv
     
 def animateMap(TimeIx, NcFile, ModelFig):
+    """ Animation timestepping function for generating plan view animation
+    """
     logging.info('Animating timestep no %i' % TimeIx)
-    (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
-     OutletEndX, OutletEndWidth, OutletEndElev, OutletChanIx,
-     WavePower, EDir_h, LST, CST, Closed, RiverElev,
-     ModelTime) = out.readTimestep(NcFile, TimeIx)
+    
+    (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
+     OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
+     OutletEndWL, OutletChanIx, WavePower, EDir_h, LST, CST, Closed, 
+     RiverElev, RiverWL, RiverVel, ModelTime) = out.readTimestep(NcFile, TimeIx)
+    
     visualise.updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth, 
                               OutletChanIx, Closed=Closed, 
                               ShoreZ=None, WavePower=None, EDir_h=0, LST=None, 
@@ -28,17 +33,49 @@ def animateMap(TimeIx, NcFile, ModelFig):
     #return [ModelFig['ChannelLine'], ModelFig['ShoreLine']]
     
 def animateTransect(TimeIx, NcFile, TransectFig):
+    """ Animation timestepping function for transect view animation
+    """
     logging.info('Animating timestep no %i' % TimeIx)
-    (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
-     OutletEndX, OutletEndWidth, OutletEndElev, OutletChanIx,
-     WavePower, EDir_h, LST, CST, Closed, RiverElev,
-     ModelTime) = out.readTimestep(NcFile, TimeIx)
+    
+    (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
+     OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
+     OutletEndWL, OutletChanIx, WavePower, EDir_h, LST, CST, Closed, 
+     RiverElev, RiverWL, RiverVel, ModelTime) = out.readTimestep(NcFile, TimeIx)
+    
     visualise.updateTransectFig(TransectFig, ShoreY, ShoreZ, 
                                 LagoonWL, OutletWL, SeaLevel,
                                 PlotTime=ModelTime)
+
+def animateLongSec(TimeIx, NcFile, LongSecFig, PhysicalPars):
+    """ Animation timestepping function for generating longsection animation
+    """
+    logging.info('Animating timestep no %i' % TimeIx)
+    
+    (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
+     OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
+     OutletEndWL, OutletChanIx, WavePower, EDir_h, LST, CST, Closed, 
+     RiverElev, RiverWL, RiverVel, ModelTime) = out.readTimestep(NcFile, TimeIx)
+    
+    Dx = ShoreX[1] - ShoreX[0]
+    OutletDep = OutletWL - ShoreZ[:,1]
+    OutletEndDep = OutletEndWL - OutletEndElev
+    RiverDep = RiverWL - RiverElev
+    
+    (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
+     OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
+        riv.assembleChannel(ShoreX, ShoreY, ShoreZ, 
+                            OutletEndX, OutletEndWidth, OutletEndElev, 
+                            RiverElev, RiverDep, RiverVel, 
+                            LagoonWL, LagoonVel, OutletDep, OutletVel, 
+                            OutletEndDep, OutletEndVel, 
+                            Dx, PhysicalPars)
+            
+    visualise.updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, 
+                                ChanDep, ChanVel, PlotTime=ModelTime)
     
 def main(ResultsFile, AnimationFile, StartTimestep=0, EndTimestep=None, 
-         ResampleInt=1, FrameRate=5, AreaOfInterest=None, TransectX=None):
+         ResampleInt=1, FrameRate=5, AreaOfInterest=None, TransectX=None,
+         Longsection=False):
     """ Main function for creating an animation of hapuamod results
         
         main(ResultsFile, AnimationFile, StartTimestep, EndTimestep)
@@ -60,7 +97,14 @@ def main(ResultsFile, AnimationFile, StartTimestep=0, EndTimestep=None,
                                     "(Xmin, Xmax, Ymin, Ymax)" (Optional)
             TransectX (float): If specified then plot transect closest to 
                                specified X value instead of map view (optional)
+            Longsection (bool): Flag to trigger plotting of long section rather
+                                than plan view (Optional, default=False)
     """
+    
+    # Some input validation
+    if Longsection and not(TransectX is None):
+        logging.warning('Both Longsection and TransectX have been specified. ' +
+                        'Only Transect animation will be produced.')
     
     # open netcdf file for reading
     logging.info('Reading data from %s' % ResultsFile)
@@ -75,30 +119,12 @@ def main(ResultsFile, AnimationFile, StartTimestep=0, EndTimestep=None,
     logging.info('Generating animation for timesteps %i to %i' % (StartTimestep, EndTimestep))
     
     # read in first timestep
-    (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
-     OutletEndX, OutletEndWidth, OutletEndElev, OutletChanIx,
-     WavePower, EDir_h, LST, CST, Closed, RiverElev,
-     ModelTime) = out.readTimestep(NcFile, StartTimestep)
+    (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
+     OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
+     OutletEndWL, OutletChanIx, WavePower, EDir_h, LST, CST, Closed, 
+     RiverElev, RiverWL, RiverVel, ModelTime) = out.readTimestep(NcFile, StartTimestep)
     
-    if TransectX is None:
-        # Map view animation
-        logging.info('Animating map view')
-        
-        # Set up initial figure
-        RiverWidth = NcFile.RiverWidth
-        ModelFig = visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, RiverWidth,
-                                       ShoreZ=None, WavePower=None, EDir_h=0, LST=None, CST=None, 
-                                       WaveScaling=0.01, CstScaling=0.00005, LstScaling=0.0001,
-                                       QuiverWidth=0.002, AreaOfInterest=AreaOfInterest)
-        FigToAnimate = ModelFig['PlanFig']
-        
-        # Set up animation function
-        ani = animation.FuncAnimation(FigToAnimate, animateMap, 
-                                      frames=range(StartTimestep, EndTimestep, 
-                                                   ResampleInt), 
-                                      fargs=(NcFile, ModelFig), 
-                                      interval=1000/FrameRate)
-    else:
+    if not(TransectX is None):
         # Transect animation
         logging.info('Animating transect closest to X = %.1f' % TransectX)
         
@@ -117,6 +143,54 @@ def main(ResultsFile, AnimationFile, StartTimestep=0, EndTimestep=None,
                                       frames=range(StartTimestep, EndTimestep, 
                                                    ResampleInt), 
                                       fargs=(NcFile, TransectFig), 
+                                      interval=1000/FrameRate)
+    elif Longsection:
+        # Longsection animation
+        logging.info('Animating longsection view')
+        
+        # Set up initial figure
+        OutletDep = OutletWL - ShoreZ[:,1]
+        OutletEndDep = OutletEndWL - OutletEndElev
+        RiverDep = RiverWL - RiverElev
+        Dx = ShoreX[1] - ShoreX[0]
+        PhysicalPars = {'RiverWidth': NcFile.RiverWidth,
+                        'MinOutletWidth': NcFile.MinOutletWidth,
+                        'MaxOutletElev': NcFile.MaxOutletElev} 
+        (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
+         OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
+            riv.assembleChannel(ShoreX, ShoreY, ShoreZ, 
+                                OutletEndX, OutletEndWidth, OutletEndElev, 
+                                RiverElev, RiverDep, RiverVel, 
+                                LagoonWL, LagoonVel, OutletDep, OutletVel, 
+                                OutletEndDep, OutletEndVel, Dx, PhysicalPars)
+        LongSecFig = visualise.longSection(ChanDx, ChanElev, ChanWidth, 
+                                           ChanDep, ChanVel, PlotTime=ModelTime,
+                                           AreaOfInterest=AreaOfInterest)
+        FigToAnimate = LongSecFig['RivFig']
+        
+        # Set up animation function
+        ani = animation.FuncAnimation(FigToAnimate, animateLongSec, 
+                                      frames=range(StartTimestep, EndTimestep, 
+                                                   ResampleInt), 
+                                      fargs=(NcFile, LongSecFig, PhysicalPars), 
+                                      interval=1000/FrameRate)  
+    else:
+        # Map view animation
+        logging.info('Animating map view')
+        
+        # Set up initial figure
+        RiverWidth = NcFile.RiverWidth
+        ModelFig = visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, RiverWidth,
+                                       ShoreZ=None, WavePower=None, EDir_h=0, LST=None, CST=None, 
+                                       WaveScaling=0.01, CstScaling=0.00005, LstScaling=0.0001,
+                                       QuiverWidth=0.002, AreaOfInterest=AreaOfInterest)
+        FigToAnimate = ModelFig['PlanFig']
+        
+        # Set up animation function
+        ani = animation.FuncAnimation(FigToAnimate, animateMap, 
+                                      frames=range(StartTimestep, EndTimestep, 
+                                                   ResampleInt), 
+                                      fargs=(NcFile, ModelFig), 
                                       interval=1000/FrameRate)
         
     # Run the animation and save to a file
@@ -163,6 +237,9 @@ if __name__ == "__main__":
                         help='If specified then plot transect closest to ' +
                               'specified X coordinate, optional - default = ' +
                               'plot map view (float)')
+    Parser.add_argument('-l', '--Longsection', action='store_true',
+                        help='If specified this flag toggles animation of a ' +
+                             'long section rather than map view')
     ArgsIn = Parser.parse_args()
     
     # Convert AreaOfInterest (if specified) into a tuple 
@@ -176,4 +253,5 @@ if __name__ == "__main__":
          ResampleInt = ArgsIn.ResampleInt, 
          FrameRate = ArgsIn.FrameRate,
          AreaOfInterest = ArgsIn.AreaOfInterest,
-         TransectX = ArgsIn.TransectX)
+         TransectX = ArgsIn.TransectX,
+         Longsection = ArgsIn.Longsection)

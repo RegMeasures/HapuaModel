@@ -404,7 +404,8 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
     ModelFig['PlanFig'].canvas.draw()
     ModelFig['PlanFig'].canvas.flush_events()
     
-def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None):
+def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None,
+                PlotTime=None, AreaOfInterest=None):
     """ Create a long section of the river to the lagoon outlet
     
     LongSecFig = longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, 
@@ -445,6 +446,8 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None):
     FrAx = VelAx.twinx()
     if not Bedload is None:
         QsAx = RivFig.add_subplot(4,1,4, sharex=ElevAx)
+    else:
+        QsAx = None
     
     # Plot the river bed level, water surface and energy line
     BedLine, = ElevAx.plot(Dist, ChanElev, 'k-')
@@ -452,6 +455,11 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None):
     EnergyLine, = ElevAx.plot(D2, Energy, 'b:')
     ElevAx.set_ylabel('Elevation [m]')
     ElevAx.grid(axis='x', which='both', linestyle=':')
+    
+    if not AreaOfInterest is None:
+        assert len(AreaOfInterest) == 4, 'AreaOfInterest must be given as four parameters (Xmin, Xmax, Ymin, Ymax)'
+        ElevAx.set_xlim(AreaOfInterest[0], AreaOfInterest[1])
+        ElevAx.set_ylim(AreaOfInterest[2], AreaOfInterest[3])
     
     # Plot the river width and flow
     WidthLine, = WidthAx.plot(Dist, ChanWidth, 'k-')
@@ -482,21 +490,25 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None):
         QsAx.set_xlabel('Distance downstream [m]')
         QsAx.set_ylim([0,50])
         QsAx.grid(axis='x', which='both', linestyle=':')
+    else:
+        QsLine=None
+    
+    # Add timestamp
+    if not PlotTime is None:
+        RivFig.suptitle(PlotTime.strftime('%d/%m/%y %H:%M'))
     
     # Compile outputs
-    if Bedload is None:
-        LongSecFig = (RivFig, ElevAx, WidthAx, FlowAx, VelAx, FrAx, 
-                      BedLine, WaterLine, EnergyLine, WidthLine, 
-                      FlowLine, VelLine, FrLine)
-    else:
-        LongSecFig = (RivFig, ElevAx, WidthAx, FlowAx, VelAx, FrAx, 
-                      BedLine, WaterLine, EnergyLine, WidthLine, 
-                      FlowLine, VelLine, FrLine, QsLine)
+    LongSecFig = {'RivFig':RivFig, 'ElevAx':ElevAx, 'WidthAx':WidthAx, 
+                  'FlowAx':FlowAx, 'VelAx':VelAx, 'FrAx':FrAx, 'QsAx':QsAx,
+                  'BedLine':BedLine, 'WaterLine':WaterLine, 
+                  'EnergyLine':EnergyLine, 'WidthLine':WidthLine, 
+                  'FlowLine':FlowLine, 'VelLine':VelLine, 'FrLine':FrLine,
+                  'QsLine':QsLine}
     
     return(LongSecFig)
 
 def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep, 
-                      ChanVel, Bedload=None):
+                      ChanVel, Bedload=None, PlotTime=None):
     
     # Calculate required variables to plot
     g = 9.81
@@ -510,23 +522,27 @@ def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep,
     Q = ChanVel * ChanDep * ChanWidth
     
     # Update the lines
-    LongSecFig[6].set_data(Dist, ChanElev)
-    LongSecFig[7].set_data(Dist, WL)
-    LongSecFig[8].set_data(D2, Energy)
-    LongSecFig[9].set_data(Dist, ChanWidth)
-    LongSecFig[10].set_data(Dist, Q)
-    LongSecFig[11].set_data(Dist, ChanVel)
-    LongSecFig[12].set_data(Dist, Fr)
+    LongSecFig['BedLine'].set_data(Dist, ChanElev)
+    LongSecFig['WaterLine'].set_data(Dist, WL)
+    LongSecFig['EnergyLine'].set_data(D2, Energy)
+    LongSecFig['WidthLine'].set_data(Dist, ChanWidth)
+    LongSecFig['FlowLine'].set_data(Dist, Q)
+    LongSecFig['VelLine'].set_data(Dist, ChanVel)
+    LongSecFig['FrLine'].set_data(Dist, Fr)
     if not Bedload is None:
-        LongSecFig[13].set_data(D2, Bedload*3600)
+        LongSecFig['QsLine'].set_data(D2, Bedload*3600)
+    
+    # Add timestamp
+    if not PlotTime is None:
+        LongSecFig['RivFig'].suptitle(PlotTime.strftime('%d/%m/%y %H:%M'))
     
     # Update flow axis scaling
-    LongSecFig[3].relim()
-    LongSecFig[3].autoscale_view(tight = False)
+    LongSecFig['FlowAx'].relim()
+    LongSecFig['FlowAx'].autoscale_view(tight = False)
     
     # Redraw
-    LongSecFig[0].canvas.draw()
-    LongSecFig[0].canvas.flush_events()
+    LongSecFig['RivFig'].canvas.draw()
+    LongSecFig['RivFig'].canvas.flush_events()
 
 def newTransectFig(ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, SeaLevel, 
                    BeachSlope, BackshoreElev, ClosureDepth, BeachTopElev,

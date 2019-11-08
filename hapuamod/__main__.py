@@ -19,7 +19,7 @@ ArgsIn = Parser.parse_args()
 
 #%% Set up logging
 RootLogger = logging.getLogger()
-RootLogger.setLevel(logging.INFO)
+RootLogger.setLevel(logging.DEBUG)
 
 LogFile = os.path.splitext(ArgsIn.ModelConfigFile)[0] + '_log.txt'
 

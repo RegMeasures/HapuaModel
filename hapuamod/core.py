@@ -37,7 +37,7 @@ def main(ModelConfigFile, Overwrite=False):
      OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
         riv.assembleChannel(ShoreX, ShoreY, ShoreZ,
                             OutletEndX, OutletEndWidth, OutletEndElev, 
-                            RiverElev, PhysicalPars['RiverWidth'], 
+                            RiverElev, 
                             np.zeros(RiverElev.size), np.zeros(RiverElev.size),
                             np.zeros(ShoreX.size), np.zeros(ShoreX.size), 
                             np.zeros(ShoreX.size), np.zeros(ShoreX.size),
@@ -74,8 +74,8 @@ def main(ModelConfigFile, Overwrite=False):
     #%% Prepare plotting
     LivePlot = OutputOpts['PlotInt'] > pd.Timedelta(0)
     if LivePlot:
-        LsLines = visualise.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, 
-                                        np.zeros(ChanElev.size-1))
+        LongSecFig = visualise.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, 
+                                           np.zeros(ChanElev.size-1))
         BdyFig = visualise.bdyCndFig(OutputTs)
         ModelFig = visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth,
                                        OutletChanIx, PhysicalPars['RiverWidth'],
@@ -96,7 +96,7 @@ def main(ModelConfigFile, Overwrite=False):
          OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
             riv.assembleChannel(ShoreX, ShoreY, ShoreZ, 
                                 OutletEndX, OutletEndWidth, OutletEndElev, 
-                                RiverElev, PhysicalPars['RiverWidth'], 
+                                RiverElev, 
                                 ChanDep[ChanFlag==0], ChanVel[ChanFlag==0], 
                                 LagoonWL, LagoonVel, OutletDep, OutletVel,
                                 OutletEndDep, OutletEndVel, 
@@ -195,7 +195,7 @@ def main(ModelConfigFile, Overwrite=False):
         # plotting
         if LivePlot:
             if MorTime >= PlotTime:
-                visualise.updateLongSection(LsLines, ChanDx, ChanElev, 
+                visualise.updateLongSection(LongSecFig, ChanElev, 
                                             ChanWidth, ChanDep, ChanVel, 
                                             Bedload)
                 visualise.updateBdyCndFig(BdyFig, OutputTs)

@@ -204,10 +204,10 @@ def loadModel(ModelConfigFile):
                      (DatetimeOfInterest.strftime("%b %d %Y %H:%M:%S"), 
                       netCDF4.num2date(NcFile.variables['time'][TimeIx][0], NcFile.variables['time'].units).strftime("%b %d %Y %H:%M:%S")))
         
-        (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
-         OutletEndX, OutletEndWidth, OutletEndElev, OutletChanIx,
-         WavePower, EDir_h, LST, CST, Closed, RiverElev, 
-         ModelTime) = out.readTimestep(NcFile, TimeIx)
+        (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
+         OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
+         OutletEndWL, OutletChanIx, WavePower, EDir_h, LST, CST, Closed, 
+         RiverElev, RiverWL, RiverVel, ModelTime) = out.readTimestep(NcFile, TimeIx)
         
         Origin = np.array([NcFile.ModelOriginX, NcFile.ModelOriginY])
         ShoreNormDir = np.deg2rad(NcFile.ModelOrientation)

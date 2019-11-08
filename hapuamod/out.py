@@ -65,11 +65,32 @@ def newOutFile(FileName, ModelName, StartTime,
     NcFile.ModelOriginX = Origin[0]
     NcFile.ModelOriginY = Origin[1]
     NcFile.ModelOrientation = np.rad2deg(ShoreNormDir)
-    NcFile.RiverWidth = PhysicalPars['RiverWidth']
-    NcFile.BeachSlope = PhysicalPars['BeachSlope']
-    NcFile.BackshoreElev = PhysicalPars['BackshoreElev']
+    
+    NcFile.Kcoef = PhysicalPars['Kcoef']
+    NcFile.RhoSed = PhysicalPars['RhoSed']
+    NcFile.RhoSea = PhysicalPars['RhoSea']
+    NcFile.VoidRatio = PhysicalPars['VoidRatio']
+    NcFile.Gravity = PhysicalPars['Gravity']
+    NcFile.GammaRatio = PhysicalPars['GammaRatio']
+    NcFile.WaveDataDepth = PhysicalPars['WaveDataDepth']
     NcFile.ClosureDepth = PhysicalPars['ClosureDepth']
+    NcFile.BeachSlope = PhysicalPars['BeachSlope']
+    NcFile.RiverSlope = PhysicalPars['RiverSlope']
+    NcFile.GrainSize = PhysicalPars['GrainSize']
+    NcFile.CritShieldsStress = PhysicalPars['CritShieldsStress']
+    NcFile.UpstreamLength = PhysicalPars['UpstreamLength']
+    NcFile.RiverWidth = PhysicalPars['RiverWidth']
+    NcFile.RoughnessManning = PhysicalPars['Roughness']
+    NcFile.WidthDepthRatio = PhysicalPars['WidthRatio']
+    NcFile.BackshoreElev = PhysicalPars['BackshoreElev']
+    NcFile.MaxOutletElev = PhysicalPars['MaxOutletElev']
+    NcFile.OT_coef = PhysicalPars['OT_coef']
+    NcFile.OT_exp = PhysicalPars['OT_exp']
+    NcFile.OwProp_coef = PhysicalPars['OwProp_coef']
+    NcFile.MinOpForOw = PhysicalPars['MinOpForOw']
     NcFile.BeachTopElev = PhysicalPars['BeachTopElev']
+    NcFile.SpitWidth = PhysicalPars['SpitWidth']
+    NcFile.MinOutletWidth = PhysicalPars['MinOutletWidth']
     
     # create coordinate variables
     XVar = NcFile.createVariable(XDim.name, np.float32, (XDim.name,))
@@ -216,13 +237,13 @@ def newOutFile(FileName, ModelName, StartTime,
     RiverElevVar.units = 'm'
     RiverElevVar.long_name = 'River cross-section bed elevation'
     
-    # River bed water level
+    # River water level
     RiverWlVar = NcFile.createVariable('river_wl', np.float32, 
                                        (TimeDim.name, RivDim.name))
     RiverWlVar.units = 'm'
     RiverWlVar.long_name = 'River cross-section water level'
     
-    # River bed velocity
+    # River velocity
     RiverVelVar = NcFile.createVariable('river_vel', np.float32, 
                                         (TimeDim.name, RivDim.name))
     RiverVelVar.units = 'm/s'
@@ -356,10 +377,10 @@ def writeCurrent(FileName, CurrentTime, SeaLevel, RivFlow,
 def readTimestep(NcFile, TimeIx):
     """ Extract model results for a specific timestep from netcdf file
         
-        (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
-         OutletEndX, OutletEndWidth, OutletEndElev, OutletChanIx,
-         WavePower, EDir_h, LST, CST, Closed, RiverElev, 
-         ModelTime) = readTimestep(NcFile, TimeIx)
+        (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
+         OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
+         OutletEndWL, OutletChanIx, WavePower, EDir_h, LST, CST, Closed, 
+         RiverElev, RiverWL, RiverVel, ModelTime) = readTimestep(NcFile, TimeIx)
     """
     
     NTransects = NcFile.dimensions['transect_x'].size
@@ -387,11 +408,15 @@ def readTimestep(NcFile, TimeIx):
     ShoreZ[:,3] = NcFile.variables['lagoon_bed_z'][TimeIx,:]
     
     LagoonWL = NcFile.variables['lagoon_wl'][TimeIx,:]
+    LagoonVel = NcFile.variables['lagoon_vel'][TimeIx,:]
     OutletWL = NcFile.variables['outlet_wl'][TimeIx,:]
+    OutletVel = NcFile.variables['outlet_vel'][TimeIx,:]
     
     OutletEndX = NcFile.variables['outlet_end_x'][TimeIx,:].squeeze()
     OutletEndWidth = NcFile.variables['outlet_end_width'][TimeIx,:].squeeze()
     OutletEndElev = NcFile.variables['outlet_end_z'][TimeIx,:].squeeze()
+    OutletEndVel = NcFile.variables['outlet_end_vel'][TimeIx,:].squeeze()
+    OutletEndWL = NcFile.variables['outlet_end_wl'][TimeIx,:].squeeze()
     Closed = bool(NcFile.variables['outlet_closed'][TimeIx])
     
     WavePower=None
@@ -399,7 +424,9 @@ def readTimestep(NcFile, TimeIx):
     LST = NcFile.variables['lst'][TimeIx,:] / 3600
     CST = NcFile.variables['cst'][TimeIx,:] / 3600
     
-    RiverElev=NcFile.variables['river_bed_z'][TimeIx,:].squeeze()
+    RiverElev = NcFile.variables['river_bed_z'][TimeIx,:].squeeze()
+    RiverWL  = NcFile.variables['river_wl'][TimeIx,:].squeeze()
+    RiverVel  = NcFile.variables['river_vel'][TimeIx,:].squeeze()
     
     # Calculate OutletChanIx
     if Closed:
@@ -414,9 +441,10 @@ def readTimestep(NcFile, TimeIx):
         OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] <= ShoreX,
                                                          ShoreX <= OutletEndX[0]))[0])
     
-    return(SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, OutletWL, 
-           OutletEndX, OutletEndWidth, OutletEndElev, OutletChanIx,
-           WavePower, EDir_h, LST, CST, Closed, RiverElev, ModelTime)
+    return(SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
+           OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
+           OutletEndWL, OutletChanIx, WavePower, EDir_h, LST, CST, Closed, 
+           RiverElev, RiverWL, RiverVel, ModelTime)
     
 def closestTimeIx(NcFile, DatetimeOfInterest):
     """ Find result file timestep index closest to desired datetime value
