@@ -130,6 +130,10 @@ def overtopping(Runup, SeaLevel, ShoreY, ShoreZ, PhysicalPars):
     NoLagoon[OutletPresent] = False
     OverwashProp = np.maximum(np.minimum(PhysicalPars['OwProp_coef'] * (OP-PhysicalPars['MinOpForOw']) / CrestWidth, 1.),0.)
     OverwashProp[NoLagoon] = 0.0
+    # Where there is a zero width outlet channel make CST all overwash into channel - as it will then get redistributed in mor
+    ZeroWidthOutlet = OutletPresent.copy()
+    ZeroWidthOutlet[OutletPresent] = ShoreY[OutletPresent,1] <= ShoreY[OutletPresent,2]
+    OverwashProp[ZeroWidthOutlet] = 1.0
     
     # Checks
     assert np.all(np.logical_and(OverwashProp>=0.0, OverwashProp<=1.0)), 'OverwashProp outside of range 0-1 in overtopping function'
