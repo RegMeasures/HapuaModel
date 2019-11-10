@@ -195,9 +195,8 @@ def main(ModelConfigFile, Overwrite=False):
         # plotting
         if LivePlot:
             if MorTime >= PlotTime:
-                visualise.updateLongSection(LongSecFig, ChanElev, 
-                                            ChanWidth, ChanDep, ChanVel, 
-                                            Bedload)
+                visualise.updateLongSection(LongSecFig, ChanDx, ChanElev, 
+                                            ChanWidth, ChanDep, ChanVel, Bedload)
                 visualise.updateBdyCndFig(BdyFig, OutputTs)
                 visualise.updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, 
                                           OutletEndWidth, OutletChanIx, 

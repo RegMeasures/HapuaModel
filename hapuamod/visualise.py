@@ -515,10 +515,10 @@ def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep,
     Dist = np.insert(np.cumsum(ChanDx),0,0)
     D2 = (Dist[:-1]+Dist[1:])/2
     WL = ChanElev + ChanDep
-    WL2 = (WL[:-1]+WL[1:])/2
-    Vel2 = (ChanVel[:-1]+ChanVel[1:])/2
+    WL2 = (WL[:-1] + WL[1:])/2
+    Vel2 = (ChanVel[:-1] + ChanVel[1:]) / 2
     Energy = WL2 + (Vel2**2) / (2*g)
-    Fr = abs(ChanVel)/np.sqrt(g*ChanDep)
+    Fr = abs(ChanVel) / np.sqrt(g * ChanDep)
     Q = ChanVel * ChanDep * ChanWidth
     
     # Update the lines
