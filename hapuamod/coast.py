@@ -62,7 +62,11 @@ def longShoreTransport(ShoreY, Dx, WavePower, WavePeriod, Wlen_h, EDir_h, Physic
     LocalWavePower[LocalEDir_h > (np.pi/2)] = 0
     
     # Calculate breaking wave depth
-    BreakerDepth = (PhysicalPars['BreakerCoef'] * WavePower)**0.2
+    # Note that on import we calculate:
+    # PhysicalPars['BreakerCoef'] = 8.0 / (PhysicalPars['RhoSea'] *
+    #                                      PhysicalPars['Gravity']**1.5 *
+    #                                      PhysicalPars['GammaRatio']**2.0)
+    BreakerDepth = (PhysicalPars['BreakerCoef'] * WavePower)**0.4
     
     # Calculate breaking wave angle
     C_b = (PhysicalPars['Gravity'] * BreakerDepth)**0.5
