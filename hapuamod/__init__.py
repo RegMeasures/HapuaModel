@@ -15,6 +15,7 @@ hapuamod contains functions grouped into several sub-modules:
     mor       Morphology updating
     out       Writing outputs to netCDF
     animate   Producing animations of model outputs
+    synth     Generate synthetic timeseries for input boundary conditions
     
 hapuamod requires: numpy, pandas, matplotlib, configobj, os, shapefile
 """

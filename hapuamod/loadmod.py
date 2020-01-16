@@ -13,6 +13,7 @@ import netCDF4
 # import local packages
 from hapuamod import geom
 from hapuamod import out
+from hapuamod import synth
 
 def loadModel(ModelConfigFile):
     """ Pre-processes model inputs
@@ -28,8 +29,8 @@ def loadModel(ModelConfigFile):
      TimePars, PhysicalPars, NumericalPars, OutputOpts) = loadModel(Config)
     
     Parameters:
-        Config (Dict): Model config file read into a dict variable by the 
-            readConfig function
+        ModelConfigFile (string): Filename (and path if required) of a valid 
+            hapuamod model config file
     
     Returns:
         ModelName (str): Model name specified in config file
@@ -165,15 +166,10 @@ def loadModel(ModelConfigFile):
     
     # TODO: Add more some validation of inputs 
     
-    #%% Extract file path and add to other relative file paths as required
+    #%% Extract file path ready to pre-pend to relative file paths as required
     ConfigFilePath = os.path.split(ModelConfigFile)[0]
     
-    Config['BoundaryConditions']['RiverFlow'] = \
-            os.path.join(ConfigFilePath, Config['BoundaryConditions']['RiverFlow'])
-    Config['BoundaryConditions']['WaveConditions'] = \
-            os.path.join(ConfigFilePath, Config['BoundaryConditions']['WaveConditions'])
-    Config['BoundaryConditions']['SeaLevel'] = \
-            os.path.join(ConfigFilePath, Config['BoundaryConditions']['SeaLevel'])
+    
     if 'HotStart' in Config:
         Config['HotStart']['InitialConditionsNetCDF'] = \
                 os.path.join(ConfigFilePath, Config['HotStart']['InitialConditionsNetCDF'])
@@ -277,33 +273,6 @@ def loadModel(ModelConfigFile):
             # land is to south of baseline
             ShoreNormDir = math.atan2(-Baseline[0],1)
     
-    #%% Read the boundary condition timeseries
-    to_datetime = lambda d: pd.datetime.strptime(d, '%d/%m/%Y %H:%M')
-    
-    logging.info('Reading flow timeseries from "%s"' % 
-                 Config['BoundaryConditions']['RiverFlow'])
-    FlowTs = pd.read_csv(Config['BoundaryConditions']['RiverFlow'], 
-                         index_col=0, parse_dates=[0],
-                         date_parser=to_datetime)
-    FlowTs = FlowTs.Flow
-    
-    logging.info('Reading wave timeseries from "%s"' % 
-                 Config['BoundaryConditions']['WaveConditions'])
-    WaveTs = pd.read_csv(Config['BoundaryConditions']['WaveConditions'], 
-                         index_col=0, parse_dates=[0],
-                         date_parser=to_datetime)
-    # Convert wave directions into radians in model coordinate system
-    WaveTs.EDir_h = np.deg2rad(WaveTs.EDir_h) - (ShoreNormDir)
-    # Make sure all wave angles are in the range -pi to +pi
-    WaveTs.EDir_h = np.mod(WaveTs.EDir_h + np.pi, 2.0 * np.pi) - np.pi 
-    
-    logging.info('Reading sea level timeseries from "%s"' % 
-                 Config['BoundaryConditions']['SeaLevel'])
-    SeaLevelTs = pd.read_csv(Config['BoundaryConditions']['SeaLevel'], 
-                             index_col=0, parse_dates=[0],
-                             date_parser=to_datetime)
-    SeaLevelTs = SeaLevelTs.SeaLevel
-    
     #%% Initial conditions
     if not 'HotStart' in Config:
         logging.info('Reading initial conditions')
@@ -320,6 +289,62 @@ def loadModel(ModelConfigFile):
                 'MorDt': pd.Timedelta(seconds=float(Config['Time']['MorDt']))}
     # TODO: check mortime is a multiple of hydtime (or replace with morscaling?)
     
+    #%% Read the boundary condition timeseries
+    to_datetime = lambda d: pd.datetime.strptime(d, '%d/%m/%Y %H:%M')
+    
+    # Flow timeseries
+    if Config['BoundaryConditions']['RiverFlow'].lower() == 'shotnoise':
+        logging.info('Using synthetic shot-noise flow hydrograph')
+        SNPars = Config['BoundaryConditions']['ShotnoiseHydrographParameters']
+        
+        if 'RandomSeed' in SNPars:
+            if SNPars['RandomSeed'].lower() == 'none':
+                SNPars['RandomSeed'] = None
+            else:
+                SNPars['RandomSeed'] = int(SNPars['RandomSeed'])
+        else:
+            SNPars['RandomSeed'] = None
+        
+        FlowTs = synth.shotNoise(TimePars['StartTime'], TimePars['EndTime'], 
+                                 pd.Timedelta(minutes = float(SNPars['HydrographDt'])),
+                                 pd.Timedelta(days = float(SNPars['MeanDaysBetweenEvents'])), 
+                                 float(SNPars['MeanEventIncrease']), 
+                                 float(SNPars['FastDecayRate']), float(SNPars['FastFlowProp']), 
+                                 float(SNPars['SlowDecayRate']), 
+                                 pd.Timedelta(days = float(SNPars['RisingLimbTime'])), 
+                                 RandomSeed = SNPars['RandomSeed'])
+    else:        
+        Config['BoundaryConditions']['RiverFlow'] = \
+                os.path.join(ConfigFilePath, Config['BoundaryConditions']['RiverFlow'])
+        logging.info('Reading flow timeseries from "%s"' % 
+                     Config['BoundaryConditions']['RiverFlow'])
+        FlowTs = pd.read_csv(Config['BoundaryConditions']['RiverFlow'], 
+                             index_col=0, parse_dates=[0],
+                             date_parser=to_datetime)
+        FlowTs = FlowTs.Flow
+    
+    # Wave timeseries
+    Config['BoundaryConditions']['WaveConditions'] = \
+            os.path.join(ConfigFilePath, Config['BoundaryConditions']['WaveConditions'])
+    logging.info('Reading wave timeseries from "%s"' % 
+                 Config['BoundaryConditions']['WaveConditions'])
+    WaveTs = pd.read_csv(Config['BoundaryConditions']['WaveConditions'], 
+                         index_col=0, parse_dates=[0],
+                         date_parser=to_datetime)
+    # Convert wave directions into radians in model coordinate system
+    WaveTs.EDir_h = np.deg2rad(WaveTs.EDir_h) - (ShoreNormDir)
+    # Make sure all wave angles are in the range -pi to +pi
+    WaveTs.EDir_h = np.mod(WaveTs.EDir_h + np.pi, 2.0 * np.pi) - np.pi 
+    
+    # Sea level timeseries
+    Config['BoundaryConditions']['SeaLevel'] = \
+            os.path.join(ConfigFilePath, Config['BoundaryConditions']['SeaLevel'])
+    logging.info('Reading sea level timeseries from "%s"' % 
+                 Config['BoundaryConditions']['SeaLevel'])
+    SeaLevelTs = pd.read_csv(Config['BoundaryConditions']['SeaLevel'], 
+                             index_col=0, parse_dates=[0],
+                             date_parser=to_datetime)
+    SeaLevelTs = SeaLevelTs.SeaLevel
     #%% Trim time-series inputs to model time
     assert (FlowTs.index[0] <= TimePars['StartTime'] 
             and FlowTs.index[-1] >= TimePars['EndTime']), \

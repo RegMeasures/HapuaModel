@@ -8,10 +8,10 @@ import math
 import random
 import logging
 
-def dailyShotNoise(StartDate, EndDate, OutputInt,
-                   MeanTimeBetweenEvents, MeanEventIncrease, DecayRate1, 
-                   PropRate1 = 1.0, DecayRate2 = None, RisingLimbTime = pd.Timedelta(minutes=1), 
-                   CalcTimeInt = None, RandomSeed = None):
+def shotNoise(StartDate, EndDate, OutputInt,
+              MeanTimeBetweenEvents, MeanEventIncrease, DecayRate1, 
+              PropRate1 = 1.0, DecayRate2 = None, RisingLimbTime = pd.Timedelta(minutes=1), 
+              CalcTimeInt = None, RandomSeed = None):
     """ Creates a stochastic shot noise timeseries (optionally second order)
         
     Following the principles described by Weiss (1977) except for the 
@@ -19,12 +19,9 @@ def dailyShotNoise(StartDate, EndDate, OutputInt,
     (original model has instantaneously increases associated wiht each 
     event).
     
-    (OutputTs, EventList) = dailyShotNoise(StartDate, EndDate, OutputInt,
-                                           MeanTimeBetweenEvents, 
-                                           MeanEventIncrease, DecayRate1, 
-                                           PropRate1, DecayRate2, 
-                                           RisingLimbTime, CalcTimeInt, 
-                                           RandomSeed)
+    OutputTs = shotNoise(StartDate, EndDate, OutputInt, MeanTimeBetweenEvents, 
+                         MeanEventIncrease, DecayRate1, PropRate1, DecayRate2, 
+                         RisingLimbTime, CalcTimeInt, RandomSeed)
     
     Parameters
     ----------
@@ -66,9 +63,6 @@ def dailyShotNoise(StartDate, EndDate, OutputInt,
     -------
     OutputTs : pd.Series
         stochastic shot noise timeseries with regularly spaced datapoints.
-    EventList  : pd.Series
-        Series with the exact time and magnitude of each event in the generated
-        output timeseries.
             
     References
     ----------
@@ -80,9 +74,8 @@ def dailyShotNoise(StartDate, EndDate, OutputInt,
     >>> StartDate = pd.datetime(2020,1,1)
     >>> EndDate = pd.datetime(2021,1,1)
     >>> OutputInt = pd.Timedelta(hours=1)
-    >>> (OutputTs, EventList) = dailyShotNoise(StartDate, EndDate, OutputInt,
-    ...                                        pd.Timedelta(days=15), 
-                                               100, 0.3, 0.9, 0.015)
+    >>> OutputTs = shotNoise(StartDate, EndDate, OutputInt,
+    ...                      pd.Timedelta(days=15), 100, 0.3, 0.9, 0.015)
     >>> OutputTS.plot()
     """
     # Validate inputs
@@ -106,6 +99,10 @@ def dailyShotNoise(StartDate, EndDate, OutputInt,
     MeanVal = Rate1Vals[0] + Rate2Vals[0]
     
     logging.info('Generating synthetic shot-noise timeseries for period %s to %s' % (StartDate, EndDate))
+    logging.debug('MeanTimeBetweenEvents = %f days, MeanEventIncrease = %f m3/s, DecayRate1 = %f' %  
+                  (MeanTimeBetweenEvents.days, MeanEventIncrease,DecayRate1))
+    logging.debug('PropRate1 = %f, DecayRate2 = %f, RisingLimbTime = %f hours' % 
+                  (PropRate1, DecayRate2, RisingLimbTime.total_seconds() / 3600))
     logging.info('Estimated mean value of generated timeseries = %.3f' % MeanVal)
         
     EventList = pd.Series([MeanVal], index=pd.DatetimeIndex([StartDate]))
@@ -153,13 +150,13 @@ def dailyShotNoise(StartDate, EndDate, OutputInt,
         TotVals = Rate1Vals + Rate2Vals
         OutputTs = OutputTs.append(pd.Series(TotVals, index = TimeList))
         
+        LastEventTime += GapLength
         
         # Also create a timeseries of 'Events'
-        LastEventTime += GapLength
-        EventList = EventList.append(pd.Series([EventSize], index = pd.DatetimeIndex([LastEventTime])))
+        # EventList = EventList.append(pd.Series([EventSize], index = pd.DatetimeIndex([LastEventTime])))
     
     # Resample the output timeseries and clip
     OutputTs = OutputTs.resample(OutputInt).mean()
     OutputTs = OutputTs.loc[:EndDate]    
     
-    return(OutputTs, EventList)
+    return OutputTs
