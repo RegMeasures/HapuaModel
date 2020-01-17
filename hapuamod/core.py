@@ -169,8 +169,6 @@ def main(ModelConfigFile, Overwrite=False):
                              NumericalPars['Dx'], TimePars['MorDt'], 
                              PhysicalPars)
         
-        
-        
         # Save outputs
         if MorTime >= OutTime:
             out.writeCurrent(OutputOpts['OutFile'], MorTime, SeaLevel[-1], RivFlow[-1],

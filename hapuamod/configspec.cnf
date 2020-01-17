@@ -1,0 +1,80 @@
+# HapuaModel configuration file
+
+ModelName = string
+
+[BoundaryConditions]
+RiverFlow = string
+WaveConditions = string
+SeaLevel = string
+
+    [[ShotnoiseHydrographParameters]]
+    MeanDaysBetweenEvents = float(min=0, default=None)
+    MeanEventIncrease = float(min=0, default=None)
+    FastDecayRate = float(min=0, default=None)
+    SlowDecayRate = float(min=0, default=None)
+    FastFlowProp = float(min=0, max=1, default=None)
+    RisingLimbTime = float(min=0, default=None)
+    HydrographDt = float(min=0, default=None)
+    RandomSeed = integer(default=None)
+
+[SpatialInputs]
+Shoreline = string
+RiverLocation = string
+BarrierBackshore = string
+CliffToe = string
+OutletLocation = string
+
+[InitialConditions]
+OutletWidth = float(min=0)
+OutletBed = float
+LagoonBed = float
+BarrierElev = float
+
+[Time]
+StartTime = string
+EndTime = string
+HydDt = float(min=0)
+MorDt = float(min=0)
+
+[PhysicalParameters]
+Kcoef = float(min=0)
+RhoSed = float(min=0, default=2650)
+RhoSea = float(min=0, default=1025)
+RhoRiv = float(min=0, default=1000)
+VoidRatio = float(min=0, max=1)
+Gravity = float(min=0, default=9.81)
+GammaRatio = float(min=0, default=0.5)
+WaveDataDepth = float(min=0)
+ClosureDepth = float(min=0)
+BeachSlope = float(min=0)
+RiverSlope = float(min=0, max=1)
+GrainSize = float(min=0, max=1)
+CritShieldsStress = float(min=0, max=0.1)
+UpstreamLength = float(min=0)
+RiverWidth = float(min=0)
+RoughnessManning = float(min=0, max = 0.3)
+WidthDepthRatio = float(min=1)
+BackshoreElev = float(min=0)
+MaxOutletElev = float
+OT_coef = float(min=0, default=0.0002)
+OT_exp = float(min=1, default=2)
+OwProp_coef = float(min=0)
+MinOpForOw = float(min=0)
+BeachTopElev = float(min=0)
+SpitWidth = float(min=0)
+MinOutletWidth = float(min=0)
+
+[NumericalParameters]
+AlongShoreDx = float(min=0)
+Beta = float(min=0)
+Theta = float(min=0, max=1, default=0.7)
+Psi = float(min=0, max=0.5, default=0.4)
+ErrTol = float(min=0, default=0.001)
+MaxIt = integer(min=1, default=30)
+WarnTol = float(min=0, default=0.1)
+
+[OutputOptions]
+OutFile = string
+OutInt = float(min=0)
+LogInt = float(min=0)
+PlotInt = float(min=0, default=0)

@@ -4,16 +4,29 @@
 import pandas as pd
 import numpy as np
 import math
-from configobj import ConfigObj
+from configobj import ConfigObj, flatten_errors
+from validate import Validator
 import os
 import shapefile
 import logging
 import netCDF4
+import pkg_resources
+import errno
 
 # import local packages
 from hapuamod import geom
 from hapuamod import out
 from hapuamod import synth
+
+class ConfigError(Exception):
+    """Exception raised during model config file validation.
+    
+    Attributes:
+        message -- explanation of the error
+    """
+    
+    def __init__(self, message):
+        self.message = message
 
 def loadModel(ModelConfigFile):
     """ Pre-processes model inputs
@@ -154,21 +167,36 @@ def loadModel(ModelConfigFile):
             PlotInt (pd.Timedelta): interval for plotting (0 = no plotting)
     """
     
-    #%% Read the main config file
+    #%% Read and validate the main config file
+    
+    # Check the specified model config file exists
     if not os.path.isfile(ModelConfigFile):
         logging.error('%s not found' % ModelConfigFile)
-        raise FileNotFoundError
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), ModelConfigFile)
     
+    # Get the absolute file path to the config spec file 'configspec.cnf'
+    ConfigSpecFile = pkg_resources.resource_filename(__name__, 'configspec.cnf')
+    
+    # Read the model config file
     logging.info('Loading "%s"' % ModelConfigFile)
-    Config = ConfigObj(ModelConfigFile)
+    Config = ConfigObj(ModelConfigFile, configspec=ConfigSpecFile)
+    
+    # Do basic validation and type conversion
+    validator = Validator()
+    ValidationResult = Config.validate(validator)
+    if ValidationResult != True:
+        for (section_list, key, _) in flatten_errors(Config, ValidationResult):
+            if key is not None:
+                raise ConfigError('The "%s" key in the section "%s" failed validation' %
+                                  (key, ', '.join(section_list)))
+            else:
+                raise ConfigError('The following section was missing:%s ' %
+                                  ', '.join(section_list))
     
     ModelName = Config['ModelName']
     
-    # TODO: Add more some validation of inputs 
-    
     #%% Extract file path ready to pre-pend to relative file paths as required
     ConfigFilePath = os.path.split(ModelConfigFile)[0]
-    
     
     if 'HotStart' in Config:
         Config['HotStart']['InitialConditionsNetCDF'] = \
@@ -276,17 +304,17 @@ def loadModel(ModelConfigFile):
     #%% Initial conditions
     if not 'HotStart' in Config:
         logging.info('Reading initial conditions')
-        IniCond = {'OutletWidth': float(Config['InitialConditions']['OutletWidth']),
-                   'OutletBed': float(Config['InitialConditions']['OutletBed']),
-                   'LagoonBed': float(Config['InitialConditions']['LagoonBed']),
-                   'BarrierElev': float(Config['InitialConditions']['BarrierElev'])}
+        IniCond = {'OutletWidth': Config['InitialConditions']['OutletWidth'],
+                   'OutletBed': Config['InitialConditions']['OutletBed'],
+                   'LagoonBed': Config['InitialConditions']['LagoonBed'],
+                   'BarrierElev': Config['InitialConditions']['BarrierElev']}
     
     #%% Time inputs
     logging.info('Reading time inputs')
     TimePars = {'StartTime': pd.to_datetime(Config['Time']['StartTime']),
                 'EndTime': pd.to_datetime(Config['Time']['EndTime']),
-                'HydDt': pd.Timedelta(seconds=float(Config['Time']['HydDt'])),
-                'MorDt': pd.Timedelta(seconds=float(Config['Time']['MorDt']))}
+                'HydDt': pd.Timedelta(seconds=Config['Time']['HydDt']),
+                'MorDt': pd.Timedelta(seconds=Config['Time']['MorDt'])}
     # TODO: check mortime is a multiple of hydtime (or replace with morscaling?)
     
     #%% Read the boundary condition timeseries
@@ -297,21 +325,13 @@ def loadModel(ModelConfigFile):
         logging.info('Using synthetic shot-noise flow hydrograph')
         SNPars = Config['BoundaryConditions']['ShotnoiseHydrographParameters']
         
-        if 'RandomSeed' in SNPars:
-            if SNPars['RandomSeed'].lower() == 'none':
-                SNPars['RandomSeed'] = None
-            else:
-                SNPars['RandomSeed'] = int(SNPars['RandomSeed'])
-        else:
-            SNPars['RandomSeed'] = None
-        
         FlowTs = synth.shotNoise(TimePars['StartTime'], TimePars['EndTime'], 
-                                 pd.Timedelta(minutes = float(SNPars['HydrographDt'])),
-                                 pd.Timedelta(days = float(SNPars['MeanDaysBetweenEvents'])), 
-                                 float(SNPars['MeanEventIncrease']), 
-                                 float(SNPars['FastDecayRate']), float(SNPars['FastFlowProp']), 
-                                 float(SNPars['SlowDecayRate']), 
-                                 pd.Timedelta(days = float(SNPars['RisingLimbTime'])), 
+                                 pd.Timedelta(minutes = SNPars['HydrographDt']),
+                                 pd.Timedelta(days = SNPars['MeanDaysBetweenEvents']), 
+                                 SNPars['MeanEventIncrease'], 
+                                 SNPars['FastDecayRate'], SNPars['FastFlowProp'], 
+                                 SNPars['SlowDecayRate'], 
+                                 pd.Timedelta(days = SNPars['RisingLimbTime']), 
                                  RandomSeed = SNPars['RandomSeed'])
     else:        
         Config['BoundaryConditions']['RiverFlow'] = \
@@ -375,32 +395,32 @@ def loadModel(ModelConfigFile):
     
     #%% Read physical parameters
     logging.info('Processing physical parameters')
-    PhysicalPars = {'RhoSed': float(Config['PhysicalParameters']['RhoSed']),
-                    'RhoSea': float(Config['PhysicalParameters']['RhoSea']),
-                    'RhoRiv': float(Config['PhysicalParameters']['RhoSea']),
-                    'Kcoef': float(Config['PhysicalParameters']['Kcoef']),
-                    'Gravity': float(Config['PhysicalParameters']['Gravity']),
-                    'VoidRatio': float(Config['PhysicalParameters']['VoidRatio']),
-                    'GammaRatio': float(Config['PhysicalParameters']['GammaRatio']),
-                    'WaveDataDepth': float(Config['PhysicalParameters']['WaveDataDepth']),
-                    'ClosureDepth': float(Config['PhysicalParameters']['ClosureDepth']),
-                    'BeachSlope': float(Config['PhysicalParameters']['BeachSlope']),
-                    'RiverSlope': float(Config['PhysicalParameters']['RiverSlope']),
-                    'GrainSize': float(Config['PhysicalParameters']['GrainSize']),
-                    'CritShieldsStress': float(Config['PhysicalParameters']['CritShieldsStress']),
-                    'UpstreamLength': float(Config['PhysicalParameters']['UpstreamLength']),
-                    'RiverWidth': float(Config['PhysicalParameters']['RiverWidth']),
-                    'Roughness': float(Config['PhysicalParameters']['RoughnessManning']),
-                    'WidthRatio': float(Config['PhysicalParameters']['WidthDepthRatio']),
-                    'BackshoreElev': float(Config['PhysicalParameters']['BackshoreElev']),
-                    'MaxOutletElev': float(Config['PhysicalParameters']['MaxOutletElev']),
-                    'OT_coef': float(Config['PhysicalParameters']['OT_coef']),
-                    'OT_exp': float(Config['PhysicalParameters']['OT_exp']),
-                    'OwProp_coef': float(Config['PhysicalParameters']['OwProp_coef']),
-                    'MinOpForOw': float(Config['PhysicalParameters']['MinOpForOw']),
-                    'BeachTopElev': float(Config['PhysicalParameters']['BeachTopElev']),
-                    'SpitWidth': float(Config['PhysicalParameters']['SpitWidth']),
-                    'MinOutletWidth': float(Config['PhysicalParameters']['MinOutletWidth'])}
+    PhysicalPars = {'RhoSed': Config['PhysicalParameters']['RhoSed'],
+                    'RhoSea': Config['PhysicalParameters']['RhoSea'],
+                    'RhoRiv': Config['PhysicalParameters']['RhoSea'],
+                    'Kcoef': Config['PhysicalParameters']['Kcoef'],
+                    'Gravity': Config['PhysicalParameters']['Gravity'],
+                    'VoidRatio': Config['PhysicalParameters']['VoidRatio'],
+                    'GammaRatio': Config['PhysicalParameters']['GammaRatio'],
+                    'WaveDataDepth': Config['PhysicalParameters']['WaveDataDepth'],
+                    'ClosureDepth': Config['PhysicalParameters']['ClosureDepth'],
+                    'BeachSlope': Config['PhysicalParameters']['BeachSlope'],
+                    'RiverSlope': Config['PhysicalParameters']['RiverSlope'],
+                    'GrainSize': Config['PhysicalParameters']['GrainSize'],
+                    'CritShieldsStress': Config['PhysicalParameters']['CritShieldsStress'],
+                    'UpstreamLength': Config['PhysicalParameters']['UpstreamLength'],
+                    'RiverWidth': Config['PhysicalParameters']['RiverWidth'],
+                    'Roughness': Config['PhysicalParameters']['RoughnessManning'],
+                    'WidthRatio': Config['PhysicalParameters']['WidthDepthRatio'],
+                    'BackshoreElev': Config['PhysicalParameters']['BackshoreElev'],
+                    'MaxOutletElev': Config['PhysicalParameters']['MaxOutletElev'],
+                    'OT_coef': Config['PhysicalParameters']['OT_coef'],
+                    'OT_exp': Config['PhysicalParameters']['OT_exp'],
+                    'OwProp_coef': Config['PhysicalParameters']['OwProp_coef'],
+                    'MinOpForOw': Config['PhysicalParameters']['MinOpForOw'],
+                    'BeachTopElev': Config['PhysicalParameters']['BeachTopElev'],
+                    'SpitWidth': Config['PhysicalParameters']['SpitWidth'],
+                    'MinOutletWidth': Config['PhysicalParameters']['MinOutletWidth']}
 
     GammaLST = ((PhysicalPars['RhoSed'] - PhysicalPars['RhoSea']) * 
                 PhysicalPars['Gravity'] * (1 - PhysicalPars['VoidRatio']))
@@ -411,20 +431,20 @@ def loadModel(ModelConfigFile):
                                          PhysicalPars['GammaRatio']**2.0)
     
     #%% Read numerical parameters
-    Dx = float(Config['NumericalParameters']['AlongShoreDx'])
+    Dx = Config['NumericalParameters']['AlongShoreDx']
     NumericalPars = {'Dx': Dx,
-                     'Beta': float(Config['NumericalParameters']['Beta']),
-                     'Theta': float(Config['NumericalParameters']['Theta']),
-                     'Psi': float(Config['NumericalParameters']['Psi']),
-                     'ErrTol': float(Config['NumericalParameters']['ErrTol']),
-                     'MaxIt': int(Config['NumericalParameters']['MaxIt']),
-                     'WarnTol': float(Config['NumericalParameters']['WarnTol'])}
+                     'Beta': Config['NumericalParameters']['Beta'],
+                     'Theta': Config['NumericalParameters']['Theta'],
+                     'Psi': Config['NumericalParameters']['Psi'],
+                     'ErrTol': Config['NumericalParameters']['ErrTol'],
+                     'MaxIt': Config['NumericalParameters']['MaxIt'],
+                     'WarnTol': Config['NumericalParameters']['WarnTol']}
 
     #%% Read output options
     OutputOpts = {'OutFile': Config['OutputOptions']['OutFile'],
-                  'OutInt': pd.Timedelta(seconds=float(Config['OutputOptions']['OutInt'])),
-                  'LogInt': pd.Timedelta(seconds=float(Config['OutputOptions']['LogInt'])),
-                  'PlotInt': pd.Timedelta(seconds=float(Config['OutputOptions']['PlotInt']))}
+                  'OutInt': pd.Timedelta(seconds=Config['OutputOptions']['OutInt']),
+                  'LogInt': pd.Timedelta(seconds=Config['OutputOptions']['LogInt']),
+                  'PlotInt': pd.Timedelta(seconds=Config['OutputOptions']['PlotInt'])}
     
     #%% Initialise shoreline variables
     
