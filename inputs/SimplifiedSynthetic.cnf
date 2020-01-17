@@ -1,0 +1,156 @@
+# HapuaModel configuration file
+
+ModelName = 'Hurunui hapua'
+
+[BoundaryConditions]
+# River flow timeseries [either filename/path of input csv file or "shotnoise"]
+RiverFlow = shotnoise
+# Wave conditions timeseries [filename/path of input csv file]
+WaveConditions = WaveData.csv
+# Sea level timeseries [either filename/path of input csv file or "harmonic"]
+SeaLevel = harmonic
+
+    [[ShotnoiseHydrographParameters]]
+    # Input parameters to the shot-noise hydrograph generator. Only required/used if RiverFlow = shotnoise
+    # Mean time between flow increase events [days]
+    MeanDaysBetweenEvents = 15 
+    # Mean flow increase associated with each 'event' [m3/s]
+    MeanEventIncrease = 100
+    # Fast flow (runoff) decay rate between events [/day]
+    FastDecayRate = 0.3
+    # Slow flow (baseflow) decay rate between events [/day]
+    SlowDecayRate = 0.015
+    # Proportion of event flow which is classified as fast flow
+    FastFlowProp = 0.9
+    # Time for flow to rise prior to event peak [days]
+    RisingLimbTime = 1.0
+    # Discretisation interval for generated flow timeseries [mins]
+    HydrographDt = 60
+    # Optional seed value to initialise random number generator [integer]
+    RandomSeed = 1
+    
+    [[HarmonicTideParameters]]
+    # Input parameters to the harmonic tide generator. Only required if SeaLevel = harmonic
+    # Mean sea level [m] (optional, default=0)
+    MeanSeaLevel = 0
+    # Tidal range [m]
+    TidalRange = 1.44
+    # Discretisation interval for generated tidal timeseries [mins] (optional, default=60)
+    SeaLevelDt = 30
+
+[SpatialInputs]
+# polyline shapefile of shoreline initial position
+Shoreline = HurunuiShoreline.shp
+# point shapefile of location river flows into lagoon
+RiverLocation = RiverInflow.shp
+# polyline shapefile of barrier backshore (seaward edge of lagoon)
+BarrierBackshore = LagoonPolyline.shp
+# cliff toe line (polyline extending over full model domain, even river!)
+CliffToe = CliffPolyline.shp
+# Initial outlet position (polyline shapefile of outlet centerline)
+OutletLocation = InitialOutlet.shp
+
+[InitialConditions]
+# Initial outlet width [m]
+OutletWidth = 35
+# Initial bed level of the seaward end of the outlet channel
+OutletBed = -1.0
+# Lagoon bed elevation [m]
+LagoonBed = -1.0
+# Barrier crest height [m]
+BarrierElev = 3.0
+
+[Time]
+# Simulation start date
+StartTime = '1 Jul 2015'
+# Simulation end date '30 Jun 2016'
+EndTime = '30 Jun 2016'
+# Hydraulic Timestep [s]
+HydDt = 5
+# Morphology Timestep [s]
+MorDt = 900
+
+[PhysicalParameters]
+# K coefficient for longshore transport calculation (non-dimensional)
+Kcoef = 0.03
+# Sediment density [kg/m^3]
+RhoSed = 2650
+# Seawater density [kg/m^3]
+RhoSea = 1025
+# River water density [kg/m^3]
+RhoRiv = 1000
+# Sediment void ratio
+VoidRatio = 0.4
+# Gravity [m/s^2]
+Gravity = 9.81
+# Ratio of water depth at breakpoint to breaking wave height 
+# (WaveHeightAtBreaking = GammaRatio x WaterDepthAtBreakPoint)
+GammaRatio = 0.5
+# Depth of output point for wave model data given in WaveConditions file [m]
+WaveDataDepth = 10.0
+# Closure depth for single line shoreline model [m]
+ClosureDepth = 5.0
+# Beach shoreface slope for runup calculation [m/m]
+BeachSlope = 0.13
+# River bed slope upstream of lagoon [m/m]
+RiverSlope = 0.003
+# Grain size for fluvial sediment transport [m]
+GrainSize = 0.032
+# Critical shields stress for initiation of bedload transport
+CritShieldsStress = 0.03
+# Upstream river length to simulate [m]
+UpstreamLength = 1000
+# River width upstream of hapua [m]
+RiverWidth = 100
+# Fluvial hydraulic roughness (Manning's n) [m^(-1/3).s]
+RoughnessManning = 0.03
+# Width-Depth ratio of eroding channel [dimensionless]
+WidthDepthRatio = 30
+# Elevation of top of lagoon backshore [m]
+BackshoreElev = 30
+# Maximum elevation of the downstream end of the outlet channel [m] 
+# This elevation is applied downstream of the last real outlet channel 
+# cross-section and should be below the minimum sea level.
+MaxOutletElev = -2.0
+# Overtopping coefficient - controls magnitude of overtopping sediment flux [s^-1]
+OT_coef = 0.0002
+# Overtopping exponent (recommended value = 2)
+OT_exp = 2
+# Overwash proportion coefficient
+OwProp_coef = 10
+# Minimum overtopping potential for overwash to initiate
+MinOpForOw = 0.0
+# Crest height and width of 'new' barrier created by longshore transport across river mouth [m]
+BeachTopElev = 2
+SpitWidth = 10
+# Threshold width for setting outlet channel to closed [m]
+MinOutletWidth = 1.0
+
+[NumericalParameters]
+# Alongshore discretisation resolution (transect spacing) [m]
+AlongShoreDx = 20
+# Momentum (Boussinesq) coefficient (generally in the range 1 to 1.05) 
+# Can be set to zero to ignore the convective acceleration term of the momentum
+# equation if desired!
+Beta = 0
+# Temporal weighting factor for implicit Preissmann scheme 
+Theta = 0.7
+# Spatial weighting coefficient for bedload transport (0.5=central, 0-0.5=partial upwinding)
+Psi = 0.4
+# Error tolerance for implicit solution to unsteady river hydraulics [m and m/s]
+ErrTol = 0.001
+# Maximum iterations for implicit solution to unsteady river hydraulics
+MaxIt = 30
+# Warning tolerance for change in water level/velocity within a single iteration of the hydrodynamic solution [m and m/s]
+WarnTol = 0.1
+
+[OutputOptions]
+# filename of the netCDF file which outputs will be written to
+OutFile = 'SimplifiedSynthetic.nc'
+# Interval to save data to netCDF file [s]
+OutInt = 3600
+# Interval at which progress will be logged to console/logfile during simulation [s]
+LogInt = 3600
+# Interval to update plots (zero means no plotting will occur) [s]
+PlotInt = 7200
+

@@ -188,16 +188,16 @@ def harmonicTide(StartDate, EndDate, OutputInt, MeanSeaLevel, TidalRange):
     Example
     -------
     >>> StartDate = pd.datetime(2020,1,1)
-    >>> EndDate = pd.datetime(2021,1,1)
+    >>> EndDate = pd.datetime(2020,1,3)
     >>> OutputInt = pd.Timedelta(hours=1)
-    >>> OutputTs = shotNoise(StartDate, EndDate, OutputInt, 0, 2)
+    >>> OutputTs = harmonicTide(StartDate, EndDate, OutputInt, 0, 2)
     >>> OutputTs.plot()
     """
     TidePeriod = (12*60 + 25.2) * 60 # in seconds
     
     OutputTimes = pd.date_range(start=StartDate, end=EndDate, freq=OutputInt)
     OutputVals = (MeanSeaLevel + (TidalRange / 2) * 
-                  np.sin(((OutputTimes - StartDate).total_seconds() / TidePeriod) * np.pi))
+                  np.sin(((OutputTimes - StartDate).total_seconds() / TidePeriod) * 2*np.pi))
     
     OutputTs = pd.Series(OutputVals, index=OutputTimes)
     
