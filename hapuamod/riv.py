@@ -430,6 +430,9 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
     assert not np.any(np.isnan(ChanVel)), 'NaN values in ChanVel after assembleChannel'
     assert not np.any(np.isnan(ChanDep)), 'NaN values in ChanDep after assembleChannel'
     
+    # Check consistency of key outputs
+    assert OnlineLagoon.size == sum(ChanFlag==1), 'Missmatch between length of online lagoon in "OnlineLagoon" (%i) and "ChanFlag" (%i)' % (OnlineLagoon.size, sum(ChanFlag[:-1]==1))
+    
     return (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
             OnlineLagoon, OutletChanIx, ChanFlag, Closed)
 
@@ -545,16 +548,14 @@ def storeBedload(Bedload, NTransects, OnlineLagoon, OutletChanIx,
         bedload transpor trate into the output netCDF file.
     """
     
-    # Lagoon Bedload
-    LagoonBedload = np.zeros(NTransects)
-    LagoonBedload[OnlineLagoon] = Bedload[ChanFlag[:-1]==1]
-    
-    # Outlet Bedload
     OutletBedload = np.zeros(NTransects)
+    LagoonBedload = np.zeros(NTransects)
     if Closed:
         OutletEndBedload = np.zeros(2)
+        LagoonBedload[OnlineLagoon[:-1]] = Bedload[ChanFlag[:-1]==1]
     else:        
         OutletBedload[OutletChanIx] = Bedload[ChanFlag[:-1]==3]
         OutletEndBedload = Bedload[ChanFlag[:-1]==2]
+        LagoonBedload[OnlineLagoon] = Bedload[ChanFlag[:-1]==1]
     
     return (LagoonBedload, OutletBedload, OutletEndBedload)
