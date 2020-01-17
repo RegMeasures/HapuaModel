@@ -69,14 +69,14 @@ def shotNoise(StartDate, EndDate, OutputInt,
     Weiss G. (1977) Shot noise models for the generation of synthetic 
     streamflow data. Water Resources Research 13(1):101–108.
     
-    Examples
-    --------
+    Example
+    -------
     >>> StartDate = pd.datetime(2020,1,1)
     >>> EndDate = pd.datetime(2021,1,1)
     >>> OutputInt = pd.Timedelta(hours=1)
     >>> OutputTs = shotNoise(StartDate, EndDate, OutputInt,
     ...                      pd.Timedelta(days=15), 100, 0.3, 0.9, 0.015)
-    >>> OutputTS.plot()
+    >>> OutputTs.plot()
     """
     # Validate inputs
     assert DecayRate1 > 0, 'DecayRate must be greater than 0'
@@ -158,5 +158,47 @@ def shotNoise(StartDate, EndDate, OutputInt,
     # Resample the output timeseries and clip
     OutputTs = OutputTs.resample(OutputInt).mean()
     OutputTs = OutputTs.loc[:EndDate]    
+    
+    return OutputTs
+
+def harmonicTide(StartDate, EndDate, OutputInt, MeanSeaLevel, TidalRange):
+    """ Create a discretised timeseries for a harmonic tidal signal
+    
+    OutputTs = harmonicTide(StartDate, EndDate, OutputInt, 
+                            MeanSeaLevel, TidalRange)
+    
+    Parameters
+    ----------
+    StartDate : pd.datetime
+        Datetime for start of timeseries.
+    EndDate : pd.datetime
+        Datetime for end of timeseries.
+    OutputInt : pd.Timedelta
+        Time interval for output timeseries.
+    MeanSeaLevel : float
+        mean value for the harmonic output timeseries
+    TidalRange : float
+        Range of the harmonic output timeseries
+    
+    Returns
+    -------
+    OutputTs : pd.Series
+        Harmonic timeseries with regularly spaced datapoints.
+    
+    Example
+    -------
+    >>> StartDate = pd.datetime(2020,1,1)
+    >>> EndDate = pd.datetime(2021,1,1)
+    >>> OutputInt = pd.Timedelta(hours=1)
+    >>> OutputTs = shotNoise(StartDate, EndDate, OutputInt, 0, 2)
+    >>> OutputTs.plot()
+    """
+    TidePeriod = (12*60 + 25.2) * 60 # in seconds
+    
+    OutputTimes = pd.date_range(start=StartDate, end=EndDate, freq=OutputInt)
+    OutputVals = (MeanSeaLevel + (TidalRange / 2) * 
+                  np.sin(((OutputTimes - StartDate).total_seconds() / TidePeriod) * np.pi))
+    
+    OutputTs = pd.Series(OutputVals, index=OutputTimes)
     
     return OutputTs

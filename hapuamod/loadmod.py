@@ -322,9 +322,8 @@ def loadModel(ModelConfigFile):
     
     # Flow timeseries
     if Config['BoundaryConditions']['RiverFlow'].lower() == 'shotnoise':
-        logging.info('Using synthetic shot-noise flow hydrograph')
+        logging.info('Synthetic shot-noise flow hydrograph specified')
         SNPars = Config['BoundaryConditions']['ShotnoiseHydrographParameters']
-        
         FlowTs = synth.shotNoise(TimePars['StartTime'], TimePars['EndTime'], 
                                  pd.Timedelta(minutes = SNPars['HydrographDt']),
                                  pd.Timedelta(days = SNPars['MeanDaysBetweenEvents']), 
@@ -357,14 +356,22 @@ def loadModel(ModelConfigFile):
     WaveTs.EDir_h = np.mod(WaveTs.EDir_h + np.pi, 2.0 * np.pi) - np.pi 
     
     # Sea level timeseries
-    Config['BoundaryConditions']['SeaLevel'] = \
-            os.path.join(ConfigFilePath, Config['BoundaryConditions']['SeaLevel'])
-    logging.info('Reading sea level timeseries from "%s"' % 
-                 Config['BoundaryConditions']['SeaLevel'])
-    SeaLevelTs = pd.read_csv(Config['BoundaryConditions']['SeaLevel'], 
-                             index_col=0, parse_dates=[0],
-                             date_parser=to_datetime)
-    SeaLevelTs = SeaLevelTs.SeaLevel
+    if Config['BoundaryConditions']['SeaLevel'].lower() == 'harmonic':
+        logging.info('Harmonic tidal boundary specified')
+        HTPars = Config['BoundaryConditions']['HarmonicTideParameters']
+        SeaLevelTs = synth.harmonicTide(TimePars['StartTime'], TimePars['EndTime'], 
+                                        pd.Timedelta(minutes = HTPars['SeaLevelDt']),
+                                        HTPars['MeanSeaLevel'], HTPars['TidalRange'])
+    else:
+        Config['BoundaryConditions']['SeaLevel'] = \
+                os.path.join(ConfigFilePath, Config['BoundaryConditions']['SeaLevel'])
+        logging.info('Reading sea level timeseries from "%s"' % 
+                     Config['BoundaryConditions']['SeaLevel'])
+        SeaLevelTs = pd.read_csv(Config['BoundaryConditions']['SeaLevel'], 
+                                 index_col=0, parse_dates=[0],
+                                 date_parser=to_datetime)
+        SeaLevelTs = SeaLevelTs.SeaLevel
+    
     #%% Trim time-series inputs to model time
     assert (FlowTs.index[0] <= TimePars['StartTime'] 
             and FlowTs.index[-1] >= TimePars['EndTime']), \

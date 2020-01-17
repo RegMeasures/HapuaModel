@@ -16,6 +16,11 @@ SeaLevel = string
     RisingLimbTime = float(min=0, default=None)
     HydrographDt = float(min=0, default=None)
     RandomSeed = integer(default=None)
+    
+    [[HarmonicTideParameters]]
+    MeanSeaLevel = float(default=0)
+    TidalRange = float(default=None)
+    SeaLevelDt = float(min=0, default=60)
 
 [SpatialInputs]
 Shoreline = string
