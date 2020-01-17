@@ -195,28 +195,14 @@ def loadModel(ModelConfigFile):
     
     ModelName = Config['ModelName']
     
-    #%% Extract file path ready to pre-pend to relative file paths as required
+    # Extract file path ready to pre-pend to relative file paths as required
     ConfigFilePath = os.path.split(ModelConfigFile)[0]
     
-    if 'HotStart' in Config:
+    #%% Spatial inputs
+    if 'Config['HotStart']['InitialConditionsNetCDF'] is not None:
+        # Read spatial inputs from hotstart file
         Config['HotStart']['InitialConditionsNetCDF'] = \
                 os.path.join(ConfigFilePath, Config['HotStart']['InitialConditionsNetCDF'])
-    else:
-        
-        Config['SpatialInputs']['Shoreline'] = \
-                os.path.join(ConfigFilePath, Config['SpatialInputs']['Shoreline'])
-        Config['SpatialInputs']['RiverLocation'] = \
-                os.path.join(ConfigFilePath, Config['SpatialInputs']['RiverLocation'])
-        Config['SpatialInputs']['BarrierBackshore'] = \
-                os.path.join(ConfigFilePath, Config['SpatialInputs']['BarrierBackshore'])
-        Config['SpatialInputs']['CliffToe'] = \
-                os.path.join(ConfigFilePath, Config['SpatialInputs']['CliffToe'])
-        Config['SpatialInputs']['OutletLocation'] = \
-                os.path.join(ConfigFilePath, Config['SpatialInputs']['OutletLocation'])
-    
-    #%% Spatial inputs
-    if 'HotStart' in Config:
-        # Read spatial inputs from hotstart file
         logging.info('Hotstarted simulation: Spatial inputs and initial conditions being read from %s' %
                      Config['HotStart']['InitialConditionsNetCDF'])
         NcFile = netCDF4.Dataset(Config['HotStart']['InitialConditionsNetCDF'], 
@@ -237,6 +223,8 @@ def loadModel(ModelConfigFile):
         ShoreNormDir = np.deg2rad(NcFile.ModelOrientation)
     else:
         # Read the initial shoreline position
+        Config['SpatialInputs']['Shoreline'] = \
+                os.path.join(ConfigFilePath, Config['SpatialInputs']['Shoreline'])
         logging.info('Reading initial shoreline position from "%s"' %
                      Config['SpatialInputs']['Shoreline'])
         ShoreShp = shapefile.Reader(Config['SpatialInputs']['Shoreline'])
@@ -247,6 +235,8 @@ def loadModel(ModelConfigFile):
         IniShoreCoords = np.asarray(ShoreShp.shape(0).points[:])
         
         # Read the river inflow location
+        Config['SpatialInputs']['RiverLocation'] = \
+                os.path.join(ConfigFilePath, Config['SpatialInputs']['RiverLocation'])
         logging.info('Reading river inflow location from "%s"' %
                      Config['SpatialInputs']['RiverLocation'])
         RiverShp = shapefile.Reader(Config['SpatialInputs']['RiverLocation'])
@@ -256,6 +246,8 @@ def loadModel(ModelConfigFile):
         InflowCoord = np.asarray(RiverShp.shape(0).points[:]).squeeze()
         
         # Read the barrier backshore
+        Config['SpatialInputs']['BarrierBackshore'] = \
+                os.path.join(ConfigFilePath, Config['SpatialInputs']['BarrierBackshore'])
         logging.info('Reading barrier backshore position from from "%s"' %
                      Config['SpatialInputs']['BarrierBackshore'])
         LagoonShp = shapefile.Reader(Config['SpatialInputs']['BarrierBackshore'])
@@ -265,6 +257,8 @@ def loadModel(ModelConfigFile):
         LagoonCoords = np.asarray(LagoonShp.shape(0).points[:])
         
         # Read the cliff toe position
+        Config['SpatialInputs']['CliffToe'] = \
+                os.path.join(ConfigFilePath, Config['SpatialInputs']['CliffToe'])
         logging.info('Reading cliff toe position from from "%s"' %
                      Config['SpatialInputs']['CliffToe'])
         CliffShp = shapefile.Reader(Config['SpatialInputs']['CliffToe'])
@@ -274,6 +268,8 @@ def loadModel(ModelConfigFile):
         CliffCoords = np.asarray(CliffShp.shape(0).points[:])
         
         # Read the initial outlet position polyline
+        Config['SpatialInputs']['OutletLocation'] = \
+                os.path.join(ConfigFilePath, Config['SpatialInputs']['OutletLocation'])
         logging.info('Reading lagoon outline from from "%s"' %
                      Config['SpatialInputs']['OutletLocation'])
         OutletShp = shapefile.Reader(Config['SpatialInputs']['OutletLocation'])

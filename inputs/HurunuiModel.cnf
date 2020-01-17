@@ -3,8 +3,11 @@
 ModelName = 'Hurunui hapua'
 
 [BoundaryConditions]
+# River flow timeseries [either filename/path of input csv file or "shotnoise"]
 RiverFlow = LagoonInflow.csv
+# Wave conditions timeseries [filename/path of input csv file]
 WaveConditions = WaveData.csv
+# Sea level timeseries [either filename/path of input csv file or "harmonic"]
 SeaLevel = SeaLevel.csv
 
 [SpatialInputs]

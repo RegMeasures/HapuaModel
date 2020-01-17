@@ -14,13 +14,17 @@ SeaLevel = string
     SlowDecayRate = float(min=0, default=None)
     FastFlowProp = float(min=0, max=1, default=None)
     RisingLimbTime = float(min=0, default=None)
-    HydrographDt = float(min=0, default=None)
+    HydrographDt = float(min=0, default=60)
     RandomSeed = integer(default=None)
     
     [[HarmonicTideParameters]]
     MeanSeaLevel = float(default=0)
     TidalRange = float(default=None)
     SeaLevelDt = float(min=0, default=60)
+
+[HotStart]
+InitialConditionsNetCDF = string(default=None)
+HotStartTime = string(default=None)
 
 [SpatialInputs]
 Shoreline = string
