@@ -119,9 +119,9 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, RiverWid
     WaterFill,   = PlanAx.fill(ShoreX, ShoreY[:,3], 'lightskyblue', label='Water', zorder=0)
     CliffFill,   = PlanAx.fill(ShoreX, ShoreY[:,4], fill=False, hatch = '/', label='Cliff', zorder=1)
     ShoreLine,   = PlanAx.plot(ShoreX, ShoreY[:,0], 'k-', label='Shore', zorder=4)
-    ShoreDots,   = PlanAx.plot(ShoreX, ShoreY[:,0], 'k.', label='Shore', color='grey', zorder=3)
+    #ShoreDots,   = PlanAx.plot(ShoreX, ShoreY[:,0], 'k.', label='Shore', color='grey', zorder=3)
     OutletLine,  = PlanAx.plot(ShoreX, ShoreY[:,1], 'k-', label='Outlet bank', zorder=5)
-    ChannelLine, = PlanAx.plot(ShoreX, ShoreY[:,1], '-x', label='Channel', color='grey', zorder=2)
+    #ChannelLine, = PlanAx.plot(ShoreX, ShoreY[:,1], '-x', label='Channel', color='grey', zorder=2)
     LagoonLine,  = PlanAx.plot(ShoreX, ShoreY[:,3], 'k-', label='Lagoon', zorder=6)
     CliffLine,   = PlanAx.plot(ShoreX, ShoreY[:,4], 'k-', label='Cliff', zorder=7)
     RiverLine,   = PlanAx.plot([0, 0], [-1000, 0], 'k-', label='River bank', zorder=8)
@@ -148,17 +148,17 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, RiverWid
     
     # Add some labels
     #PlanAx.legend()
-    PlanAx.set_xlabel('Model X-coordinate (m)')
-    PlanAx.set_ylabel('Model Y-coordinate (m)')
+    PlanAx.set_xlabel('Alongshore distance (m)')
+    PlanAx.set_ylabel('Cross-shore distance (m)')
     if not ShoreZ is None:
         VertAx.set_ylabel('Elevation (m)')
     
     # Compile output variable
     ModelFig = {'PlanFig':PlanFig, 'PlanAx':PlanAx, 'ShoreLine':ShoreLine, 
-                'OutletLine':OutletLine, 'ChannelLine':ChannelLine,
+                'OutletLine':OutletLine, 'RiverLine':RiverLine,
                 'LagoonLine':LagoonLine, 'CliffLine':CliffLine, 
                 'WaterFill':WaterFill, 'RiverWidth':RiverWidth,
-                'ShoreDots':ShoreDots, 'RiverLine':RiverLine,
+                #'ShoreDots':ShoreDots, 'ChannelLine':ChannelLine,
                 'CliffFill':CliffFill}
     if not ShoreZ is None:
         ModelFig['CrestLine'] = CrestLine
@@ -359,8 +359,8 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
     
     # Update the lines etc
     ModelFig['ShoreLine'].set_data(ShoreLineX, ShoreLineY)
-    ModelFig['ShoreDots'].set_data(ShoreDotsX, ShoreDotsY)
-    ModelFig['ChannelLine'].set_data(ChannelX, ChannelY)
+    #ModelFig['ShoreDots'].set_data(ShoreDotsX, ShoreDotsY)
+    #ModelFig['ChannelLine'].set_data(ChannelX, ChannelY)
     ModelFig['OutletLine'].set_data(OutletX, OutletY)
     ModelFig['LagoonLine'].set_data(LagoonLineX, LagoonLineY)
     ModelFig['CliffLine'].set_data(CliffLineX, CliffLineY)
