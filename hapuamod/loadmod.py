@@ -70,7 +70,7 @@ def loadModel(ModelConfigFile):
         ShoreNormDir (float): Direction of offshore pointing line at 90 
             degrees to overall average coast direction. Computed based on a 
             straightline fitted thruogh the initial condition shoreline 
-            position (radians).
+            position (radians, clockwise from North).
         ShoreX (np.ndarray(float64)): positions of discretised 
             shoreline in model coordinate system (m)
         ShoreY (np.ndarray(float64)): position of aspects of cross-shore 
@@ -142,7 +142,8 @@ def loadModel(ModelConfigFile):
                 longshore transport across river mouth [m]
             MinOutletWidth (float): Threshold width to trigger outlet closure
             K2coef (float): Calculated from other inputs for use in calculation
-                of longshore transport rate. K2 = K / (RhoSed - RhoSea) * g * (1 - VoidRatio))
+                of longshore transport rate. 
+                K2 = K / (RhoSed - RhoSea) * g * (1 - VoidRatio))
             BreakerCoef (float): Calculated from other inputs for use in 
                 calculation of depth of breaking waves. 
                 BreakerCoef = 8 / (RhoSea * Gravity^1.5 * GammaRatio^2)
@@ -172,7 +173,8 @@ def loadModel(ModelConfigFile):
     # Check the specified model config file exists
     if not os.path.isfile(ModelConfigFile):
         logging.error('%s not found' % ModelConfigFile)
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), ModelConfigFile)
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), 
+                                ModelConfigFile)
     
     # Get the absolute file path to the config spec file 'configspec.cnf'
     ConfigSpecFile = pkg_resources.resource_filename(__name__, 'configspec.cnf')
@@ -196,11 +198,81 @@ def loadModel(ModelConfigFile):
     ModelName = Config['ModelName']
     
     # Extract file path ready to pre-pend to relative file paths as required
-    ConfigFilePath = os.path.split(ModelConfigFile)[0]
+    ConfigFilePath = os.path.split(ModelConfigFile)[0]    
     
-    #%% Spatial inputs
-    if 'Config['HotStart']['InitialConditionsNetCDF'] is not None:
-        # Read spatial inputs from hotstart file
+    #%% Time inputs
+    logging.info('Reading time inputs')
+    TimePars = {'StartTime': pd.to_datetime(Config['Time']['StartTime']),
+                'EndTime': pd.to_datetime(Config['Time']['EndTime']),
+                'HydDt': pd.Timedelta(seconds=Config['Time']['HydDt']),
+                'MorDt': pd.Timedelta(seconds=Config['Time']['MorDt'])}
+    # TODO: check mortime is a multiple of hydtime (or replace with morscaling?)
+    
+    #%% Read physical parameters
+    logging.info('Processing physical parameters')
+    PhysicalPars = {'RhoSed': Config['PhysicalParameters']['RhoSed'],
+                    'RhoSea': Config['PhysicalParameters']['RhoSea'],
+                    'RhoRiv': Config['PhysicalParameters']['RhoSea'],
+                    'Kcoef': Config['PhysicalParameters']['Kcoef'],
+                    'Gravity': Config['PhysicalParameters']['Gravity'],
+                    'VoidRatio': Config['PhysicalParameters']['VoidRatio'],
+                    'GammaRatio': Config['PhysicalParameters']['GammaRatio'],
+                    'WaveDataDepth': Config['PhysicalParameters']['WaveDataDepth'],
+                    'ClosureDepth': Config['PhysicalParameters']['ClosureDepth'],
+                    'BeachSlope': Config['PhysicalParameters']['BeachSlope'],
+                    'RiverSlope': Config['PhysicalParameters']['RiverSlope'],
+                    'GrainSize': Config['PhysicalParameters']['GrainSize'],
+                    'CritShieldsStress': Config['PhysicalParameters']['CritShieldsStress'],
+                    'UpstreamLength': Config['PhysicalParameters']['UpstreamLength'],
+                    'RiverWidth': Config['PhysicalParameters']['RiverWidth'],
+                    'Roughness': Config['PhysicalParameters']['RoughnessManning'],
+                    'WidthRatio': Config['PhysicalParameters']['WidthDepthRatio'],
+                    'BackshoreElev': Config['PhysicalParameters']['BackshoreElev'],
+                    'MaxOutletElev': Config['PhysicalParameters']['MaxOutletElev'],
+                    'OT_coef': Config['PhysicalParameters']['OT_coef'],
+                    'OT_exp': Config['PhysicalParameters']['OT_exp'],
+                    'OwProp_coef': Config['PhysicalParameters']['OwProp_coef'],
+                    'MinOpForOw': Config['PhysicalParameters']['MinOpForOw'],
+                    'BeachTopElev': Config['PhysicalParameters']['BeachTopElev'],
+                    'SpitWidth': Config['PhysicalParameters']['SpitWidth'],
+                    'MinOutletWidth': Config['PhysicalParameters']['MinOutletWidth']}
+
+    GammaLST = ((PhysicalPars['RhoSed'] - PhysicalPars['RhoSea']) * 
+                PhysicalPars['Gravity'] * (1 - PhysicalPars['VoidRatio']))
+    
+    PhysicalPars['K2coef'] = PhysicalPars['Kcoef'] / GammaLST
+    PhysicalPars['BreakerCoef'] = 8.0 / (PhysicalPars['RhoSea'] *
+                                         PhysicalPars['Gravity']**1.5 *
+                                         PhysicalPars['GammaRatio']**2.0)
+    
+    #%% Read numerical parameters
+    Dx = Config['NumericalParameters']['AlongShoreDx']
+    NumericalPars = {'Dx': Dx,
+                     'Beta': Config['NumericalParameters']['Beta'],
+                     'Theta': Config['NumericalParameters']['Theta'],
+                     'Psi': Config['NumericalParameters']['Psi'],
+                     'ErrTol': Config['NumericalParameters']['ErrTol'],
+                     'MaxIt': Config['NumericalParameters']['MaxIt'],
+                     'WarnTol': Config['NumericalParameters']['WarnTol']}
+    
+    #%% Read initial conditions
+    if Config['HotStart']['InitialConditionsNetCDF'] is None:
+        logging.info('Reading initial conditions')
+        IniCond = {'OutletWidth': Config['InitialConditions']['OutletWidth'],
+                   'OutletBed': Config['InitialConditions']['OutletBed'],
+                   'LagoonBed': Config['InitialConditions']['LagoonBed'],
+                   'BarrierElev': Config['InitialConditions']['BarrierElev']}
+        
+        #%% Initialise river variables
+        RiverElev = np.flipud(np.arange(IniCond['LagoonBed'],
+                                        IniCond['LagoonBed']
+                                        + PhysicalPars['RiverSlope']
+                                        * PhysicalPars['UpstreamLength'],
+                                        PhysicalPars['RiverSlope'] * Dx))
+    
+    #%% Read/initialise spatial inputs
+    if Config['HotStart']['InitialConditionsNetCDF'] is not None:
+        #%% Read spatial inputs from hotstart file
         Config['HotStart']['InitialConditionsNetCDF'] = \
                 os.path.join(ConfigFilePath, Config['HotStart']['InitialConditionsNetCDF'])
         logging.info('Hotstarted simulation: Spatial inputs and initial conditions being read from %s' %
@@ -221,7 +293,52 @@ def loadModel(ModelConfigFile):
         
         Origin = np.array([NcFile.ModelOriginX, NcFile.ModelOriginY])
         ShoreNormDir = np.deg2rad(NcFile.ModelOrientation)
+        assert ShoreX[1] - ShoreX[0] == Dx, 'Dx specified in model config file must match hotstart file'
+        
+    elif Config['SpatialInputs']['Shoreline'] is None:
+        #%% Initialise model with default straight shoreline etc
+        logging.info('No shoreline locatoin provided - Initialising with simple straight shoreline.')
+        assert Config['SpatialInputs']['ShorelineLengthLeft'] is not None, 'ShorelineLengthLeft is required in [SpatialInputs]'
+        assert Config['SpatialInputs']['ShorelineLengthRight'] is not None, 'ShorelineLengthRight is required in [SpatialInputs]'
+        assert Config['SpatialInputs']['BeachWidth'] is not None, 'BeachWidth is required in [SpatialInputs]'
+        
+        # No transformation from real world to model coordinates
+        Origin = np.zeros(2)
+        ShoreNormDir = 0.0
+        
+        # Create key shore parrallel variables
+        ShoreX = np.arange(math.floor(-Config['SpatialInputs']['ShorelineLengthLeft']/Dx)*Dx, 
+                           Config['SpatialInputs']['ShorelineLengthRight'] + Dx, Dx)
+        ShoreY = np.full([ShoreX.size, 5], np.nan)
+        ShoreZ = np.full([ShoreX.size, 4], np.nan)
+        
+        # Setup basic straight shoreline
+        ShoreY[:, 0] = 0.0
+        ShoreY[:, 3] = -Config['SpatialInputs']['BeachWidth']
+        ShoreY[:, 4] = -Config['SpatialInputs']['BeachWidth']
+        
+        ShoreZ[:, 0] = IniCond['BarrierElev']
+        
+        # Setup outlet channel
+        OutletEndX = np.asarray([0., 0.])
+        OutletEndWidth = np.full(2, IniCond['OutletWidth'])
+        OutletEndElev = np.asarray([IniCond['LagoonBed'], IniCond['OutletBed']])
+        
+        LagoonMask = ShoreX == 0
+        ShoreY[LagoonMask, 1] = -PhysicalPars['SpitWidth']
+        ShoreY[LagoonMask, 2] = ShoreY[LagoonMask,1] - IniCond['OutletWidth']
+        
+        ShoreZ[LagoonMask, 1] = (IniCond['OutletBed'] + IniCond['LagoonBed'])/2
+        ShoreZ[LagoonMask, 2] = ShoreZ[LagoonMask, 0]
+        
+        # Setup lagoon
+        ShoreY[LagoonMask, 3] = ShoreY[LagoonMask, 2] - 0.001
+        ShoreY[LagoonMask, 4] = ShoreY[LagoonMask, 2] - PhysicalPars['RiverWidth']
+        ShoreZ[:, 3] = IniCond['LagoonBed']
+        
     else:
+        #%% Initialise model from supplied real world spatial data
+        
         # Read the initial shoreline position
         Config['SpatialInputs']['Shoreline'] = \
                 os.path.join(ConfigFilePath, Config['SpatialInputs']['Shoreline'])
@@ -296,168 +413,15 @@ def loadModel(ModelConfigFile):
         else:
             # land is to south of baseline
             ShoreNormDir = math.atan2(-Baseline[0],1)
-    
-    #%% Initial conditions
-    if not 'HotStart' in Config:
-        logging.info('Reading initial conditions')
-        IniCond = {'OutletWidth': Config['InitialConditions']['OutletWidth'],
-                   'OutletBed': Config['InitialConditions']['OutletBed'],
-                   'LagoonBed': Config['InitialConditions']['LagoonBed'],
-                   'BarrierElev': Config['InitialConditions']['BarrierElev']}
-    
-    #%% Time inputs
-    logging.info('Reading time inputs')
-    TimePars = {'StartTime': pd.to_datetime(Config['Time']['StartTime']),
-                'EndTime': pd.to_datetime(Config['Time']['EndTime']),
-                'HydDt': pd.Timedelta(seconds=Config['Time']['HydDt']),
-                'MorDt': pd.Timedelta(seconds=Config['Time']['MorDt'])}
-    # TODO: check mortime is a multiple of hydtime (or replace with morscaling?)
-    
-    #%% Read the boundary condition timeseries
-    to_datetime = lambda d: pd.datetime.strptime(d, '%d/%m/%Y %H:%M')
-    
-    # Flow timeseries
-    if Config['BoundaryConditions']['RiverFlow'].lower() == 'shotnoise':
-        logging.info('Synthetic shot-noise flow hydrograph specified')
-        SNPars = Config['BoundaryConditions']['ShotnoiseHydrographParameters']
-        FlowTs = synth.shotNoise(TimePars['StartTime'], TimePars['EndTime'], 
-                                 pd.Timedelta(minutes = SNPars['HydrographDt']),
-                                 pd.Timedelta(days = SNPars['MeanDaysBetweenEvents']), 
-                                 SNPars['MeanEventIncrease'], 
-                                 SNPars['FastDecayRate'], SNPars['FastFlowProp'], 
-                                 SNPars['SlowDecayRate'], 
-                                 pd.Timedelta(days = SNPars['RisingLimbTime']), 
-                                 RandomSeed = SNPars['RandomSeed'])
-    else:        
-        Config['BoundaryConditions']['RiverFlow'] = \
-                os.path.join(ConfigFilePath, Config['BoundaryConditions']['RiverFlow'])
-        logging.info('Reading flow timeseries from "%s"' % 
-                     Config['BoundaryConditions']['RiverFlow'])
-        FlowTs = pd.read_csv(Config['BoundaryConditions']['RiverFlow'], 
-                             index_col=0, parse_dates=[0],
-                             date_parser=to_datetime)
-        FlowTs = FlowTs.Flow
-    
-    # Wave timeseries
-    Config['BoundaryConditions']['WaveConditions'] = \
-            os.path.join(ConfigFilePath, Config['BoundaryConditions']['WaveConditions'])
-    logging.info('Reading wave timeseries from "%s"' % 
-                 Config['BoundaryConditions']['WaveConditions'])
-    WaveTs = pd.read_csv(Config['BoundaryConditions']['WaveConditions'], 
-                         index_col=0, parse_dates=[0],
-                         date_parser=to_datetime)
-    # Convert wave directions into radians in model coordinate system
-    WaveTs.EDir_h = np.deg2rad(WaveTs.EDir_h) - (ShoreNormDir)
-    # Make sure all wave angles are in the range -pi to +pi
-    WaveTs.EDir_h = np.mod(WaveTs.EDir_h + np.pi, 2.0 * np.pi) - np.pi 
-    
-    # Sea level timeseries
-    if Config['BoundaryConditions']['SeaLevel'].lower() == 'harmonic':
-        logging.info('Harmonic tidal boundary specified')
-        HTPars = Config['BoundaryConditions']['HarmonicTideParameters']
-        SeaLevelTs = synth.harmonicTide(TimePars['StartTime'], TimePars['EndTime'], 
-                                        pd.Timedelta(minutes = HTPars['SeaLevelDt']),
-                                        HTPars['MeanSeaLevel'], HTPars['TidalRange'])
-    else:
-        Config['BoundaryConditions']['SeaLevel'] = \
-                os.path.join(ConfigFilePath, Config['BoundaryConditions']['SeaLevel'])
-        logging.info('Reading sea level timeseries from "%s"' % 
-                     Config['BoundaryConditions']['SeaLevel'])
-        SeaLevelTs = pd.read_csv(Config['BoundaryConditions']['SeaLevel'], 
-                                 index_col=0, parse_dates=[0],
-                                 date_parser=to_datetime)
-        SeaLevelTs = SeaLevelTs.SeaLevel
-    
-    #%% Trim time-series inputs to model time
-    assert (FlowTs.index[0] <= TimePars['StartTime'] 
-            and FlowTs.index[-1] >= TimePars['EndTime']), \
-        'Flow timeseries %s does not extend over full model duration' \
-        % Config['BoundaryConditions']['RiverFlow']
-    KeepTimes = np.zeros(FlowTs.shape[0], dtype=bool)
-    KeepTimes[:-1] = FlowTs.index[1:] > TimePars['StartTime']
-    KeepTimes[1:] = FlowTs.index[:-1]<TimePars['EndTime']
-    FlowTs = FlowTs[KeepTimes]
+            
+        #%% Initialise shoreline variables
 
-    assert (WaveTs.index[0] <= TimePars['StartTime'] 
-            and WaveTs.index[-1] >= TimePars['EndTime']), \
-        'Wave timeseries %s does not extend over full model duration' \
-        % Config['BoundaryConditions']['WaveConditions']
-    KeepTimes = np.zeros(WaveTs.shape[0], dtype=bool)
-    KeepTimes[:-1] = WaveTs.index[1:] > TimePars['StartTime']
-    KeepTimes[1:] = WaveTs.index[:-1]<TimePars['EndTime']
-    WaveTs = WaveTs[KeepTimes]
-    
-    assert (SeaLevelTs.index[0] <= TimePars['StartTime'] 
-            and SeaLevelTs.index[-1] >= TimePars['EndTime']), \
-        'Sea level timeseries %s does not extend over full model duration' \
-        % Config['BoundaryConditions']['SeaLevel']        
-    KeepTimes = np.zeros(SeaLevelTs.shape[0], dtype=bool)
-    KeepTimes[:-1] = SeaLevelTs.index[1:] > TimePars['StartTime']
-    KeepTimes[1:] = SeaLevelTs.index[:-1]<TimePars['EndTime']
-    SeaLevelTs = SeaLevelTs[KeepTimes]
-    
-    #%% Read physical parameters
-    logging.info('Processing physical parameters')
-    PhysicalPars = {'RhoSed': Config['PhysicalParameters']['RhoSed'],
-                    'RhoSea': Config['PhysicalParameters']['RhoSea'],
-                    'RhoRiv': Config['PhysicalParameters']['RhoSea'],
-                    'Kcoef': Config['PhysicalParameters']['Kcoef'],
-                    'Gravity': Config['PhysicalParameters']['Gravity'],
-                    'VoidRatio': Config['PhysicalParameters']['VoidRatio'],
-                    'GammaRatio': Config['PhysicalParameters']['GammaRatio'],
-                    'WaveDataDepth': Config['PhysicalParameters']['WaveDataDepth'],
-                    'ClosureDepth': Config['PhysicalParameters']['ClosureDepth'],
-                    'BeachSlope': Config['PhysicalParameters']['BeachSlope'],
-                    'RiverSlope': Config['PhysicalParameters']['RiverSlope'],
-                    'GrainSize': Config['PhysicalParameters']['GrainSize'],
-                    'CritShieldsStress': Config['PhysicalParameters']['CritShieldsStress'],
-                    'UpstreamLength': Config['PhysicalParameters']['UpstreamLength'],
-                    'RiverWidth': Config['PhysicalParameters']['RiverWidth'],
-                    'Roughness': Config['PhysicalParameters']['RoughnessManning'],
-                    'WidthRatio': Config['PhysicalParameters']['WidthDepthRatio'],
-                    'BackshoreElev': Config['PhysicalParameters']['BackshoreElev'],
-                    'MaxOutletElev': Config['PhysicalParameters']['MaxOutletElev'],
-                    'OT_coef': Config['PhysicalParameters']['OT_coef'],
-                    'OT_exp': Config['PhysicalParameters']['OT_exp'],
-                    'OwProp_coef': Config['PhysicalParameters']['OwProp_coef'],
-                    'MinOpForOw': Config['PhysicalParameters']['MinOpForOw'],
-                    'BeachTopElev': Config['PhysicalParameters']['BeachTopElev'],
-                    'SpitWidth': Config['PhysicalParameters']['SpitWidth'],
-                    'MinOutletWidth': Config['PhysicalParameters']['MinOutletWidth']}
-
-    GammaLST = ((PhysicalPars['RhoSed'] - PhysicalPars['RhoSea']) * 
-                PhysicalPars['Gravity'] * (1 - PhysicalPars['VoidRatio']))
-    
-    PhysicalPars['K2coef'] = PhysicalPars['Kcoef'] / GammaLST
-    PhysicalPars['BreakerCoef'] = 8.0 / (PhysicalPars['RhoSea'] *
-                                         PhysicalPars['Gravity']**1.5 *
-                                         PhysicalPars['GammaRatio']**2.0)
-    
-    #%% Read numerical parameters
-    Dx = Config['NumericalParameters']['AlongShoreDx']
-    NumericalPars = {'Dx': Dx,
-                     'Beta': Config['NumericalParameters']['Beta'],
-                     'Theta': Config['NumericalParameters']['Theta'],
-                     'Psi': Config['NumericalParameters']['Psi'],
-                     'ErrTol': Config['NumericalParameters']['ErrTol'],
-                     'MaxIt': Config['NumericalParameters']['MaxIt'],
-                     'WarnTol': Config['NumericalParameters']['WarnTol']}
-
-    #%% Read output options
-    OutputOpts = {'OutFile': Config['OutputOptions']['OutFile'],
-                  'OutInt': pd.Timedelta(seconds=Config['OutputOptions']['OutInt']),
-                  'LogInt': pd.Timedelta(seconds=Config['OutputOptions']['LogInt']),
-                  'PlotInt': pd.Timedelta(seconds=Config['OutputOptions']['PlotInt'])}
-    
-    #%% Initialise shoreline variables
-    
-    if not 'HotStart' in Config:
         # Convert shoreline polyline into model coordinate system
         IniShoreCoords2 = np.empty(IniShoreCoords.shape)
         (IniShoreCoords2[:,0], IniShoreCoords2[:,1]) = geom.real2mod(IniShoreCoords[:,0], IniShoreCoords[:,1], Origin, ShoreNormDir)
         if IniShoreCoords2[0,0] > IniShoreCoords2[-1,0]:
             IniShoreCoords2 = IniShoreCoords2 = np.flipud(IniShoreCoords2)
-        assert np.all(np.diff(IniShoreCoords2[:,0]) > 0), 'Shoreline includes recurvature???'
+        assert np.all(np.diff(IniShoreCoords2[:,0]) > 0), 'Shoreline includes recurvature incompatible with model coordinate system'
         
         # Discretise shoreline at fixed intervals in model coordinate system
         ShoreX = np.arange(math.ceil(IniShoreCoords2[0,0]/Dx)*Dx, 
@@ -550,7 +514,7 @@ def loadModel(ModelConfigFile):
         OutletEndWidth = np.full(2, IniCond['OutletWidth'])
         
         # Initialise lagoon bed elevation
-        ShoreZ[~np.isnan(ShoreY[:,3]),3] = np.full(ShoreX.size, IniCond['LagoonBed'])
+        ShoreZ[: ,3] = np.full(ShoreX.size, IniCond['LagoonBed'])
         
         # Initialise outlet channel bed elevation
         BedLevel = np.linspace(IniCond['LagoonBed'], IniCond['OutletBed'], np.sum(OutletMask)+2)
@@ -563,13 +527,95 @@ def loadModel(ModelConfigFile):
         # Initialise barrier crest elevation
         ShoreZ[:, 0] = np.full(ShoreX.size, IniCond['BarrierElev'])
         ShoreZ[OutletMask, 2] = np.full(np.sum(OutletMask), IniCond['BarrierElev'])
-        
-        #%% Initialising river variables
-        RiverElev = np.flipud(np.arange(IniCond['LagoonBed'],
-                                        IniCond['LagoonBed']
-                                        + PhysicalPars['RiverSlope']
-                                        * PhysicalPars['UpstreamLength'],
-                                        PhysicalPars['RiverSlope'] * Dx))
+    
+    #%% Read the boundary condition timeseries
+    to_datetime = lambda d: pd.datetime.strptime(d, '%d/%m/%Y %H:%M')
+    
+    # Flow timeseries
+    if Config['BoundaryConditions']['RiverFlow'].lower() == 'shotnoise':
+        logging.info('Synthetic shot-noise flow hydrograph specified')
+        SNPars = Config['BoundaryConditions']['ShotnoiseHydrographParameters']
+        FlowTs = synth.shotNoise(TimePars['StartTime'], TimePars['EndTime'], 
+                                 pd.Timedelta(minutes = SNPars['HydrographDt']),
+                                 pd.Timedelta(days = SNPars['MeanDaysBetweenEvents']), 
+                                 SNPars['MeanEventIncrease'], 
+                                 SNPars['FastDecayRate'], SNPars['FastFlowProp'], 
+                                 SNPars['SlowDecayRate'], 
+                                 pd.Timedelta(days = SNPars['RisingLimbTime']), 
+                                 RandomSeed = SNPars['RandomSeed'])
+    else:        
+        Config['BoundaryConditions']['RiverFlow'] = \
+                os.path.join(ConfigFilePath, Config['BoundaryConditions']['RiverFlow'])
+        logging.info('Reading flow timeseries from "%s"' % 
+                     Config['BoundaryConditions']['RiverFlow'])
+        FlowTs = pd.read_csv(Config['BoundaryConditions']['RiverFlow'], 
+                             index_col=0, parse_dates=[0],
+                             date_parser=to_datetime)
+        FlowTs = FlowTs.Flow
+    
+    # Wave timeseries
+    Config['BoundaryConditions']['WaveConditions'] = \
+            os.path.join(ConfigFilePath, Config['BoundaryConditions']['WaveConditions'])
+    logging.info('Reading wave timeseries from "%s"' % 
+                 Config['BoundaryConditions']['WaveConditions'])
+    WaveTs = pd.read_csv(Config['BoundaryConditions']['WaveConditions'], 
+                         index_col=0, parse_dates=[0],
+                         date_parser=to_datetime)
+    # Convert wave directions into radians in model coordinate system
+    WaveTs.EDir_h = np.deg2rad(WaveTs.EDir_h) - (ShoreNormDir)
+    # Make sure all wave angles are in the range -pi to +pi
+    WaveTs.EDir_h = np.mod(WaveTs.EDir_h + np.pi, 2.0 * np.pi) - np.pi 
+    
+    # Sea level timeseries
+    if Config['BoundaryConditions']['SeaLevel'].lower() == 'harmonic':
+        logging.info('Harmonic tidal boundary specified')
+        HTPars = Config['BoundaryConditions']['HarmonicTideParameters']
+        SeaLevelTs = synth.harmonicTide(TimePars['StartTime'], TimePars['EndTime'], 
+                                        pd.Timedelta(minutes = HTPars['SeaLevelDt']),
+                                        HTPars['MeanSeaLevel'], HTPars['TidalRange'])
+    else:
+        Config['BoundaryConditions']['SeaLevel'] = \
+                os.path.join(ConfigFilePath, Config['BoundaryConditions']['SeaLevel'])
+        logging.info('Reading sea level timeseries from "%s"' % 
+                     Config['BoundaryConditions']['SeaLevel'])
+        SeaLevelTs = pd.read_csv(Config['BoundaryConditions']['SeaLevel'], 
+                                 index_col=0, parse_dates=[0],
+                                 date_parser=to_datetime)
+        SeaLevelTs = SeaLevelTs.SeaLevel
+    
+    #%% Trim time-series inputs to model time
+    assert (FlowTs.index[0] <= TimePars['StartTime'] 
+            and FlowTs.index[-1] >= TimePars['EndTime']), \
+        'Flow timeseries %s does not extend over full model duration' \
+        % Config['BoundaryConditions']['RiverFlow']
+    KeepTimes = np.zeros(FlowTs.shape[0], dtype=bool)
+    KeepTimes[:-1] = FlowTs.index[1:] > TimePars['StartTime']
+    KeepTimes[1:] = FlowTs.index[:-1]<TimePars['EndTime']
+    FlowTs = FlowTs[KeepTimes]
+
+    assert (WaveTs.index[0] <= TimePars['StartTime'] 
+            and WaveTs.index[-1] >= TimePars['EndTime']), \
+        'Wave timeseries %s does not extend over full model duration' \
+        % Config['BoundaryConditions']['WaveConditions']
+    KeepTimes = np.zeros(WaveTs.shape[0], dtype=bool)
+    KeepTimes[:-1] = WaveTs.index[1:] > TimePars['StartTime']
+    KeepTimes[1:] = WaveTs.index[:-1]<TimePars['EndTime']
+    WaveTs = WaveTs[KeepTimes]
+    
+    assert (SeaLevelTs.index[0] <= TimePars['StartTime'] 
+            and SeaLevelTs.index[-1] >= TimePars['EndTime']), \
+        'Sea level timeseries %s does not extend over full model duration' \
+        % Config['BoundaryConditions']['SeaLevel']        
+    KeepTimes = np.zeros(SeaLevelTs.shape[0], dtype=bool)
+    KeepTimes[:-1] = SeaLevelTs.index[1:] > TimePars['StartTime']
+    KeepTimes[1:] = SeaLevelTs.index[:-1]<TimePars['EndTime']
+    SeaLevelTs = SeaLevelTs[KeepTimes]
+    
+    #%% Read output options
+    OutputOpts = {'OutFile': Config['OutputOptions']['OutFile'],
+                  'OutInt': pd.Timedelta(seconds=Config['OutputOptions']['OutInt']),
+                  'LogInt': pd.Timedelta(seconds=Config['OutputOptions']['LogInt']),
+                  'PlotInt': pd.Timedelta(seconds=Config['OutputOptions']['PlotInt'])}
           
     # Produce a map showing the spatial inputs
     #(ShoreXreal, ShoreYreal) = geom.mod2real(ShoreX, ShoreY, Origin, BaseShoreNormDir)

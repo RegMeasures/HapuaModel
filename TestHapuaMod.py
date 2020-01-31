@@ -34,11 +34,11 @@ plt.plot((ShoreX[0:-1]+ShoreX[1:])/2, LST)
  OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
     riv.assembleChannel(ShoreX, ShoreY, ShoreZ,
                         OutletEndX, OutletEndWidth, OutletEndElev, 
-                        RiverElev, PhysicalPars['RiverWidth'], 
+                        RiverElev, 
                         np.zeros(RiverElev.size), np.zeros(RiverElev.size),
                         np.zeros(ShoreX.size), np.zeros(ShoreX.size), 
                         np.zeros(ShoreX.size), np.zeros(ShoreX.size),
-                        np.zeros(2), np.zeros(2), NumericalPars['Dx'],
+                        np.zeros(3), np.zeros(3), NumericalPars['Dx'],
                         PhysicalPars)
 visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, PhysicalPars['RiverWidth'])
     
@@ -57,7 +57,7 @@ SeaLevel = core.interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartTime
  OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
     riv.assembleChannel(ShoreX, ShoreY, ShoreZ, 
                         OutletEndX, OutletEndWidth, OutletEndElev, 
-                        RiverElev, PhysicalPars['RiverWidth'], 
+                        RiverElev, 
                         ChanDep[ChanFlag==0], ChanVel[ChanFlag==0], 
                         LagoonWL, LagoonVel, OutletDep, OutletVel,
                         OutletEndDep, OutletEndVel, 
@@ -97,7 +97,7 @@ Hs_offshore = WaveTs.Hsig_Offshore[0]
 Runup = coast.runup(WavePeriod, Hs_offshore, PhysicalPars['BeachSlope'])
 
 (CST_tot, OverwashProp) = coast.overtopping(Runup, SeaLevel, ShoreY, 
-                                               ShoreZ, PhysicalPars)
+                                            ShoreZ, PhysicalPars)
 
 #%% Morphology updating
 OldShoreY = ShoreY.copy()

@@ -39,16 +39,12 @@ SeaLevel = harmonic
     SeaLevelDt = 30
 
 [SpatialInputs]
-# polyline shapefile of shoreline initial position
-Shoreline = HurunuiShoreline.shp
-# point shapefile of location river flows into lagoon
-RiverLocation = RiverInflow.shp
-# polyline shapefile of barrier backshore (seaward edge of lagoon)
-BarrierBackshore = LagoonPolyline.shp
-# cliff toe line (polyline extending over full model domain, even river!)
-CliffToe = CliffPolyline.shp
-# Initial outlet position (polyline shapefile of outlet centerline)
-OutletLocation = InitialOutlet.shp
+# Model domain extent to left of river centerline when looking to sea [m]
+ShorelineLengthLeft = 1000
+# Model domain extent to right of river centerline when looking to sea [m]
+ShorelineLengthRight = 500
+# Beach width in initial condition (uniform across whole model domain, no lagoon) [m]
+BeachWidth = 50
 
 [InitialConditions]
 # Initial outlet width [m]

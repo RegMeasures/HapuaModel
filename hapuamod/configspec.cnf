@@ -27,11 +27,14 @@ InitialConditionsNetCDF = string(default=None)
 HotStartTime = string(default=None)
 
 [SpatialInputs]
-Shoreline = string
-RiverLocation = string
-BarrierBackshore = string
-CliffToe = string
-OutletLocation = string
+Shoreline = string(default=None)
+RiverLocation = string(default=None)
+BarrierBackshore = string(default=None)
+CliffToe = string(default=None)
+OutletLocation = string(default=None)
+ShorelineLengthLeft = float(min=0, default=None)
+ShorelineLengthRight = float(min=0, default=None)
+BeachWidth = float(min=0, default=None)
 
 [InitialConditions]
 OutletWidth = float(min=0)
