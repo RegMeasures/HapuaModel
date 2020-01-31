@@ -338,13 +338,22 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
     
     # Calculate properties for the 'online' section of lagoon
     LagoonWidth = ShoreY[:,3] - ShoreY[:,4]
-    if OutletEndX[0] > 0:
+    if OutletEndX[0] == 0:
+        # Outlet directly inline with river (special case to ensure lagoon always has at least 1 XS)
+        if Closed:
+            OnlineLagoon = np.flipud(np.where(np.logical_and(0 >= ShoreX, LagoonWidth > 0))[0])
+            EndArea = 0
+        else:
+            OnlineLagoon = np.where(ShoreX == 0)[0]
+            EndArea = np.nansum(LagoonWidth[ShoreX > OutletEndX[0]] * Dx)
+        StartArea = np.nansum(LagoonWidth[ShoreX > 0] * Dx)
+    elif OutletEndX[0] > 0:
         # Outlet channel to right of river
         if Closed:
             OnlineLagoon = np.where(np.logical_and(0 <= ShoreX, LagoonWidth > 0))[0]
             EndArea = 0
         else:
-            OnlineLagoon = np.where(np.logical_and(0 <= ShoreX, ShoreX <= OutletEndX[0]))[0]
+            OnlineLagoon = np.where(np.logical_and(0 <= ShoreX, ShoreX < OutletEndX[0]))[0]
             EndArea = np.nansum(LagoonWidth[ShoreX > OutletEndX[0]] * Dx)
         StartArea = np.nansum(LagoonWidth[ShoreX < 0] * Dx)
     else:
@@ -353,13 +362,13 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
             OnlineLagoon = np.flipud(np.where(np.logical_and(0 >= ShoreX, LagoonWidth > 0))[0])
             EndArea = 0
         else:
-            OnlineLagoon = np.flipud(np.where(np.logical_and(0 >= ShoreX, ShoreX >= OutletEndX[0]))[0])
+            OnlineLagoon = np.flipud(np.where(np.logical_and(0 >= ShoreX, ShoreX > OutletEndX[0]))[0])
             EndArea = np.nansum(LagoonWidth[ShoreX < OutletEndX[0]] * Dx)
         StartArea = np.nansum(LagoonWidth[ShoreX > 0] * Dx)
         
     # TODO: handle the weirdness which makes it theoretically possible for the below asserts to fail
     assert np.abs(OnlineLagoon[-1]-OnlineLagoon[0]) == (OnlineLagoon.size-1), 'Gap in online lagoon (possibly split lagoon and closed?) need to handle this'
-    assert np.all(LagoonWidth[OnlineLagoon]>0), 'Lagoon closure in assembleChannel - need to modify code to deal with this'
+    assert np.all(LagoonWidth[OnlineLagoon]>0), 'Lagoon closure in assembleChannel at X = %f' % ShoreX[OnlineLagoon[LagoonWidth[OnlineLagoon]<=0][0]]
     
     # Assemble the complete channel
     if Closed:

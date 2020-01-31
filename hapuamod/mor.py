@@ -232,18 +232,24 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     # Note: have to be careful to leave at least 1 transect in outlet channel
     
     # Check for truncation of online outlet channel and move ends of channel if required
+    # (Perform each check seperately incase multiple triggered in the same timestep...)
+    
+    # Check for truncation of lagoonward end of outlet channel 
     # (Only check for truncation if outlet channel crosses >1 transect)
     if OutletChanIx.size > 1:
-        
-        # Check for truncation of lagoonward end of outlet channel 
         # (don't check last transect as trucation here would leave 0 transects)
         if np.any(ShoreY[OutletChanIx[:-1],2] <= ShoreY[OutletChanIx[:-1],3]):
             logging.info('Truncating lagoon end of outlet channel (due to erosion)')
-            TruncationIx = OutletChanIx[ShoreY[OutletChanIx,1] <= ShoreY[OutletChanIx,0]]
+            TruncationIx = OutletChanIx[:-1][ShoreY[OutletChanIx[:-1],2] <= ShoreY[OutletChanIx[:-1],3]]
+            for AffectedX in TruncationIx:
+                logging.info('Truncation tiggered at X = %f' % ShoreX[AffectedX])
+                
             if OutletEndX[0] < OutletEndX[1]:
                 # Outlet angles from L to R
                 OutletEndX[0] = ShoreX[TruncationIx[-1] + 1]
-                if ShoreY[TruncationIx[-1], 3] <= ShoreY[TruncationIx[-1], 4]:
+                OutletChanIx = np.where(np.logical_and(OutletEndX[0] <= ShoreX, 
+                                                       ShoreX <= OutletEndX[1]))[0]
+                if ShoreY[TruncationIx[-1], 2] <= ShoreY[TruncationIx[-1], 4]:
                     logging.info('Extending R end of lagoon via outletchannel to cliffline collision.')
                     Extend = True
                     CurLagEndIx = np.where(ShoreY[:,3] > ShoreY[:,4])[0][-1]
@@ -253,7 +259,9 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             else:
                 # Outlet angles from R to L
                 OutletEndX[0] = ShoreX[TruncationIx[0] - 1]
-                if ShoreY[TruncationIx[0], 3] <= ShoreY[TruncationIx[0], 4]:
+                OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] <= ShoreX,
+                                                                 ShoreX <= OutletEndX[0]))[0])
+                if ShoreY[TruncationIx[0], 2] <= ShoreY[TruncationIx[0], 4]:
                     logging.info('Extending L end of lagoon via outletchannel to cliffline collision.')
                     Extend = True
                     CurLagEndIx = np.where(ShoreY[:,3] > ShoreY[:,4])[0][0]
@@ -271,9 +279,9 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                 ShoreY[LagExtension,2] = np.nan
                 ShoreZ[LagExtension,1] = np.nan
                 ShoreZ[LagExtension,2] = np.nan
-        
-        # Check seaward end
-        # Not sure what happens if truncation of both ends happens in same timestep???
+    
+    # Check for truncation of seaward end of outlet channel
+    if OutletChanIx.size > 1:
         # (don't check first transect as trucation here would leave 0 transects)
         if np.any(ShoreY[OutletChanIx[1:],1] >= ShoreY[OutletChanIx[1:],0]):
             logging.info('Truncating seaward end of outlet channel (due to erosion)')
@@ -281,12 +289,16 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             if OutletEndX[0] < OutletEndX[1]:
                 # Outlet angles from L to R
                 OutletEndX[1] = ShoreX[TruncationIx[0]] - Dx/2 
+                OutletChanIx = np.where(np.logical_and(OutletEndX[0] <= ShoreX, 
+                                                       ShoreX <= OutletEndX[1]))[0]
             else:
                 # Outlet angles from R to L
                 OutletEndX[1] = ShoreX[TruncationIx[-1]] + Dx/2 
+                OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] <= ShoreX,
+                                                                 ShoreX <= OutletEndX[0]))[0])
     
     # if outlet is open but has only 1 transect then adjust shoreline/lagoonline to preserve it's width when we adjust ShoreY in the next step
-    elif not Closed:
+    if OutletChanIx.size == 1 and not Closed:
         # Preserve channel width by extending into lagoon as required 
         # (not extending into sea as this would mess with LST)
         if ShoreY[OutletChanIx,1] > ShoreY[OutletChanIx,0]:
