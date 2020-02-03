@@ -381,6 +381,17 @@ def readTimestep(NcFile, TimeIx):
          OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
          OutletEndWL, OutletChanIx, WavePower, EDir_h, LST, CST, Closed, 
          RiverElev, RiverWL, RiverVel, ModelTime) = readTimestep(NcFile, TimeIx)
+        
+        Example
+        -------
+        > NcFile = netCDF4.Dataset(FileName, mode='r', format='NETCDF4_CLASSIC') 
+        
+        > (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
+        >  OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
+        >  OutletEndWL, OutletChanIx, WavePower, EDir_h, LST, CST, Closed, 
+        >  RiverElev, RiverWL, RiverVel, ModelTime) = readTimestep(NcFile, TimeIx)
+        
+        > NcFile.close()
     """
     
     NTransects = NcFile.dimensions['transect_x'].size

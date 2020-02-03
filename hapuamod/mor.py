@@ -301,10 +301,22 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     if OutletChanIx.size == 1 and not Closed:
         # Preserve channel width by extending into lagoon as required 
         # (not extending into sea as this would mess with LST)
-        if ShoreY[OutletChanIx,1] > ShoreY[OutletChanIx,0]:
+        if ShoreY[OutletChanIx,1] >= ShoreY[OutletChanIx,0]:
+            logging.info('Length 1 outlet channel pushed into sea at X = %f' % ShoreX[OutletChanIx])
             ShoreY[OutletChanIx,2] -= ShoreY[OutletChanIx,1] - ShoreY[OutletChanIx,0]
             ShoreY[OutletChanIx,1] = ShoreY[OutletChanIx,0] - 0.0001
-        ShoreY[OutletChanIx,3] = min(ShoreY[OutletChanIx,3], ShoreY[OutletChanIx,2]-0.0001)
+        if ShoreY[OutletChanIx,3] >= ShoreY[OutletChanIx,2]:
+            logging.info('Length 1 outlet channel pushed into lagoon at X = %f' % ShoreX[OutletChanIx])
+            ShoreY[OutletChanIx,3] = ShoreY[OutletChanIx,2] - 0.0001
+        # if this pushes into cliff then assume cliff erodes into outlet channel...
+        if ShoreY[OutletChanIx,3] < ShoreY[OutletChanIx,4]:
+            logging.info('Length 1 outlet channel pushed into cliff at X = %f' % ShoreX[OutletChanIx])
+            CliffRetDist = ShoreY[OutletChanIx,4] - ShoreY[OutletChanIx,3]
+            ShoreY[OutletChanIx, 4] = ShoreY[OutletChanIx, 3]
+            ShoreZ[OutletChanIx, 1] += (CliffRetDist * (PhysicalPars['BackshoreElev'] - ShoreZ[OutletChanIx,1]) / 
+                                        (ShoreY[OutletChanIx, 1] - ShoreY[OutletChanIx, 2]))
+            logging.debug('CliffRetDist = %f, OutletWidth = %f, NewOutletBedLevel = %f' % 
+                          (CliffRetDist, (ShoreY[OutletChanIx, 1] - ShoreY[OutletChanIx, 2]), ShoreZ[OutletChanIx, 1]))
     
     # Adjust ShoreY where outlet banks intersects coast or lagoon
     # Note this can include offline/disconnected bits of outlet as well as online bits

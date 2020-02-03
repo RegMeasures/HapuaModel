@@ -376,7 +376,7 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
         ChanFlag = np.concatenate([np.full(RiverElev.size, 0), 
                                    np.full(OnlineLagoon.size, 1)])
         ChanElev = np.concatenate([RiverElev, ShoreZ[OnlineLagoon,3]])
-        ChanWidth = np.concatenate([np.tile(PhysicalPars['RiverWidth'], RiverElev.size), 
+        ChanWidth = np.concatenate([np.full(RiverElev.size, PhysicalPars['RiverWidth']), 
                                     LagoonWidth[OnlineLagoon]])
     else: # open
         ChanDx = np.full(RiverElev.size + OnlineLagoon.size + OutletChanIx.size + 2, Dx)
@@ -392,7 +392,7 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
         ChanElev = np.concatenate([RiverElev, ShoreZ[OnlineLagoon,3], 
                                    [OutletEndElev[0]], ShoreZ[OutletChanIx,1], 
                                    [OutletEndElev[1], min(PhysicalPars['MaxOutletElev'], OutletEndElev[1])]])
-        ChanWidth = np.concatenate([np.tile(PhysicalPars['RiverWidth'], RiverElev.size), 
+        ChanWidth = np.concatenate([np.full(RiverElev.size, PhysicalPars['RiverWidth']), 
                                     LagoonWidth[OnlineLagoon], [OutletEndWidth[0]],
                                     OutletWidth, np.full(2, OutletEndWidth[1])])
     LagArea = np.zeros(ChanElev.size)
