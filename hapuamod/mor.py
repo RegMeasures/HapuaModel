@@ -246,14 +246,14 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                 
             if OutletEndX[0] < OutletEndX[1]:
                 # Outlet angles from L to R
-                OutletEndX[0] = ShoreX[TruncationIx[-1] + 1]
+                OutletEndX[0] = ShoreX[TruncationIx[0] + 1]
                 OutletChanIx = np.where(np.logical_and(OutletEndX[0] <= ShoreX, 
                                                        ShoreX <= OutletEndX[1]))[0]
-                if ShoreY[TruncationIx[-1], 2] <= ShoreY[TruncationIx[-1], 4]:
+                if ShoreY[TruncationIx[0], 2] <= ShoreY[TruncationIx[0], 4]:
                     logging.info('Extending R end of lagoon via outletchannel to cliffline collision.')
                     Extend = True
                     CurLagEndIx = np.where(ShoreY[:,3] > ShoreY[:,4])[0][-1]
-                    LagExtension = np.arange(CurLagEndIx+1, TruncationIx[-1])
+                    LagExtension = np.arange(CurLagEndIx + 1, TruncationIx[0] + 1)
                 else:
                     Extend = False
             else:
@@ -265,7 +265,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                     logging.info('Extending L end of lagoon via outletchannel to cliffline collision.')
                     Extend = True
                     CurLagEndIx = np.where(ShoreY[:,3] > ShoreY[:,4])[0][0]
-                    LagExtension = np.arange(TruncationIx[0], CurLagEndIx-1)
+                    LagExtension = np.arange(TruncationIx[0], CurLagEndIx)
                 else:
                     Extend = False
             
