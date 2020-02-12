@@ -297,32 +297,38 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                 OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] <= ShoreX,
                                                                  ShoreX <= OutletEndX[0]))[0])
     
-    # if outlet is open but has only 1 transect then adjust shoreline/lagoonline to preserve it's width when we adjust ShoreY in the next step
-    if OutletChanIx.size == 1 and not Closed:
+    # if outlet is open but truncation would result in a outlet channel with no transects... 
+    # then adjust shoreline/lagoonline to preserve it's width when we adjust ShoreY in the next step
+    if not Closed:
         # Preserve channel width by extending into lagoon as required 
         # (not extending into sea as this would mess with LST)
-        if ShoreY[OutletChanIx,1] >= ShoreY[OutletChanIx,0]:
-            logging.info('Length 1 outlet channel pushed into sea at X = %f' % ShoreX[OutletChanIx])
-            ShoreY[OutletChanIx,2] -= ShoreY[OutletChanIx,1] - ShoreY[OutletChanIx,0]
-            ShoreY[OutletChanIx,1] = ShoreY[OutletChanIx,0] - 0.0001
-        if ShoreY[OutletChanIx,3] >= ShoreY[OutletChanIx,2]:
-            logging.info('Length 1 outlet channel pushed into lagoon at X = %f' % ShoreX[OutletChanIx])
-            ShoreY[OutletChanIx,3] = ShoreY[OutletChanIx,2] - 0.0001
-        # if this pushes into cliff then assume cliff erodes into outlet channel...
-        if ShoreY[OutletChanIx,3] < ShoreY[OutletChanIx,4]:
-            logging.info('Length 1 outlet channel pushed into cliff at X = %f' % ShoreX[OutletChanIx])
-            CliffRetDist = ShoreY[OutletChanIx,4] - ShoreY[OutletChanIx,3]
-            ShoreY[OutletChanIx, 4] = ShoreY[OutletChanIx, 3]
-            ShoreZ[OutletChanIx, 1] += (CliffRetDist * (PhysicalPars['BackshoreElev'] - ShoreZ[OutletChanIx,1]) / 
-                                        (ShoreY[OutletChanIx, 1] - ShoreY[OutletChanIx, 2]))
-            logging.debug('CliffRetDist = %f, OutletWidth = %f, NewOutletBedLevel = %f' % 
-                          (CliffRetDist, (ShoreY[OutletChanIx, 1] - ShoreY[OutletChanIx, 2]), ShoreZ[OutletChanIx, 1]))
+        if ShoreY[OutletChanIx[0],1] >= ShoreY[OutletChanIx[0],0]:
+            logging.info('Preventing seaward truncation at X = %.1f as it would result in a length 0 outlet channel' % 
+                         ShoreX[OutletChanIx[0]])
+            ShoreY[OutletChanIx[0],2] -= ShoreY[OutletChanIx[0],1] - ShoreY[OutletChanIx[0],0]
+            ShoreY[OutletChanIx[0],1] = ShoreY[OutletChanIx[0],0] - 0.0001
+        if ShoreY[OutletChanIx[-1],3] >= ShoreY[OutletChanIx[-1],2]:
+            logging.info('Preventing lagoonward truncation at X = %.1f as it would result in a length 0 outlet channel' % 
+                         ShoreX[OutletChanIx[-1]])
+            ShoreY[OutletChanIx[-1],3] = ShoreY[OutletChanIx[-1],2] - 0.0001
+            # if this pushes into cliff then assume cliff erodes into outlet channel...
+            if ShoreY[OutletChanIx[-1],3] < ShoreY[OutletChanIx[-1],4]:
+                logging.info('Preventing lagoonward truncation means outlet channel pushed into cliff at X = %.1f' % 
+                             ShoreX[OutletChanIx[-1]])
+                CliffRetDist = ShoreY[OutletChanIx[-1],4] - ShoreY[OutletChanIx[-1],3]
+                ShoreY[OutletChanIx[-1], 4] = ShoreY[OutletChanIx[-1], 3]
+                ShoreZ[OutletChanIx[-1], 1] += (CliffRetDist * (PhysicalPars['BackshoreElev'] - ShoreZ[OutletChanIx[-1],1]) / 
+                                                (ShoreY[OutletChanIx[-1], 1] - ShoreY[OutletChanIx[-1], 2]))
+                logging.debug('CliffRetDist = %f, OutletWidth = %f, NewOutletBedLevel = %f' % 
+                              (CliffRetDist, (ShoreY[OutletChanIx[-1], 1] - ShoreY[OutletChanIx[-1], 2]), 
+                               ShoreZ[OutletChanIx[-1], 1]))
     
     # Adjust ShoreY where outlet banks intersects coast or lagoon
     # Note this can include offline/disconnected bits of outlet as well as online bits
     ShoreIntersect = ~np.greater(ShoreY[:,0], ShoreY[:,1], where=~np.isnan(ShoreY[:,1]))
     if np.any(ShoreIntersect):
-        logging.info('Outlet intersects shoreline at %i transects - filling outlet with sediment from shoreface' % np.sum(ShoreIntersect))
+        logging.info('Outlet intersects shoreline at %i transects - filling outlet with sediment from shoreface' % 
+                     np.sum(ShoreIntersect))
         ShoreY[ShoreIntersect, 0] -= ((ShoreY[ShoreIntersect, 1] - ShoreY[ShoreIntersect, 2]) 
                                       * (ShoreZ[ShoreIntersect, 2] - ShoreZ[ShoreIntersect, 1]) 
                                       / (ShoreZ[ShoreIntersect, 2] + PhysicalPars['ClosureDepth']))
@@ -336,7 +342,9 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     
     LagoonIntersect = ~np.greater(ShoreY[:,2], ShoreY[:,3], where=~np.isnan(ShoreY[:,1]))
     if np.any(LagoonIntersect):
-        logging.info('Outlet intersects lagoon at %i transects - adding channel width into lagoon' % np.sum(LagoonIntersect))
+        for IntersectIx in np.where(LagoonIntersect)[0]:
+            logging.info('Outlet intersects lagoon at X = %.1f: adding channel width into lagoon' % 
+                         ShoreX[IntersectIx])
         ShoreZ[LagoonIntersect, 3] = (((ShoreY[LagoonIntersect, 1] - ShoreY[LagoonIntersect, 2]) * ShoreZ[LagoonIntersect, 1] 
                                       + (ShoreY[LagoonIntersect, 3] - ShoreY[LagoonIntersect, 4]) * ShoreZ[LagoonIntersect, 3]) 
                                       / (ShoreY[LagoonIntersect, 1] - ShoreY[LagoonIntersect, 4]))
