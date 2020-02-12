@@ -328,7 +328,10 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
     # Check if closure has occured.
     Closed = np.any(OutletWidth<=PhysicalPars['MinOutletWidth']) | np.any(OutletEndWidth<=PhysicalPars['MinOutletWidth'])
     if Closed:
-        logging.info('Outlet closed')
+        for ClosedIx in OutletChanIx[OutletWidth<=PhysicalPars['MinOutletWidth']]:
+            logging.info('Outlet channel closed by wave washover at X = %f' % ShoreX[ClosedIx])
+        if OutletEndWidth[1] <= PhysicalPars['MinOutletWidth']:
+            logging.info('Downstream end of outlet channel closed by longshore transport (EndX = %f)' % OutletEndX[1])
         OutletChanIx = np.empty(0)
     elif np.min(OutletWidth) < 5:
         logging.debug('Narrow outlet, min outlet width = %f' % (np.min(OutletWidth)))
