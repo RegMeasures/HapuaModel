@@ -65,35 +65,35 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     TooWide = AspectRatio > PhysicalPars['WidthRatio']
     
     # Update channel bed elevation
-    EroVol = np.minimum(dVol, 0.0)  # Total erosion volume (-ve)
-    BedEro = EroVol * TooWide       # Bed erosion volume (-ve)
-    BankEro = EroVol * np.logical_not(TooWide) # Bank erosion volume (-ve)
+    EroVol = - np.minimum(dVol, 0.0)  # Total erosion volume (+ve = erosion)
+    BedEro = EroVol * TooWide       # Bed erosion volume (+ve)
+    BankEro = EroVol * np.logical_not(TooWide) # Bank erosion volume (+ve)
     BedDep = np.maximum(dVol, 0.0)  # Bed deposition volume (+ve)
     # note that += modifies variables in place so no need to explicitly return them!
     # No change in river width allowed so all erosion applied to bed.
-    RiverElev[1:] += (BedDep[RivXS] + EroVol[RivXS]) / (PhysicalPars['RiverWidth'] * Dx)
-    ShoreZ[OnlineLagoon, 3] += ((BedDep[LagXS] + BedEro[LagXS])
+    RiverElev[1:] += (BedDep[RivXS] - EroVol[RivXS]) / (PhysicalPars['RiverWidth'] * Dx)
+    ShoreZ[OnlineLagoon, 3] += ((BedDep[LagXS] - BedEro[LagXS])
                                 / ((ShoreY[OnlineLagoon, 3] - ShoreY[OnlineLagoon, 4]) * Dx))
     if not Closed:
-        ShoreZ[OutletChanIx, 1] += (BedDep[OutXS[1:-1]] + BedEro[OutXS[1:-1]]) / (ChanWidth[OutXS] * Dx)
-        OutletEndElev += (BedDep[OutEndXS-1] + BedEro[OutEndXS-1]) / (OutletEndWidth * Dx)
+        ShoreZ[OutletChanIx, 1] += (BedDep[OutXS[1:-1]] - BedEro[OutXS[1:-1]]) / (ChanWidth[OutXS] * Dx)
+        OutletEndElev += (BedDep[OutEndXS-1] - BedEro[OutEndXS-1]) / (OutletEndWidth * Dx)
     
     # Update lagoon and outlet channel bank positions
     # Note: River upstream of lagoon has fixed width - all morpho change is on bed
     LagoonBankElev = ShoreZ[:,0].copy()
     LagoonBankElev[OutletPresent] = ShoreZ[OutletPresent, 2]
-    ShoreY[OnlineLagoon,3] -= (BankEro[LagXS]/2) / ((LagoonBankElev[OnlineLagoon] - ShoreZ[OnlineLagoon,3]) * Dx)
-    ShoreY[OnlineLagoon,4] += (BankEro[LagXS]/2) / ((PhysicalPars['BackshoreElev'] - ShoreZ[OnlineLagoon,3]) * Dx)
+    ShoreY[OnlineLagoon,3] += (BankEro[LagXS]/2) / ((LagoonBankElev[OnlineLagoon] - ShoreZ[OnlineLagoon,3]) * Dx)
+    ShoreY[OnlineLagoon,4] -= (BankEro[LagXS]/2) / ((PhysicalPars['BackshoreElev'] - ShoreZ[OnlineLagoon,3]) * Dx)
     # Outlet channel
     if not Closed:
-        ShoreY[OutletChanIx,1] -= (BankEro[OutXS[1:-1]]/2) / ((ShoreZ[OutletChanIx,0] - ShoreZ[OutletChanIx,1]) * Dx)
-        ShoreY[OutletChanIx,2] += (BankEro[OutXS[1:-1]]/2) / ((ShoreZ[OutletChanIx,2] - ShoreZ[OutletChanIx,1]) * Dx)
+        ShoreY[OutletChanIx,1] += (BankEro[OutXS[1:-1]]/2) / ((ShoreZ[OutletChanIx,0] - ShoreZ[OutletChanIx,1]) * Dx)
+        ShoreY[OutletChanIx,2] -= (BankEro[OutXS[1:-1]]/2) / ((ShoreZ[OutletChanIx,2] - ShoreZ[OutletChanIx,1]) * Dx)
         
-        OutletEndWidth[0] -= BankEro[OutEndXS[0]-1] / ((ShoreZ[OutletChanIx[0],0] - OutletEndElev[0]) * Dx)
-        OutletEndWidth[1] -= BankEro[OutEndXS[1]-1] / ((PhysicalPars['BeachTopElev'] - OutletEndElev[1]) * PhysicalPars['SpitWidth'])
+        OutletEndWidth[0] += BankEro[OutEndXS[0]-1] / ((ShoreZ[OutletChanIx[0],0] - OutletEndElev[0]) * Dx)
+        OutletEndWidth[1] += BankEro[OutEndXS[1]-1] / ((PhysicalPars['BeachTopElev'] - OutletEndElev[1]) * PhysicalPars['SpitWidth'])
         
         # Put sediment discharged from outlet onto shoreline 
-        # TODO improve sediment distribution...
+        # TODO improve sediment distribution (github issue #46)
         ShoreY[[OutletRbShoreIx-1,OutletRbShoreIx],0] += ((Bedload[-1] / 2) * Dt.seconds 
                                                         / (ShorefaceHeight[[OutletRbShoreIx-1,OutletRbShoreIx]] * Dx))
     
