@@ -119,9 +119,9 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, RiverWid
     WaterFill,   = PlanAx.fill(ShoreX, ShoreY[:,3], 'lightskyblue', label='Water', zorder=0)
     CliffFill,   = PlanAx.fill(ShoreX, ShoreY[:,4], fill=False, hatch = '/', label='Cliff', zorder=1)
     ShoreLine,   = PlanAx.plot(ShoreX, ShoreY[:,0], 'k-', label='Shore', zorder=4)
-    #ShoreDots,   = PlanAx.plot(ShoreX, ShoreY[:,0], 'k.', label='Shore', color='grey', zorder=3)
+    ShoreDots,   = PlanAx.plot(ShoreX, ShoreY[:,0], 'k.', label='Shore', color='grey', zorder=3)
     OutletLine,  = PlanAx.plot(ShoreX, ShoreY[:,1], 'k-', label='Outlet bank', zorder=5)
-    #ChannelLine, = PlanAx.plot(ShoreX, ShoreY[:,1], '-x', label='Channel', color='grey', zorder=2)
+    ChannelLine, = PlanAx.plot(ShoreX, ShoreY[:,1], '-x', label='Channel', color='grey', zorder=2)
     LagoonLine,  = PlanAx.plot(ShoreX, ShoreY[:,3], 'k-', label='Lagoon', zorder=6)
     CliffLine,   = PlanAx.plot(ShoreX, ShoreY[:,4], 'k-', label='Cliff', zorder=7)
     RiverLine,   = PlanAx.plot([0, 0], [-1000, 0], 'k-', label='River bank', zorder=8)
@@ -158,7 +158,7 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, RiverWid
                 'OutletLine':OutletLine, 'RiverLine':RiverLine,
                 'LagoonLine':LagoonLine, 'CliffLine':CliffLine, 
                 'WaterFill':WaterFill, 'RiverWidth':RiverWidth,
-                #'ShoreDots':ShoreDots, 'ChannelLine':ChannelLine,
+                'ShoreDots':ShoreDots, 'ChannelLine':ChannelLine,
                 'CliffFill':CliffFill}
     if not ShoreZ is None:
         ModelFig['CrestLine'] = CrestLine
@@ -276,41 +276,52 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
         
     else: # Outlet open
         
+        LagoonPresent = ShoreY[:,3] > ShoreY[:,4]
+        Dx = ShoreX[1] - ShoreX[0]
+        LagoonLeftEndX = np.min(ShoreX[LagoonPresent]) - Dx
+        LagoonRightEndX = np.max(ShoreX[LagoonPresent]) + Dx
+        
+        OutletUsLbPlotX = max(OutletEndX[0] - OutletEndWidth[0]/2, LagoonLeftEndX)
+        OutletUsRbPlotX = min(OutletEndX[0] + OutletEndWidth[0]/2, LagoonRightEndX)
+        
+        OutletDsLbX = OutletEndX[1] - OutletEndWidth[1]/2
+        OutletDsRbX = OutletEndX[1] + OutletEndWidth[1]/2
+        
         # Outlet plotting position
         if OutletEndX[0] < OutletEndX[1]:
             # Outlet angkles L to R
-            L_Ok = ShoreX[OutletChanIx] < (OutletEndX[1] - OutletEndWidth[1]/2)
-            R_Ok = ShoreX[OutletChanIx] > (OutletEndX[0] + OutletEndWidth[0]/2)
-            OutletLbY = np.hstack([np.interp(OutletEndX[0] - OutletEndWidth[0]/2, ShoreX, ShoreY[:,3]),
+            L_Ok = ShoreX[OutletChanIx] < OutletDsLbX
+            R_Ok = ShoreX[OutletChanIx] > OutletUsRbPlotX
+            OutletLbY = np.hstack([np.interp(OutletUsLbPlotX, ShoreX, ShoreY[:,3]),
                                    ShoreY[OutletChanIx[L_Ok],1], 
-                                   np.interp(OutletEndX[1] - OutletEndWidth[1]/2, ShoreX, ShoreY[:,0])])
-            OutletRbY = np.hstack([np.interp(OutletEndX[0] + OutletEndWidth[0]/2, ShoreX, ShoreY[:,3]),
+                                   np.interp(OutletDsLbX, ShoreX, ShoreY[:,0])])
+            OutletRbY = np.hstack([np.interp(OutletUsRbPlotX, ShoreX, ShoreY[:,3]),
                                    ShoreY[OutletChanIx[R_Ok],2],
-                                   np.interp(OutletEndX[1] + OutletEndWidth[1]/2, ShoreX, ShoreY[:,0])])
+                                   np.interp(OutletDsRbX, ShoreX, ShoreY[:,0])])
         else:
             # Outlet angkles R to L
-            L_Ok = ShoreX[OutletChanIx] < (OutletEndX[0] - OutletEndWidth[0]/2)
-            R_Ok = ShoreX[OutletChanIx] > (OutletEndX[1] + OutletEndWidth[1]/2)
-            OutletLbY = np.hstack([np.interp(OutletEndX[0] - OutletEndWidth[0]/2, ShoreX, ShoreY[:,3]),
+            L_Ok = ShoreX[OutletChanIx] < OutletUsLbPlotX
+            R_Ok = ShoreX[OutletChanIx] > OutletDsRbX
+            OutletLbY = np.hstack([np.interp(OutletUsLbPlotX, ShoreX, ShoreY[:,3]),
                                    ShoreY[OutletChanIx[L_Ok],2], 
-                                   np.interp(OutletEndX[1] - OutletEndWidth[1]/2, ShoreX, ShoreY[:,0])])
-            OutletRbY = np.hstack([np.interp(OutletEndX[0] + OutletEndWidth[0]/2, ShoreX, ShoreY[:,3]),
+                                   np.interp(OutletDsLbX, ShoreX, ShoreY[:,0])])
+            OutletRbY = np.hstack([np.interp(OutletUsRbPlotX, ShoreX, ShoreY[:,3]),
                                    ShoreY[OutletChanIx[R_Ok],1],
-                                   np.interp(OutletEndX[1] + OutletEndWidth[1]/2, ShoreX, ShoreY[:,0])])
+                                   np.interp(OutletDsRbX, ShoreX, ShoreY[:,0])])
         OutletY = np.hstack([OutletLbY, np.nan, OutletRbY])
-        OutletLbX = np.hstack([OutletEndX[0] - OutletEndWidth[0]/2,
+        OutletLbX = np.hstack([OutletUsLbPlotX,
                                ShoreX[OutletChanIx[L_Ok]],
-                               OutletEndX[1] - OutletEndWidth[1]/2])
-        OutletRbX = np.hstack([OutletEndX[0] + OutletEndWidth[0]/2,
+                               OutletDsLbX])
+        OutletRbX = np.hstack([OutletUsRbPlotX,
                                ShoreX[OutletChanIx[R_Ok]],
-                               OutletEndX[1] + OutletEndWidth[1]/2])
+                               OutletDsRbX])
         OutletX = np.hstack([OutletLbX, np.nan, OutletRbX])
     
         # Some useful masks for the transects
-        LagoonToL = ShoreX <= (OutletEndX[0] - OutletEndWidth[0]/2)
-        LagoonToR = ShoreX >= (OutletEndX[0] + OutletEndWidth[0]/2)
-        ShoreToL = ShoreX <= (OutletEndX[1] - OutletEndWidth[1]/2)
-        ShoreToR = ShoreX >= (OutletEndX[1] + OutletEndWidth[1]/2)
+        LagoonToL = ShoreX <= OutletUsLbPlotX
+        LagoonToR = ShoreX >= OutletUsRbPlotX
+        ShoreToL = ShoreX <= OutletDsLbX
+        ShoreToR = ShoreX >= OutletDsRbX
         ShoreInChan = ~np.logical_or(ShoreToL, ShoreToR)
     
         # Shoreline
@@ -359,8 +370,8 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
     
     # Update the lines etc
     ModelFig['ShoreLine'].set_data(ShoreLineX, ShoreLineY)
-    #ModelFig['ShoreDots'].set_data(ShoreDotsX, ShoreDotsY)
-    #ModelFig['ChannelLine'].set_data(ChannelX, ChannelY)
+    ModelFig['ShoreDots'].set_data(ShoreDotsX, ShoreDotsY)
+    ModelFig['ChannelLine'].set_data(ChannelX, ChannelY)
     ModelFig['OutletLine'].set_data(OutletX, OutletY)
     ModelFig['LagoonLine'].set_data(LagoonLineX, LagoonLineY)
     ModelFig['CliffLine'].set_data(CliffLineX, CliffLineY)
