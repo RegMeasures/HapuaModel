@@ -1,1 +1,7 @@
 *.pyc
+.spyproject
+*.mp4
+*log.txt
+*.nc
+*.png
+*.html
