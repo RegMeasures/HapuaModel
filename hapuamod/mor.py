@@ -92,10 +92,10 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         OutletEndWidth[0] += BankEro[OutEndXS[0]-1] / ((ShoreZ[OutletChanIx[0],0] - OutletEndElev[0]) * Dx)
         OutletEndWidth[1] += BankEro[OutEndXS[1]-1] / ((PhysicalPars['BeachTopElev'] - OutletEndElev[1]) * PhysicalPars['SpitWidth'])
         
-        # Put sediment discharged from outlet onto shoreline 
-        # TODO improve sediment distribution (github issue #46)
-        ShoreY[[OutletRbShoreIx-1,OutletRbShoreIx],0] += ((Bedload[-1] / 2) * Dt.seconds 
-                                                        / (ShorefaceHeight[[OutletRbShoreIx-1,OutletRbShoreIx]] * Dx))
+        # Distribute sediment discharged from outlet onto shoreline 
+        BedloadToShore = ((Dx * Bedload[-1] / PhysicalPars['OutletSedSpreadDist']) * 
+                          np.maximum(1 - np.abs(ShoreX - OutletEndX[1])/PhysicalPars['OutletSedSpreadDist'], 0.0))
+        ShoreY[:,0] += BedloadToShore * Dt.seconds / (ShorefaceHeight * Dx)
     
     #%% 1-Line shoreline model morphology
     

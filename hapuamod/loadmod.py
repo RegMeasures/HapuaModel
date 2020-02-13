@@ -236,7 +236,8 @@ def loadModel(ModelConfigFile):
                     'BeachTopElev': Config['PhysicalParameters']['BeachTopElev'],
                     'SpitWidth': Config['PhysicalParameters']['SpitWidth'],
                     'MinOutletWidth': Config['PhysicalParameters']['MinOutletWidth'],
-                    'MinLagoonWidth': Config['PhysicalParameters']['MinLagoonWidth']}
+                    'MinLagoonWidth': Config['PhysicalParameters']['MinLagoonWidth'],
+                    'OutletSedSpreadDist': Config['PhysicalParameters']['OutletSedSpreadDist']}
 
     GammaLST = ((PhysicalPars['RhoSed'] - PhysicalPars['RhoSea']) * 
                 PhysicalPars['Gravity'] * (1 - PhysicalPars['VoidRatio']))

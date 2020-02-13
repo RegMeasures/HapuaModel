@@ -123,6 +123,8 @@ SpitWidth = 10
 MinOutletWidth = 1.0
 # Assumed minimum lagoon width in the online part of the lagoon [m]
 MinLagoonWidth = 3.0
+# Distance river gravel spread along shoreline from outlet channel [m]
+OutletSedSpreadDist = 100.0
 
 [NumericalParameters]
 # Alongshore discretisation resolution (transect spacing) [m]
