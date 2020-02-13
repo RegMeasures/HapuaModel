@@ -57,10 +57,10 @@ LagoonBed = -1.0
 BarrierElev = 3.0
 
 [Time]
-# Simulation start date
+# Simulation start date [D MMM YYYY]
 StartTime = '1 Sep 2000'
-# Simulation end date '1 Jan 2018'
-EndTime = '30 Jun 2016'
+# Simulation end date [D MMM YYYY]
+EndTime = '1 Jan 2018'
 # Hydraulic Timestep [s]
 HydDt = 5
 # Morphology Timestep [s]
