@@ -6,7 +6,7 @@ ModelName = 'Hurunui hapua'
 # River flow timeseries [either filename/path of input csv file or "shotnoise"]
 RiverFlow = shotnoise
 # Wave conditions timeseries [filename/path of input csv file]
-WaveConditions = WaveData.csv
+WaveConditions = WaveDataRotated.csv
 # Sea level timeseries [either filename/path of input csv file or "harmonic"]
 SeaLevel = harmonic
 
@@ -21,7 +21,7 @@ SeaLevel = harmonic
     # Slow flow (baseflow) decay rate between events [/day]
     SlowDecayRate = 0.015
     # Proportion of event flow which is classified as fast flow
-    FastFlowProp = 0.9
+    FastFlowProp = 0.8
     # Time for flow to rise prior to event peak [days]
     RisingLimbTime = 1.0
     # Discretisation interval for generated flow timeseries [mins]
@@ -44,7 +44,7 @@ ShorelineLengthLeft = 1000
 # Model domain extent to right of river centerline when looking to sea [m]
 ShorelineLengthRight = 500
 # Beach width in initial condition (uniform across whole model domain, no lagoon) [m]
-BeachWidth = 50
+BeachWidth = 30
 
 [InitialConditions]
 # Initial outlet width [m]
@@ -58,8 +58,8 @@ BarrierElev = 3.0
 
 [Time]
 # Simulation start date
-StartTime = '1 Jul 2015'
-# Simulation end date '30 Jun 2016'
+StartTime = '1 Sep 2000'
+# Simulation end date '1 Jan 2018'
 EndTime = '30 Jun 2016'
 # Hydraulic Timestep [s]
 HydDt = 5
@@ -68,7 +68,7 @@ MorDt = 900
 
 [PhysicalParameters]
 # K coefficient for longshore transport calculation (non-dimensional)
-Kcoef = 0.03
+Kcoef = 0.015
 # Sediment density [kg/m^3]
 RhoSed = 2650
 # Seawater density [kg/m^3]
@@ -103,7 +103,7 @@ RoughnessManning = 0.03
 # Width-Depth ratio of eroding channel [dimensionless]
 WidthDepthRatio = 30
 # Elevation of top of lagoon backshore [m]
-BackshoreElev = 30
+BackshoreElev = 10
 # Maximum elevation of the downstream end of the outlet channel [m] 
 # This elevation is applied downstream of the last real outlet channel 
 # cross-section and should be below the minimum sea level.
