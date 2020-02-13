@@ -235,7 +235,8 @@ def loadModel(ModelConfigFile):
                     'MinOpForOw': Config['PhysicalParameters']['MinOpForOw'],
                     'BeachTopElev': Config['PhysicalParameters']['BeachTopElev'],
                     'SpitWidth': Config['PhysicalParameters']['SpitWidth'],
-                    'MinOutletWidth': Config['PhysicalParameters']['MinOutletWidth']}
+                    'MinOutletWidth': Config['PhysicalParameters']['MinOutletWidth'],
+                    'MinLagoonWidth': Config['PhysicalParameters']['MinLagoonWidth']}
 
     GammaLST = ((PhysicalPars['RhoSed'] - PhysicalPars['RhoSea']) * 
                 PhysicalPars['Gravity'] * (1 - PhysicalPars['VoidRatio']))
@@ -297,7 +298,7 @@ def loadModel(ModelConfigFile):
         
     elif Config['SpatialInputs']['Shoreline'] is None:
         #%% Initialise model with default straight shoreline etc
-        logging.info('No shoreline locatoin provided - Initialising with simple straight shoreline.')
+        logging.info('No shoreline location provided - Initialising with simple straight shoreline.')
         assert Config['SpatialInputs']['ShorelineLengthLeft'] is not None, 'ShorelineLengthLeft is required in [SpatialInputs]'
         assert Config['SpatialInputs']['ShorelineLengthRight'] is not None, 'ShorelineLengthRight is required in [SpatialInputs]'
         assert Config['SpatialInputs']['BeachWidth'] is not None, 'BeachWidth is required in [SpatialInputs]'

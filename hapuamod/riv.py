@@ -344,7 +344,8 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
     if OutletEndX[0] == 0:
         # Outlet directly inline with river (special case to ensure lagoon always has at least 1 XS)
         if Closed:
-            OnlineLagoon = np.flipud(np.where(np.logical_and(0 >= ShoreX, LagoonWidth > 0))[0])
+            OnlineLagoon = np.arange(np.where(ShoreX == 0)[0], 
+                                     np.where(LagoonWidth > 0)[0][-1] + 1)
             EndArea = 0
         else:
             OnlineLagoon = np.where(ShoreX == 0)[0]
@@ -353,23 +354,31 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
     elif OutletEndX[0] > 0:
         # Outlet channel to right of river
         if Closed:
-            OnlineLagoon = np.where(np.logical_and(0 <= ShoreX, LagoonWidth > 0))[0]
+            OnlineLagoon = np.arange(np.where(ShoreX == 0)[0], 
+                                     np.where(LagoonWidth > 0)[0][-1] + 1)
             EndArea = 0
         else:
-            OnlineLagoon = np.where(np.logical_and(0 <= ShoreX, ShoreX < OutletEndX[0]))[0]
+            OnlineLagoon = np.arange(np.where(ShoreX == 0)[0], 
+                                     np.where(ShoreX < OutletEndX[0])[0][-1] + 1)
             EndArea = np.nansum(LagoonWidth[ShoreX > OutletEndX[0]] * Dx)
         StartArea = np.nansum(LagoonWidth[ShoreX < 0] * Dx)
     else:
         # Outlet channel to left of river
         if Closed:
-            OnlineLagoon = np.flipud(np.where(np.logical_and(0 >= ShoreX, LagoonWidth > 0))[0])
+            OnlineLagoon = np.arange(np.where(ShoreX == 0)[0], 
+                                     np.where(LagoonWidth > 0)[0][0] - 1, -1)
             EndArea = 0
         else:
-            OnlineLagoon = np.flipud(np.where(np.logical_and(0 >= ShoreX, ShoreX > OutletEndX[0]))[0])
+            OnlineLagoon = np.arange(np.where(ShoreX == 0)[0], 
+                                     np.where(ShoreX > OutletEndX[0])[0][0] - 1, -1)
             EndArea = np.nansum(LagoonWidth[ShoreX < OutletEndX[0]] * Dx)
         StartArea = np.nansum(LagoonWidth[ShoreX > 0] * Dx)
-        
-    # TODO: handle the weirdness which makes it theoretically possible for the below asserts to fail
+    
+    # Maintain a minimum width in the online lagoon - this represents the fact that the online lagoon rarely (if ever) closes.
+    LagoonWidth[OnlineLagoon] = np.maximum(LagoonWidth[OnlineLagoon], 
+                                           PhysicalPars['MinLagoonWidth'])
+    
+    # These asserts *should* now be impossible to breach...
     assert np.abs(OnlineLagoon[-1]-OnlineLagoon[0]) == (OnlineLagoon.size-1), 'Gap in online lagoon (possibly split lagoon and closed?) need to handle this'
     assert np.all(LagoonWidth[OnlineLagoon]>0), 'Lagoon closure in assembleChannel at X = %f' % ShoreX[OnlineLagoon[LagoonWidth[OnlineLagoon]<=0][0]]
     

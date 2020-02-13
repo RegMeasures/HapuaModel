@@ -97,6 +97,8 @@ BeachTopElev = 2
 SpitWidth = 10
 # Threshold width for setting outlet channel to closed [m]
 MinOutletWidth = 1.0
+# Assumed minimum lagoon width in the online part of the lagoon [m]
+MinLagoonWidth = 3.0
 
 [NumericalParameters]
 # Alongshore discretisation resolution (transect spacing) [m]

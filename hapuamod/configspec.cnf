@@ -75,6 +75,7 @@ MinOpForOw = float(min=0)
 BeachTopElev = float(min=0)
 SpitWidth = float(min=0)
 MinOutletWidth = float(min=0)
+MinLagoonWidth = float(min=0)
 
 [NumericalParameters]
 AlongShoreDx = float(min=0)
