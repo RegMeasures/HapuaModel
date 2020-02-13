@@ -141,6 +141,16 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     # Erosion of sediment off the shoreface (don't move ends)
     ShoreY[1:-1,0] -= CST_tot[1:-1] * Dt.seconds / ShorefaceHeight[1:-1]
     
+    #%% Check if shoreline has eroded into cliff anywhere
+    CliffCollision = ShoreY[:,0] < ShoreY[:,4]
+    if np.any(CliffCollision):
+        logging.info('Shoreline/cliff collision - retreating cliff')
+        CliffOverlapDist = ShoreY[CliffCollision,4] - ShoreY[CliffCollision,0]
+        CliffRetDist = (CliffOverlapDist * ShorefaceHeight[CliffCollision] / 
+                        (PhysicalPars['ClosureDepth'] + PhysicalPars['BackshoreElev']))
+        ShoreY[CliffCollision, 4] -= CliffRetDist
+        ShoreY[CliffCollision, 0] += (CliffOverlapDist - CliffRetDist)
+    
     #%% Check if outlet channel (online or offline) has closed due to overwash and adjust to prevent negative width channel
     if np.any(ShoreY[OutletPresent,1] < ShoreY[OutletPresent,2]):
         logging.info('Overwashing occuring into closed channel in barrier - redistributing overwash onto barrier top')
@@ -358,11 +368,28 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     
     # Check for breach
     Breach = False
-    if np.any(np.logical_and(ShoreY[:,3]>=ShoreY[:,0], ShoreY[:,3]>ShoreY[:,4])):
-        EroTsects = np.where(np.logical_and(ShoreY[:,3]>=ShoreY[:,0], ShoreY[:,3]>ShoreY[:,4]))[0]
-        BreachIx = EroTsects[np.argmin(np.abs(ShoreX[EroTsects]))]
-        Breach = True
-        logging.info('Barrier completely eroded at X = %i' % ShoreX[BreachIx])
+    EroTsects = np.where(np.logical_and(ShoreY[:,3]>=ShoreY[:,0], ShoreY[:,3]>ShoreY[:,4]))[0]
+    
+    if EroTsects.size > 0:
+        for TsectNo in EroTsects:
+            logging.info('Barrier completely eroded at X = %i' % ShoreX[TsectNo])
+        if Closed:
+            # If closed then any eorion of barrier causes breach
+            BreachIx = EroTsects[np.argmin(np.abs(ShoreX[EroTsects]))]
+            Breach = True
+        elif np.min(np.abs(ShoreX[EroTsects])) < np.abs(OutletEndX[0]):
+            # if open then barrier erosion only causes breach if it is closer to the river than the existing outlet
+            # (as the model cannot handle multiple outlets)
+            BreachIx = EroTsects[np.argmin(np.abs(ShoreX[EroTsects]))]
+            Breach = True
+            NotBreachIx = EroTsects[EroTsects != BreachIx]
+            ShoreY[NotBreachIx,3] = ShoreY[NotBreachIx,0] - 0.001
+        else:
+            # barrier eroded but further from river than existing outlet 
+            logging.info('Preventing breach as eroded barrier is further from river than existing outlet' % 
+                         ShoreX[TsectNo])
+            ShoreY[EroTsects,3] = ShoreY[EroTsects,0] - 0.001
+        
     elif np.any(ShoreZ[:,0] < WaterLevel):
         if Closed:
             # If lagoon closed then assume any overtopping causes breach, 
