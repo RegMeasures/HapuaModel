@@ -320,6 +320,12 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
                                    np.interp(OutletDsRbX, ShoreX[np.flip(OutletChanIx)], 
                                              ShoreY[np.flip(OutletChanIx), 1]),
                                    np.interp(OutletDsRbX, ShoreX, ShoreY[:,0])])
+        
+        OutletLbY[1] = np.max(OutletLbY[:2])
+        OutletRbY[1] = np.max(OutletRbY[:2])
+        OutletLbY[-2] = np.min(OutletLbY[-2:])
+        OutletRbY[-2] = np.min(OutletRbY[-2:])
+        
         OutletY = np.hstack([OutletLbY, np.nan, OutletRbY])
         OutletLbX = np.hstack([OutletUsLbPlotX, OutletUsLbPlotX,
                                ShoreX[OutletChanIx[L_Ok]],

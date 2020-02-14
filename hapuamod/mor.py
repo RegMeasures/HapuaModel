@@ -257,6 +257,12 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             if OutletEndX[0] < OutletEndX[1]:
                 # Outlet angles from L to R
                 OutletEndX[0] = ShoreX[TruncationIx[0] + 1]
+            else:
+                # Outlet angles from R to L
+                OutletEndX[0] = ShoreX[TruncationIx[0] - 1]
+                
+            if OutletEndX[0] < OutletEndX[1]:
+                # Outlet angles from L to R
                 OutletChanIx = np.where(np.logical_and(OutletEndX[0] <= ShoreX, 
                                                        ShoreX <= OutletEndX[1]))[0]
                 if ShoreY[TruncationIx[0], 2] <= ShoreY[TruncationIx[0], 4]:
@@ -268,7 +274,6 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                     Extend = False
             else:
                 # Outlet angles from R to L
-                OutletEndX[0] = ShoreX[TruncationIx[0] - 1]
                 OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] <= ShoreX,
                                                                  ShoreX <= OutletEndX[0]))[0])
                 if ShoreY[TruncationIx[0], 2] <= ShoreY[TruncationIx[0], 4]:
