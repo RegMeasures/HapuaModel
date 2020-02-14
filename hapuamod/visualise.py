@@ -293,28 +293,40 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
             L_Ok = ShoreX[OutletChanIx] < OutletDsLbX
             R_Ok = ShoreX[OutletChanIx] > OutletUsRbPlotX
             OutletLbY = np.hstack([np.interp(OutletUsLbPlotX, ShoreX, ShoreY[:,3]),
+                                   ShoreY[OutletChanIx[0],1], 
                                    ShoreY[OutletChanIx[L_Ok],1], 
+                                   np.interp(OutletDsLbX, ShoreX[OutletChanIx], 
+                                             ShoreY[OutletChanIx, 1]),
                                    np.interp(OutletDsLbX, ShoreX, ShoreY[:,0])])
             OutletRbY = np.hstack([np.interp(OutletUsRbPlotX, ShoreX, ShoreY[:,3]),
+                                   np.interp(OutletUsRbPlotX, ShoreX[OutletChanIx], 
+                                             ShoreY[OutletChanIx, 2]),
                                    ShoreY[OutletChanIx[R_Ok],2],
+                                   ShoreY[OutletChanIx[-1],2],
                                    np.interp(OutletDsRbX, ShoreX, ShoreY[:,0])])
         else:
             # Outlet angkles R to L
             L_Ok = ShoreX[OutletChanIx] < OutletUsLbPlotX
             R_Ok = ShoreX[OutletChanIx] > OutletDsRbX
             OutletLbY = np.hstack([np.interp(OutletUsLbPlotX, ShoreX, ShoreY[:,3]),
-                                   ShoreY[OutletChanIx[L_Ok],2], 
+                                   np.interp(OutletUsLbPlotX, ShoreX[np.flip(OutletChanIx)], 
+                                             ShoreY[np.flip(OutletChanIx), 2]),
+                                   ShoreY[OutletChanIx[L_Ok],2],
+                                   ShoreY[OutletChanIx[-1],2],
                                    np.interp(OutletDsLbX, ShoreX, ShoreY[:,0])])
             OutletRbY = np.hstack([np.interp(OutletUsRbPlotX, ShoreX, ShoreY[:,3]),
+                                   ShoreY[OutletChanIx[0],1],
                                    ShoreY[OutletChanIx[R_Ok],1],
+                                   np.interp(OutletDsRbX, ShoreX[np.flip(OutletChanIx)], 
+                                             ShoreY[np.flip(OutletChanIx), 1]),
                                    np.interp(OutletDsRbX, ShoreX, ShoreY[:,0])])
         OutletY = np.hstack([OutletLbY, np.nan, OutletRbY])
-        OutletLbX = np.hstack([OutletUsLbPlotX,
+        OutletLbX = np.hstack([OutletUsLbPlotX, OutletUsLbPlotX,
                                ShoreX[OutletChanIx[L_Ok]],
-                               OutletDsLbX])
-        OutletRbX = np.hstack([OutletUsRbPlotX,
+                               OutletDsLbX, OutletDsLbX])
+        OutletRbX = np.hstack([OutletUsRbPlotX, OutletUsRbPlotX,
                                ShoreX[OutletChanIx[R_Ok]],
-                               OutletDsRbX])
+                               OutletDsRbX, OutletDsRbX])
         OutletX = np.hstack([OutletLbX, np.nan, OutletRbX])
     
         # Some useful masks for the transects
