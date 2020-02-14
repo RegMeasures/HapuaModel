@@ -145,8 +145,6 @@ MaxIt = 30
 WarnTol = 0.1
 
 [OutputOptions]
-# filename of the netCDF file which outputs will be written to
-OutFile = 'SimplifiedSynthetic.nc'
 # Interval to save data to netCDF file [s]
 OutInt = 3600
 # Interval at which progress will be logged to console/logfile during simulation [s]

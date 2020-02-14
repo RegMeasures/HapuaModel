@@ -198,7 +198,7 @@ def loadModel(ModelConfigFile):
     ModelName = Config['ModelName']
     
     # Extract file path ready to pre-pend to relative file paths as required
-    ConfigFilePath = os.path.split(ModelConfigFile)[0]    
+    (ConfigFilePath, ConfigFileName) = os.path.split(ModelConfigFile)  
     
     #%% Time inputs
     logging.info('Reading time inputs')
@@ -614,7 +614,11 @@ def loadModel(ModelConfigFile):
     SeaLevelTs = SeaLevelTs[KeepTimes]
     
     #%% Read output options
-    OutputOpts = {'OutFile': Config['OutputOptions']['OutFile'],
+    if Config['OutputOptions']['OutFile'] is None:
+        OutFile = os.path.splitext(ConfigFileName)[0] + '_outputs.nc'
+    else:
+        OutFile = Config['OutputOptions']['OutFile']
+    OutputOpts = {'OutFile': OutFile,
                   'OutInt': pd.Timedelta(seconds=Config['OutputOptions']['OutInt']),
                   'LogInt': pd.Timedelta(seconds=Config['OutputOptions']['LogInt']),
                   'PlotInt': pd.Timedelta(seconds=Config['OutputOptions']['PlotInt'])}

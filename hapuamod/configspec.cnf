@@ -88,7 +88,7 @@ MaxIt = integer(min=1, default=30)
 WarnTol = float(min=0, default=0.1)
 
 [OutputOptions]
-OutFile = string
+OutFile = string(default=None)
 OutInt = float(min=0)
 LogInt = float(min=0)
 PlotInt = float(min=0, default=0)

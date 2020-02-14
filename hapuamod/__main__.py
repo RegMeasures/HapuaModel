@@ -21,7 +21,7 @@ ArgsIn = Parser.parse_args()
 RootLogger = logging.getLogger()
 RootLogger.setLevel(logging.DEBUG)
 
-LogFile = os.path.splitext(ArgsIn.ModelConfigFile)[0] + '_log.txt'
+LogFile = os.path.splitext(os.path.split(ArgsIn.ModelConfigFile)[1])[0] + '_log.txt'
 
 ConsoleHandler = logging.StreamHandler()
 FileHandler = logging.FileHandler(LogFile)

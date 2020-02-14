@@ -11,7 +11,7 @@ ConsoleHandler = logging.StreamHandler()
 ConsoleHandler.setLevel(logging.INFO)
 RootLogger.addHandler(ConsoleHandler)
 
-LogFile = os.path.splitext(ModelConfigFile)[0] + '_log.txt'
+LogFile = os.path.splitext(os.path.split(ModelConfigFile)[1])[0] + '_log.txt'
 FileHandler = logging.FileHandler(LogFile)
 RootLogger.addHandler(FileHandler)
 
