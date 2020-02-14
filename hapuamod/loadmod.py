@@ -537,7 +537,11 @@ def loadModel(ModelConfigFile):
     if Config['BoundaryConditions']['RiverFlow'].lower() == 'shotnoise':
         logging.info('Synthetic shot-noise flow hydrograph specified')
         SNPars = Config['BoundaryConditions']['ShotnoiseHydrographParameters']
-        FlowTs = synth.shotNoise(TimePars['StartTime'], TimePars['EndTime'], 
+        if SNPars['HydrographStart'] is not None:
+            HydrographStart = pd.to_datetime(SNPars['HydrographStart'])
+        else:
+            HydrographStart = TimePars['StartTime']
+        FlowTs = synth.shotNoise(HydrographStart, TimePars['EndTime'], 
                                  pd.Timedelta(minutes = SNPars['HydrographDt']),
                                  pd.Timedelta(days = SNPars['MeanDaysBetweenEvents']), 
                                  SNPars['MeanEventIncrease'], 

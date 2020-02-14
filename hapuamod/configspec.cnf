@@ -16,6 +16,7 @@ SeaLevel = string
     RisingLimbTime = float(min=0, default=None)
     HydrographDt = float(min=0, default=60)
     RandomSeed = integer(default=None)
+    HydrographStart = string(default=None)
     
     [[HarmonicTideParameters]]
     MeanSeaLevel = float(default=0)
