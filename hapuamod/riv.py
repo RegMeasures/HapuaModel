@@ -267,7 +267,9 @@ def solveFullPreissmann(z, B, LagArea, Closed, h, V,
                                 WarnVar, WarnNode, Delta[WarnIx])            
             ItCount += 1
         
-        assert ItCount < MaxIt, 'Max iterations exceeded.'
+        if ItCount >= MaxIt:
+            logging.warning('Max iterations exceeded in unsteady river hydraulics - reverting to steady solution for this timestep')
+            (h, V) = solveSteady(dx, z, B, n, Q_Ts[-1], DsWl_Ts[-1], NumericalPars)
 
 def assembleChannel(ShoreX, ShoreY, ShoreZ, 
                     OutletEndX, OutletEndWidth, OutletEndElev, 
