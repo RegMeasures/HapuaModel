@@ -34,7 +34,7 @@ plt.plot((ShoreX[0:-1]+ShoreX[1:])/2, LST)
  OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
     riv.assembleChannel(ShoreX, ShoreY, ShoreZ,
                         OutletEndX, OutletEndWidth, OutletEndElev, 
-                        RiverElev, 
+                        False, RiverElev, 
                         np.zeros(RiverElev.size), np.zeros(RiverElev.size),
                         np.zeros(ShoreX.size), np.zeros(ShoreX.size), 
                         np.zeros(ShoreX.size), np.zeros(ShoreX.size),
@@ -57,7 +57,7 @@ SeaLevel = core.interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartTime
  OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
     riv.assembleChannel(ShoreX, ShoreY, ShoreZ, 
                         OutletEndX, OutletEndWidth, OutletEndElev, 
-                        RiverElev, 
+                        Closed, RiverElev, 
                         ChanDep[ChanFlag==0], ChanVel[ChanFlag==0], 
                         LagoonWL, LagoonVel, OutletDep, OutletVel,
                         OutletEndDep, OutletEndVel, 
@@ -102,13 +102,13 @@ Runup = coast.runup(WavePeriod, Hs_offshore, PhysicalPars['BeachSlope'])
 #%% Morphology updating
 OldShoreY = ShoreY.copy()
 MorDt = TimePars['MorDtMin']
-MorDt = mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
-                             OutletEndX, OutletEndWidth, OutletEndElev, 
-                             RiverElev, OnlineLagoon, 
-                             OutletChanIx, LagoonWL, OutletDep,
-                             ChanWidth, ChanDep, ChanDx, ChanFlag, 
-                             Closed, LST, Bedload, CST_tot, OverwashProp,
-                             MorDt, PhysicalPars, TimePars, NumericalPars)
+(MorDt, Closed) =  = mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
+                                          OutletEndX, OutletEndWidth, OutletEndElev, 
+                                          RiverElev, OnlineLagoon, 
+                                          OutletChanIx, LagoonWL, OutletDep,
+                                          ChanWidth, ChanDep, ChanDx, ChanFlag, 
+                                          Closed, LST, Bedload, CST_tot, OverwashProp,
+                                          MorDt, PhysicalPars, TimePars, NumericalPars)
 plt.plot(ShoreX, (ShoreY[:,0]-OldShoreY[:,0]))
 
 #%% Create output netcdf file and write initial condition

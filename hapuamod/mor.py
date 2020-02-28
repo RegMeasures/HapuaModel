@@ -454,6 +454,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     
     # Create breach
     if Breach:
+        Closed = False
         if BreachIx in OutletChanIx:
             # Outlet truncation breach
             logging.info('Outlet truncation due to breach at X = %f' % ShoreX[BreachIx])
@@ -485,5 +486,5 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             ShoreZ[BreachIx,1] = 0.5 * PhysicalPars['MaxOutletElev'] + 0.5 * ShoreZ[BreachIx,3]
             OutletEndElev[1] = 0.75 * PhysicalPars['MaxOutletElev'] + 0.25 * ShoreZ[BreachIx,3]
         
-    #%% Return updated MorDt (adaptive timestepping)
-    return MorDt
+    #%% Return updated MorDt (adaptive timestepping) and Closed/open status (opening happens in mor, closing in riv.assembleChannel)
+    return (MorDt, Closed)

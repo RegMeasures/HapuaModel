@@ -37,7 +37,7 @@ def main(ModelConfigFile, Overwrite=False):
      OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
         riv.assembleChannel(ShoreX, ShoreY, ShoreZ,
                             OutletEndX, OutletEndWidth, OutletEndElev, 
-                            RiverElev, 
+                            False, RiverElev, 
                             np.zeros(RiverElev.size), np.zeros(RiverElev.size),
                             np.zeros(ShoreX.size), np.zeros(ShoreX.size), 
                             np.zeros(ShoreX.size), np.zeros(ShoreX.size),
@@ -98,7 +98,7 @@ def main(ModelConfigFile, Overwrite=False):
          OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
             riv.assembleChannel(ShoreX, ShoreY, ShoreZ, 
                                 OutletEndX, OutletEndWidth, OutletEndElev, 
-                                RiverElev, 
+                                Closed, RiverElev, 
                                 ChanDep[ChanFlag==0], ChanVel[ChanFlag==0], 
                                 LagoonWL, LagoonVel, OutletDep, OutletVel,
                                 OutletEndDep, OutletEndVel, 
@@ -111,19 +111,19 @@ def main(ModelConfigFile, Overwrite=False):
         RivFlow = interpolate_at(FlowTs, HydTimes).values
         SeaLevel = interpolate_at(SeaLevelTs, HydTimes).values
         
-        # try:
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed,
-                                ChanDep, ChanVel, ChanDx, 
-                                TimePars['HydDt'], PhysicalPars['Roughness'], 
-                                RivFlow, SeaLevel, NumericalPars)
-#        except Exception as ErrMsg:
-#            logging.warning(ErrMsg)
-#            logging.warning('Unsteady hydraulics failed at %s. Falling back to quasi-steady for this timestep.' % 
-#                            HydTimes[-1].strftime("%m/%d/%Y, %H:%M:%S"))
-#            (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
-#                                                 PhysicalPars['Roughness'], 
-#                                                 RivFlow[-1], SeaLevel[-1], 
-#                                                 NumericalPars)
+        try:
+            riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed,
+                                    ChanDep, ChanVel, ChanDx, 
+                                    TimePars['HydDt'], PhysicalPars['Roughness'], 
+                                    RivFlow, SeaLevel, NumericalPars)
+        except Exception as ErrMsg:
+            logging.warning(ErrMsg)
+            logging.warning('Unsteady hydraulics failed at %s. Falling back to quasi-steady for this timestep.' % 
+                            HydTimes[-1].strftime("%m/%d/%Y, %H:%M:%S"))
+            (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
+                                                PhysicalPars['Roughness'], 
+                                                RivFlow[-1], SeaLevel[-1], 
+                                                NumericalPars)
         
         # Store the hydraulics ready to use for initial conditions in the next loop
         (LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, OutletEndVel) = \
@@ -153,14 +153,14 @@ def main(ModelConfigFile, Overwrite=False):
                                                     ShoreZ, PhysicalPars)
         
         # Update morphology
-        MorDt = mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
-                                     OutletEndX, OutletEndWidth, OutletEndElev, 
-                                     RiverElev, OnlineLagoon, 
-                                     OutletChanIx, LagoonWL, OutletDep,
-                                     ChanWidth, ChanDep, ChanDx, ChanFlag, 
-                                     Closed, LST, Bedload, CST_tot, OverwashProp,
-                                     MorDt, 
-                                     PhysicalPars, TimePars, NumericalPars)
+        (MorDt, Closed) = mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
+                                               OutletEndX, OutletEndWidth, OutletEndElev, 
+                                               RiverElev, OnlineLagoon, 
+                                               OutletChanIx, LagoonWL, OutletDep,
+                                               ChanWidth, ChanDep, ChanDx, ChanFlag, 
+                                               Closed, LST, Bedload, CST_tot, OverwashProp,
+                                               MorDt, 
+                                               PhysicalPars, TimePars, NumericalPars)
         
         # increment time
         MorTime += MorDt

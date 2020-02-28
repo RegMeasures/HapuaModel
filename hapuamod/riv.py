@@ -273,7 +273,7 @@ def solveFullPreissmann(z, B, LagArea, Closed, h, V,
 
 def assembleChannel(ShoreX, ShoreY, ShoreZ, 
                     OutletEndX, OutletEndWidth, OutletEndElev, 
-                    RiverElev, RivDep, RivVel, 
+                    Closed, RiverElev, RivDep, RivVel, 
                     LagoonWL, LagoonVel, OutletDep, OutletVel,
                     OutletEndDep, OutletEndVel, Dx, PhysicalPars):
     """ Combine river, lagoon and outlet into single channel for hyd-calcs
@@ -282,7 +282,7 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
          OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
             riv.assembleChannel(ShoreX, ShoreY, ShoreZ, 
                                 OutletEndX, OutletEndWidth, OutletEndElev, 
-                                RiverElev, RivDep, RivVel, 
+                                Closed, RiverElev, RivDep, RivVel, 
                                 LagoonWL, LagoonVel, OutletDep, OutletVel, 
                                 OutletEndDep, OutletEndVel, Dx, PhysicalPars)
         
@@ -327,16 +327,17 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
     OutletWidth = ShoreY[OutletChanIx,1] - ShoreY[OutletChanIx,2]
     OutletWidth[np.isnan(OutletWidth)] = 0.
     
-    # Check if closure has occured.
-    Closed = np.any(OutletWidth<=PhysicalPars['MinOutletWidth']) | np.any(OutletEndWidth<=PhysicalPars['MinOutletWidth'])
-    if Closed:
-        for ClosedIx in OutletChanIx[OutletWidth<=PhysicalPars['MinOutletWidth']]:
-            logging.info('Outlet channel closed by wave washover at X = %f' % ShoreX[ClosedIx])
-        if OutletEndWidth[1] <= PhysicalPars['MinOutletWidth']:
-            logging.info('Downstream end of outlet channel closed by longshore transport (EndX = %f)' % OutletEndX[1])
-        OutletChanIx = np.empty(0)
-    elif np.min(OutletWidth) < 5:
-        logging.debug('Narrow outlet, min outlet width = %f' % (np.min(OutletWidth)))
+    # Check if closure has occured in outlet channel (only if not already closed from previous timestep).
+    if not Closed:
+        if np.any(OutletWidth<=PhysicalPars['MinOutletWidth']) | np.any(OutletEndWidth<=PhysicalPars['MinOutletWidth']):
+            Closed = True
+            for ClosedIx in OutletChanIx[OutletWidth<=PhysicalPars['MinOutletWidth']]:
+                logging.info('Outlet channel closed by wave washover at X = %f' % ShoreX[ClosedIx])
+            if OutletEndWidth[1] <= PhysicalPars['MinOutletWidth']:
+                logging.info('Downstream end of outlet channel closed by longshore transport (EndX = %f)' % OutletEndX[1])
+            OutletChanIx = np.empty(0)
+        elif np.min(OutletWidth) < PhysicalPars['MinOutletWidth'] * 3:
+            logging.debug('Narrow outlet, min outlet width = %f' % (np.min(OutletWidth)))
     
     # TODO: Account for potentially dry parts of the lagoon when 
     #       calculating ChanArea
@@ -376,9 +377,17 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
             EndArea = np.nansum(LagoonWidth[ShoreX < OutletEndX[0]] * Dx)
         StartArea = np.nansum(LagoonWidth[ShoreX > 0] * Dx)
     
-    # Maintain a minimum width in the online lagoon - this represents the fact that the online lagoon rarely (if ever) closes.
-    LagoonWidth[OnlineLagoon] = np.maximum(LagoonWidth[OnlineLagoon], 
-                                           PhysicalPars['MinLagoonWidth'])
+    # Check the lagoon hasn't closed anywhere
+    # note this can happen:
+    #   - when the outlet is open (i.e. causing closure of the outlet)
+    #   - or if the outlet is already closed somewhere else (it which case it just reduces the length of lagoon which is "online" in the closed lagoon...)
+    if np.any(LagoonWidth[OnlineLagoon] < PhysicalPars['MinOutletWidth']):
+        LagCloseIx = np.where(LagoonWidth[OnlineLagoon] < PhysicalPars['MinOutletWidth'])[0][0]
+        if not Closed:
+            logging.info('Closure occured in lagoon at X=%.0f', ShoreX[LagCloseIx])
+            Closed = True
+        EndArea += np.nansum(LagoonWidth[OnlineLagoon[LagCloseIx:]] * Dx)
+        OnlineLagoon = OnlineLagoon[:LagCloseIx]
     
     # These asserts *should* now be impossible to breach...
     assert np.abs(OnlineLagoon[-1]-OnlineLagoon[0]) == (OnlineLagoon.size-1), 'Gap in online lagoon (possibly split lagoon and closed?) need to handle this'
