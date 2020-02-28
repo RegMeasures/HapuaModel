@@ -126,6 +126,8 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                                   / ((PhysicalPars['BeachTopElev'] - OutletEndElev[1]) * PhysicalPars['SpitWidth']))
             OutletEndWideningRate[1] -= WidthReductionRate
             OutletEndXMoveRate = -WidthReductionRate/2
+    else:
+        OutletEndXMoveRate = 0
     
     #%% Rates of change of morphology due to cross-shore morphology (overtopping etc)
     CrestWidth = ShoreY[:,0] - ShoreY[:,3]
@@ -145,7 +147,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     ShoreYChangeRate[1:-1,0] -= CST_tot[1:-1] / ShorefaceHeight[1:-1]
     
     
-    #%% Set adaptive timestep and update morphology
+    #%% Set adaptive timestep
     
     MaxMorChangeRate = max(np.max(np.abs(RivBedAggRate)),
                            np.max(np.abs(ShoreYChangeRate)),
@@ -166,6 +168,8 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     while MorDt.seconds < TimePars['MorDtMax'].seconds and MaxMorChangeRate * MorDt.seconds < NumericalPars['MaxMorChange']/2:
         MorDt *= 2
         logging.debug('Increasing morphological timestep to %fs', MorDt.seconds)
+    
+    #%% Update morphology
         
     # note that += modifies variables in place so no need to explicitly return them!
     RiverElev[1:] += RivBedAggRate * MorDt.seconds
