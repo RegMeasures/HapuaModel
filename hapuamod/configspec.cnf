@@ -47,7 +47,8 @@ BarrierElev = float
 StartTime = string
 EndTime = string
 HydDt = float(min=0)
-MorDt = float(min=0)
+MorDtMin = float(min=0)
+MorDtMax = float(min=0)
 
 [PhysicalParameters]
 Kcoef = float(min=0)
@@ -87,6 +88,7 @@ Psi = float(min=0, max=0.5, default=0.4)
 ErrTol = float(min=0, default=0.001)
 MaxIt = integer(min=1, default=30)
 WarnTol = float(min=0, default=0.1)
+MaxMorChange = float(min=0, default=0.05)
 
 [OutputOptions]
 OutFile = string(default=None)

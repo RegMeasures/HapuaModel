@@ -101,13 +101,14 @@ Runup = coast.runup(WavePeriod, Hs_offshore, PhysicalPars['BeachSlope'])
 
 #%% Morphology updating
 OldShoreY = ShoreY.copy()
-mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
-                     OutletEndX, OutletEndWidth, OutletEndElev, 
-                     RiverElev, PhysicalPars['RiverWidth'], OnlineLagoon, 
-                     OutletChanIx, LagoonWL, OutletDep,
-                     ChanWidth, ChanDep, ChanDx, ChanFlag, 
-                     Closed, LST, Bedload, CST_tot, OverwashProp,
-                     NumericalPars['Dx'], TimePars['MorDt'], PhysicalPars)
+MorDt = TimePars['MorDtMin']
+MorDt = mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
+                             OutletEndX, OutletEndWidth, OutletEndElev, 
+                             RiverElev, OnlineLagoon, 
+                             OutletChanIx, LagoonWL, OutletDep,
+                             ChanWidth, ChanDep, ChanDx, ChanFlag, 
+                             Closed, LST, Bedload, CST_tot, OverwashProp,
+                             MorDt, PhysicalPars, TimePars, NumericalPars)
 plt.plot(ShoreX, (ShoreY[:,0]-OldShoreY[:,0]))
 
 #%% Create output netcdf file and write initial condition

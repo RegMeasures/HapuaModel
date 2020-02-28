@@ -100,7 +100,8 @@ def loadModel(ModelConfigFile):
             StartTime (pd.datetime): Start date/time of simulation
             EndTime (pd.datetime): End date/time of simulation period
             HydDt (pd.Timedelta): Hydrodynamic timestep
-            MorDt (pd.Timedelta): Morphological timestep
+            MorDtMax (pd.Timedelta): Maximum morphological timestep
+            MorDtMin (pd.Timedelta): Minimum morphological timestep
         PhysicalPars (dict): Physical parameters including:
             RhoSed (float): Sediment density (kg/m3)
             RhoSea (float): Seawater density (kg/m3)
@@ -160,6 +161,8 @@ def loadModel(ModelConfigFile):
             WarnTol (float): Warning tolerance for change in water level/
                 velocity within a single iteration of the hydrodynamic 
                 solution (m and m/s)
+            MaxMorChange (float): Maximum morphological change per timestep 
+                (used for adaptive timestepping) (m)
         OutputOpts (dict):
             OutFile (string): filename for writing model outputs to 
                 (netCDF file)
@@ -205,7 +208,8 @@ def loadModel(ModelConfigFile):
     TimePars = {'StartTime': pd.to_datetime(Config['Time']['StartTime']),
                 'EndTime': pd.to_datetime(Config['Time']['EndTime']),
                 'HydDt': pd.Timedelta(seconds=Config['Time']['HydDt']),
-                'MorDt': pd.Timedelta(seconds=Config['Time']['MorDt'])}
+                'MorDtMin': pd.Timedelta(seconds=Config['Time']['MorDtMin']),
+                'MorDtMax': pd.Timedelta(seconds=Config['Time']['MorDtMax'])}
     # TODO: check mortime is a multiple of hydtime (or replace with morscaling?)
     
     #%% Read physical parameters
@@ -255,7 +259,8 @@ def loadModel(ModelConfigFile):
                      'Psi': Config['NumericalParameters']['Psi'],
                      'ErrTol': Config['NumericalParameters']['ErrTol'],
                      'MaxIt': Config['NumericalParameters']['MaxIt'],
-                     'WarnTol': Config['NumericalParameters']['WarnTol']}
+                     'WarnTol': Config['NumericalParameters']['WarnTol'],
+                     'MaxMorChange': Config['NumericalParameters']['MaxMorChange']}
     
     #%% Read initial conditions
     if Config['HotStart']['InitialConditionsNetCDF'] is None:

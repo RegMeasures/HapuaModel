@@ -10,16 +10,18 @@ import logging
 # import local modules
 
 def updateMorphology(ShoreX, ShoreY, ShoreZ,
-                     OutletEndX, OutletEndWidth, OutletEndElev, 
-                     RiverElev, RiverWidth, OnlineLagoon, OutletChanIx, 
+                     OutletEndX, OutletEndWidth, OutletEndElev,
+                     RiverElev, OnlineLagoon, OutletChanIx,
                      LagoonWL, OutletDep,
                      ChanWidth, ChanDep, ChanDx, ChanFlag, Closed,
                      LST, Bedload, CST_tot, OverwashProp,
-                     Dx, Dt, PhysicalPars):
+                     MorDt, PhysicalPars, TimePars, NumericalPars):
     """ Update river, lagoon, outlet, barrier and shoreline morphology
     """
     
     #%% Pre-calculate some useful parameters
+    
+    Dx = NumericalPars['Dx']
     
     # Find location outlet channel intersects shoreline
     if not Closed:
@@ -46,17 +48,20 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     if not Closed:
         WaterLevel[OutletChanIx] = (OutletDep[OutletChanIx] + ShoreZ[OutletChanIx,1])
     
-    #%% 1D River model morphology
+    #%% Calculate rates of movement of morphology due to river forcing
+    ShoreYChangeRate = np.zeros(ShoreY.shape)
+    ShoreZChangeRate = np.zeros(ShoreZ.shape)
+    OutletEndWideningRate = np.zeros(2)
     
     if Closed:
-        # Change in volume at each cross-section (except the upstream Bdy)
-        dVol = (Bedload-np.concatenate([Bedload[1:],[0]])) * Dt.seconds
+        # Rate of change in volume at each cross-section (except the upstream Bdy)
+        DVolRate = (Bedload-np.concatenate([Bedload[1:],[0]]))
         AspectRatio = ChanWidth[1:]/ChanDep[1:]
         RivXS = ChanFlag[1:]==0
         LagXS = ChanFlag[1:]==1
     else:
-        # Change in volume at each cross-section (except the upstream Bdy and dummy downstream XS)
-        dVol = (Bedload[:-1]-Bedload[1:]) * Dt.seconds
+        # Rate of change in volume at each cross-section (except the upstream Bdy and dummy downstream XS)
+        DVolRate = (Bedload[:-1]-Bedload[1:])
         AspectRatio = ChanWidth[1:-1]/ChanDep[1:-1]
         RivXS = ChanFlag[1:-1]==0
         LagXS = ChanFlag[1:-1]==1
@@ -64,67 +69,65 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         OutEndXS = np.where(ChanFlag==2)[0]
     TooWide = AspectRatio > PhysicalPars['WidthRatio']
     
-    # Update channel bed elevation
-    EroVol = - np.minimum(dVol, 0.0)  # Total erosion volume (+ve = erosion)
-    BedEro = EroVol * TooWide       # Bed erosion volume (+ve)
-    BankEro = EroVol * np.logical_not(TooWide) # Bank erosion volume (+ve)
-    BedDep = np.maximum(dVol, 0.0)  # Bed deposition volume (+ve)
-    # note that += modifies variables in place so no need to explicitly return them!
-    # No change in river width allowed so all erosion applied to bed.
-    RiverElev[1:] += (BedDep[RivXS] - EroVol[RivXS]) / (PhysicalPars['RiverWidth'] * Dx)
-    ShoreZ[OnlineLagoon, 3] += ((BedDep[LagXS] - BedEro[LagXS])
-                                / ((ShoreY[OnlineLagoon, 3] - ShoreY[OnlineLagoon, 4]) * Dx))
-    if not Closed:
-        ShoreZ[OutletChanIx, 1] += (BedDep[OutXS[1:-1]] - BedEro[OutXS[1:-1]]) / (ChanWidth[OutXS] * Dx)
-        OutletEndElev += (BedDep[OutEndXS-1] - BedEro[OutEndXS-1]) / (OutletEndWidth * Dx)
+    EroVolRate = - np.minimum(DVolRate, 0.0)  # Total volumetric erosion rate (+ve = erosion)
+    BedEroRate = EroVolRate * TooWide       # Bed erosion volumetric rate (+ve)
+    BankEroRate = EroVolRate * np.logical_not(TooWide) # Bank erosion volumetric rate (+ve)
+    BedDepRate = np.maximum(DVolRate, 0.0)  # Bed deposition volumetric rate (+ve)
     
-    # Update lagoon and outlet channel bank positions
-    # Note: River upstream of lagoon has fixed width - all morpho change is on bed
     LagoonBankElev = ShoreZ[:,0].copy()
     LagoonBankElev[OutletPresent] = ShoreZ[OutletPresent, 2]
-    ShoreY[OnlineLagoon,3] += (BankEro[LagXS]/2) / ((LagoonBankElev[OnlineLagoon] - ShoreZ[OnlineLagoon,3]) * Dx)
-    ShoreY[OnlineLagoon,4] -= (BankEro[LagXS]/2) / ((PhysicalPars['BackshoreElev'] - ShoreZ[OnlineLagoon,3]) * Dx)
-    # Outlet channel
+    
+    # Bed level change rates
+    # Note: No change in river width allowed so all erosion applied to bed.
+    RivBedAggRate = (BedDepRate[RivXS] - EroVolRate[RivXS]) / (PhysicalPars['RiverWidth'] * Dx)
+    ShoreZChangeRate[OnlineLagoon, 3] += ((BedDepRate[LagXS] - BedEroRate[LagXS])
+                                          / ((ShoreY[OnlineLagoon, 3] - ShoreY[OnlineLagoon, 4]) * Dx))
     if not Closed:
-        ShoreY[OutletChanIx,1] += (BankEro[OutXS[1:-1]]/2) / ((ShoreZ[OutletChanIx,0] - ShoreZ[OutletChanIx,1]) * Dx)
-        ShoreY[OutletChanIx,2] -= (BankEro[OutXS[1:-1]]/2) / ((ShoreZ[OutletChanIx,2] - ShoreZ[OutletChanIx,1]) * Dx)
+        ShoreZChangeRate[OutletChanIx, 1] += (BedDepRate[OutXS[1:-1]] - BedEroRate[OutXS[1:-1]]) / (ChanWidth[OutXS] * Dx)
+        OutletEndAggRate = (BedDepRate[OutEndXS-1] - BedEroRate[OutEndXS-1]) / (OutletEndWidth * Dx)
+    else:
+        OutletEndAggRate = 0.0
+    
+    # Bank erosion change rates
+    ShoreYChangeRate[OnlineLagoon,3] += (BankEroRate[LagXS]/2) / ((LagoonBankElev[OnlineLagoon] - ShoreZ[OnlineLagoon,3]) * Dx)
+    ShoreYChangeRate[OnlineLagoon,4] -= (BankEroRate[LagXS]/2) / ((PhysicalPars['BackshoreElev'] - ShoreZ[OnlineLagoon,3]) * Dx)
+    if not Closed:
+        ShoreYChangeRate[OutletChanIx,1] += (BankEroRate[OutXS[1:-1]]/2) / ((ShoreZ[OutletChanIx,0] - ShoreZ[OutletChanIx,1]) * Dx)
+        ShoreYChangeRate[OutletChanIx,2] -= (BankEroRate[OutXS[1:-1]]/2) / ((ShoreZ[OutletChanIx,2] - ShoreZ[OutletChanIx,1]) * Dx)
         
-        OutletEndWidth[0] += BankEro[OutEndXS[0]-1] / ((ShoreZ[OutletChanIx[0],0] - OutletEndElev[0]) * Dx)
-        OutletEndWidth[1] += BankEro[OutEndXS[1]-1] / ((PhysicalPars['BeachTopElev'] - OutletEndElev[1]) * PhysicalPars['SpitWidth'])
+        OutletEndWideningRate[0] += BankEroRate[OutEndXS[0]-1] / ((ShoreZ[OutletChanIx[0],0] - OutletEndElev[0]) * Dx)
+        OutletEndWideningRate[1] += BankEroRate[OutEndXS[1]-1] / ((PhysicalPars['BeachTopElev'] - OutletEndElev[1]) * PhysicalPars['SpitWidth'])
         
         # Distribute sediment discharged from outlet onto shoreline 
-        BedloadToShore = ((Dx * Bedload[-1] / PhysicalPars['OutletSedSpreadDist']) * 
-                          np.maximum(1 - np.abs(ShoreX - OutletEndX[1])/PhysicalPars['OutletSedSpreadDist'], 0.0))
-        ShoreY[:,0] += BedloadToShore * Dt.seconds / (ShorefaceHeight * Dx)
+        BedloadToShoreRate = ((Dx * Bedload[-1] / PhysicalPars['OutletSedSpreadDist']) * 
+                              np.maximum(1 - np.abs(ShoreX - OutletEndX[1])/PhysicalPars['OutletSedSpreadDist'], 0.0))
+        ShoreYChangeRate[:,0] += BedloadToShoreRate / (ShorefaceHeight * Dx)    
     
-    #%% 1-Line shoreline model morphology
-    
-    # Update shoreline position
+    #%% Calculate rate of change of shoreline position due to long shore transport
+        
+    ShoreYChangeRate[1:-1,0] += (LST[:-1] - LST[1:]) / (ShorefaceHeight[1:-1] * Dx)
     # TODO add shoreline boundary conditions here (github issue #10)
-    ShoreY[1:-1,0] += ((LST[:-1] - LST[1:]) * Dt.seconds 
-                       / (ShorefaceHeight[1:-1] * Dx))
     
     # Remove LST driven sed supply out of outlet channel and put on outlet channel bank instead
     if not Closed:
         if LST[OutletRbShoreIx-1]>0:
             # Transport from L to R
-            ShoreY[OutletRbShoreIx,0] -= (LST[OutletRbShoreIx-1] * Dt.seconds 
-                                          / (ShorefaceHeight[OutletRbShoreIx] * Dx))
-            WidthReduction = ((LST[OutletRbShoreIx-1] * Dt.seconds) 
-                              / ((PhysicalPars['BeachTopElev'] - OutletEndElev[1]) * PhysicalPars['SpitWidth']))
-            OutletEndWidth[1] -= WidthReduction
-            OutletEndX[1] += WidthReduction/2
+            ShoreYChangeRate[OutletRbShoreIx,0] -= (LST[OutletRbShoreIx-1]
+                                                    / (ShorefaceHeight[OutletRbShoreIx] * Dx))
+            WidthReductionRate = (LST[OutletRbShoreIx-1] 
+                                  / ((PhysicalPars['BeachTopElev'] - OutletEndElev[1]) * PhysicalPars['SpitWidth']))
+            OutletEndWideningRate[1] -= WidthReductionRate
+            OutletEndXMoveRate = WidthReductionRate/2
         else:
             # Transport from R to L
-            ShoreY[OutletRbShoreIx-1,0] += (LST[OutletRbShoreIx-1] * Dt.seconds 
+            ShoreY[OutletRbShoreIx-1,0] += (LST[OutletRbShoreIx-1] 
                                             / (ShorefaceHeight[OutletRbShoreIx-1] * Dx))
-            WidthReduction = ((-LST[OutletRbShoreIx-1] * Dt.seconds) 
-                              / ((PhysicalPars['BeachTopElev'] - OutletEndElev[1]) * PhysicalPars['SpitWidth']))
-            OutletEndWidth[1] -= WidthReduction
-            OutletEndX[1] -= WidthReduction/2
-        
-    #%% Cross-shore morphology (overtopping etc)
+            WidthReductionRate = (-LST[OutletRbShoreIx-1]
+                                  / ((PhysicalPars['BeachTopElev'] - OutletEndElev[1]) * PhysicalPars['SpitWidth']))
+            OutletEndWideningRate[1] -= WidthReductionRate
+            OutletEndXMoveRate = -WidthReductionRate/2
     
+    #%% Rates of change of morphology due to cross-shore morphology (overtopping etc)
     CrestWidth = ShoreY[:,0] - ShoreY[:,3]
     CrestWidth[OutletPresent] = ShoreY[OutletPresent,0] - ShoreY[OutletPresent,1]
     
@@ -132,14 +135,46 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     BackBarHeight[OutletPresent] = ShoreZ[OutletPresent,0] - ShoreZ[OutletPresent,1]
     
     # Accumulation of sediment on top of the barrier
-    ShoreZ[:,0] += (1-OverwashProp) * CST_tot * Dt.seconds / CrestWidth
+    ShoreZChangeRate[:,0] += (1-OverwashProp) * CST_tot / CrestWidth
     
     # Accumulation of sediment on the back of the barrier
-    ShoreY[~OutletPresent,3] -= OverwashProp[~OutletPresent] * CST_tot[~OutletPresent] * Dt.seconds / BackBarHeight[~OutletPresent]
-    ShoreY[OutletPresent,1] -= OverwashProp[OutletPresent] * CST_tot[OutletPresent] * Dt.seconds / BackBarHeight[OutletPresent]
+    ShoreYChangeRate[~OutletPresent,3] -= OverwashProp[~OutletPresent] * CST_tot[~OutletPresent] / BackBarHeight[~OutletPresent]
+    ShoreYChangeRate[OutletPresent,1] -= OverwashProp[OutletPresent] * CST_tot[OutletPresent] / BackBarHeight[OutletPresent]
     
     # Erosion of sediment off the shoreface (don't move ends)
-    ShoreY[1:-1,0] -= CST_tot[1:-1] * Dt.seconds / ShorefaceHeight[1:-1]
+    ShoreYChangeRate[1:-1,0] -= CST_tot[1:-1] / ShorefaceHeight[1:-1]
+    
+    
+    #%% Set adaptive timestep and update morphology
+    
+    MaxMorChangeRate = max(np.max(np.abs(RivBedAggRate)),
+                           np.max(np.abs(ShoreYChangeRate)),
+                           np.max(np.abs(ShoreZChangeRate)),
+                           np.max(np.abs(OutletEndWideningRate)),
+                           np.max(np.abs(OutletEndAggRate)),
+                           abs(OutletEndXMoveRate))
+    
+    while MorDt.seconds > TimePars['MorDtMin'].seconds and MaxMorChangeRate * MorDt.seconds > NumericalPars['MaxMorChange']:
+        MorDt /= 2
+        logging.debug('Decreasing morphological timestep to %fs', MorDt.seconds)
+    
+    if MaxMorChangeRate * MorDt.seconds > NumericalPars['MaxMorChange']:
+        assert MorDt.seconds <= TimePars['MorDtMin'].seconds
+        logging.warning('Max morphological change (%.3fm) exceeds "MaxMorChange" but MorDt already at minimum',
+                        MaxMorChangeRate * MorDt.seconds)
+    
+    while MorDt.seconds < TimePars['MorDtMax'].seconds and MaxMorChangeRate * MorDt.seconds < NumericalPars['MaxMorChange']/2:
+        MorDt *= 2
+        logging.debug('Increasing morphological timestep to %fs', MorDt.seconds)
+        
+    # note that += modifies variables in place so no need to explicitly return them!
+    RiverElev[1:] += RivBedAggRate * MorDt.seconds
+    ShoreZ += ShoreZChangeRate * MorDt.seconds
+    ShoreY += ShoreYChangeRate * MorDt.seconds
+    if not Closed:
+        OutletEndWidth += OutletEndWideningRate * MorDt.seconds
+        OutletEndElev += OutletEndAggRate * MorDt.seconds
+        OutletEndX[1] += OutletEndXMoveRate * MorDt.seconds
     
     #%% Check if shoreline has eroded into cliff anywhere
     CliffCollision = ShoreY[:,0] < ShoreY[:,4]
@@ -391,8 +426,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             ShoreY[NotBreachIx,3] = ShoreY[NotBreachIx,0] - 0.001
         else:
             # barrier eroded but further from river than existing outlet 
-            logging.info('Preventing breach as eroded barrier is further from river than existing outlet' % 
-                         ShoreX[TsectNo])
+            logging.info('Preventing breach as eroded barrier is further from river than existing outlet')
             ShoreY[EroTsects,3] = ShoreY[EroTsects,0] - 0.001
         
     elif np.any(ShoreZ[:,0] < WaterLevel):
@@ -446,7 +480,6 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             OutletEndElev[0] = 0.25 * PhysicalPars['MaxOutletElev'] + 0.75 * ShoreZ[BreachIx,3]
             ShoreZ[BreachIx,1] = 0.5 * PhysicalPars['MaxOutletElev'] + 0.5 * ShoreZ[BreachIx,3]
             OutletEndElev[1] = 0.75 * PhysicalPars['MaxOutletElev'] + 0.25 * ShoreZ[BreachIx,3]
-            
         
-        
-        
+    #%% Return updated MorDt (adaptive timestepping)
+    return MorDt

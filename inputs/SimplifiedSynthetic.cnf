@@ -63,8 +63,10 @@ StartTime = '1 Sep 2000'
 EndTime = '1 Jan 2018'
 # Hydraulic Timestep [s]
 HydDt = 5
-# Morphology Timestep [s]
-MorDt = 900
+# Minimum morphology timestep [s]
+MorDtMin = 60
+# Maximum morphology Timestep [s]
+MorDtMax = 3840
 
 [PhysicalParameters]
 # K coefficient for longshore transport calculation (non-dimensional)
@@ -143,6 +145,8 @@ ErrTol = 0.001
 MaxIt = 30
 # Warning tolerance for change in water level/velocity within a single iteration of the hydrodynamic solution [m and m/s]
 WarnTol = 0.1
+# Maximum morphological change per timestep (used for adaptive timestepping) [m]
+MaxMorChange = 0.1
 
 [OutputOptions]
 # Interval to save data to netCDF file [s]

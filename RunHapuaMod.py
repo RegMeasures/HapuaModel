@@ -2,7 +2,8 @@ import logging
 import os
 from hapuamod.core import main
 
-ModelConfigFile = 'inputs\HurunuiModel.cnf'
+#ModelConfigFile = 'inputs\HurunuiModel.cnf'
+ModelConfigFile = 'inputs\SimplifiedSynthetic.cnf'
 
 RootLogger = logging.getLogger()
 RootLogger.setLevel(logging.DEBUG)

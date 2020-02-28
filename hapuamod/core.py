@@ -89,6 +89,8 @@ def main(ModelConfigFile, Overwrite=False):
     OutTime = TimePars['StartTime'] + OutputOpts['OutInt']
     LogTime = TimePars['StartTime'] + OutputOpts['LogInt']
     PlotTime = TimePars['StartTime'] + OutputOpts['PlotInt']
+    
+    MorDt = TimePars['MorDtMin'] # Initial morphological timestep
     while MorTime <= TimePars['EndTime']:
         
         # Re-assemble the combined river channel incase it has evolved
@@ -103,7 +105,7 @@ def main(ModelConfigFile, Overwrite=False):
                                 NumericalPars['Dx'], PhysicalPars)
                 
         # Run the river model for all the timesteps upto the next morphology step
-        HydTimes = pd.date_range(MorTime, MorTime+TimePars['MorDt'], 
+        HydTimes = pd.date_range(MorTime, MorTime + MorDt, 
                                  freq=TimePars['HydDt'], closed='right')
         
         RivFlow = interpolate_at(FlowTs, HydTimes).values
@@ -150,8 +152,18 @@ def main(ModelConfigFile, Overwrite=False):
         (CST_tot, OverwashProp) = coast.overtopping(Runup, SeaLevel[-1], ShoreY, 
                                                     ShoreZ, PhysicalPars)
         
+        # Update morphology
+        MorDt = mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
+                                     OutletEndX, OutletEndWidth, OutletEndElev, 
+                                     RiverElev, OnlineLagoon, 
+                                     OutletChanIx, LagoonWL, OutletDep,
+                                     ChanWidth, ChanDep, ChanDx, ChanFlag, 
+                                     Closed, LST, Bedload, CST_tot, OverwashProp,
+                                     MorDt, 
+                                     PhysicalPars, TimePars, NumericalPars)
+        
         # increment time
-        MorTime += TimePars['MorDt']
+        MorTime += MorDt
         
         # If it is an output or plotting timestep then put bedload into model co-ordinates
         if MorTime >= OutTime or (LivePlot and MorTime >= PlotTime):
@@ -159,15 +171,7 @@ def main(ModelConfigFile, Overwrite=False):
                 riv.storeBedload(Bedload, ShoreX.size, OnlineLagoon, OutletChanIx, 
                                  ChanFlag, Closed)
                 
-        # Update morphology
-        mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
-                             OutletEndX, OutletEndWidth, OutletEndElev, 
-                             RiverElev, PhysicalPars['RiverWidth'], OnlineLagoon, 
-                             OutletChanIx, LagoonWL, OutletDep,
-                             ChanWidth, ChanDep, ChanDx, ChanFlag, 
-                             Closed, LST, Bedload, CST_tot, OverwashProp,
-                             NumericalPars['Dx'], TimePars['MorDt'], 
-                             PhysicalPars)
+        
         
         # Save outputs
         if MorTime >= OutTime:
@@ -187,7 +191,7 @@ def main(ModelConfigFile, Overwrite=False):
         
         # updates to user
         if MorTime >= LogTime:
-            logging.info('Time = %s', MorTime)
+            logging.info('Time = %s, MorDt = %.1fs', MorTime, MorDt.seconds)
             LogTime += OutputOpts['LogInt']
             
         # plotting
