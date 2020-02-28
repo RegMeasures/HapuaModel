@@ -14,6 +14,9 @@ RootLogger.addHandler(ConsoleHandler)
 
 LogFile = os.path.splitext(os.path.split(ModelConfigFile)[1])[0] + '_log.txt'
 FileHandler = logging.FileHandler(LogFile)
+LogFormatter = logging.Formatter('%(levelname)-7s: %(message)s')
+FileHandler.setFormatter(LogFormatter)
+
 RootLogger.addHandler(FileHandler)
 
 main(ModelConfigFile, True)

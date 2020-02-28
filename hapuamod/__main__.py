@@ -36,6 +36,9 @@ else:
     ConsoleHandler.setLevel(logging.INFO)
     FileHandler.setLevel(logging.INFO)
 
+LogFormatter = logging.Formatter('%(levelname)-7s: %(message)s')
+FileHandler.setFormatter(LogFormatter)
+
 RootLogger.addHandler(ConsoleHandler)
 RootLogger.addHandler(FileHandler)
 
