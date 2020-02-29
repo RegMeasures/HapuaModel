@@ -102,7 +102,7 @@ Runup = coast.runup(WavePeriod, Hs_offshore, PhysicalPars['BeachSlope'])
 #%% Morphology updating
 OldShoreY = ShoreY.copy()
 MorDt = TimePars['MorDtMin']
-(MorDt, Closed) =  = mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
+(MorDt, Breach) =  = mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
                                           OutletEndX, OutletEndWidth, OutletEndElev, 
                                           RiverElev, OnlineLagoon, 
                                           OutletChanIx, LagoonWL, OutletDep,

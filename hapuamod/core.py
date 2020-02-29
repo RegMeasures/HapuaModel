@@ -153,7 +153,7 @@ def main(ModelConfigFile, Overwrite=False):
                                                     ShoreZ, PhysicalPars)
         
         # Update morphology
-        (MorDt, Closed) = mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
+        (MorDt, Breach) = mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
                                                OutletEndX, OutletEndWidth, OutletEndElev, 
                                                RiverElev, OnlineLagoon, 
                                                OutletChanIx, LagoonWL, OutletDep,
@@ -170,8 +170,6 @@ def main(ModelConfigFile, Overwrite=False):
             (LagoonBedload, OutletBedload, OutletEndBedload) = \
                 riv.storeBedload(Bedload, ShoreX.size, OnlineLagoon, OutletChanIx, 
                                  ChanFlag, Closed)
-                
-        
         
         # Save outputs
         if MorTime >= OutTime:
@@ -206,6 +204,10 @@ def main(ModelConfigFile, Overwrite=False):
                                           WavePower=WavePower, EDir_h=EDir_h, 
                                           LST=LST, CST=CST_tot)
                 PlotTime += OutputOpts['PlotInt']
+        
+        # Adjust closed flag if breach has occured
+        if Breach:
+            Closed = False
     
 def interpolate_at(Df, New_idxs):
     """ Linearly interpolate dataframe for specified index values

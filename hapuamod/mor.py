@@ -17,6 +17,10 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                      LST, Bedload, CST_tot, OverwashProp,
                      MorDt, PhysicalPars, TimePars, NumericalPars):
     """ Update river, lagoon, outlet, barrier and shoreline morphology
+        
+        Returns:
+            MorDt = Current value of the adaptive morphological timestep
+            Breach = Flag for whether a breach has occured this timestep
     """
     
     #%% Pre-calculate some useful parameters
@@ -454,7 +458,6 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     
     # Create breach
     if Breach:
-        Closed = False
         if BreachIx in OutletChanIx:
             # Outlet truncation breach
             logging.info('Outlet truncation due to breach at X = %f' % ShoreX[BreachIx])
@@ -485,6 +488,6 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             OutletEndElev[0] = 0.25 * PhysicalPars['MaxOutletElev'] + 0.75 * ShoreZ[BreachIx,3]
             ShoreZ[BreachIx,1] = 0.5 * PhysicalPars['MaxOutletElev'] + 0.5 * ShoreZ[BreachIx,3]
             OutletEndElev[1] = 0.75 * PhysicalPars['MaxOutletElev'] + 0.25 * ShoreZ[BreachIx,3]
-        
+    
     #%% Return updated MorDt (adaptive timestepping) and Closed/open status (opening happens in mor, closing in riv.assembleChannel)
-    return (MorDt, Closed)
+    return (MorDt, Breach)
