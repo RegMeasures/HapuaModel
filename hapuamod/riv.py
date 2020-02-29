@@ -315,20 +315,20 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
     if OutletEndVel.size == 2:
         OutletEndVel = np.append(OutletEndVel, np.nan)
     
-    # Find location and orientation of outlet channel
-    if OutletEndX[0] < OutletEndX[1]:
-        # Outlet angles from L to R
-        OutletChanIx = np.where(np.logical_and(OutletEndX[0] <= ShoreX, 
-                                               ShoreX <= OutletEndX[1]))[0]
-    else:
-        # Outlet from R to L
-        OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] <= ShoreX,
-                                                         ShoreX <= OutletEndX[0]))[0])
-    OutletWidth = ShoreY[OutletChanIx,1] - ShoreY[OutletChanIx,2]
-    OutletWidth[np.isnan(OutletWidth)] = 0.
-    
-    # Check if closure has occured in outlet channel (only if not already closed from previous timestep).
     if not Closed:
+        # Find location and orientation of outlet channel
+        if OutletEndX[0] < OutletEndX[1]:
+            # Outlet angles from L to R
+            OutletChanIx = np.where(np.logical_and(OutletEndX[0] <= ShoreX, 
+                                                   ShoreX <= OutletEndX[1]))[0]
+        else:
+            # Outlet from R to L
+            OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] <= ShoreX,
+                                                             ShoreX <= OutletEndX[0]))[0])
+        OutletWidth = ShoreY[OutletChanIx,1] - ShoreY[OutletChanIx,2]
+        OutletWidth[np.isnan(OutletWidth)] = 0.
+    
+        # Check if closure has occured in outlet channel (only if not already closed from previous timestep).
         if np.any(OutletWidth<=PhysicalPars['MinOutletWidth']) | np.any(OutletEndWidth<=PhysicalPars['MinOutletWidth']):
             Closed = True
             for ClosedIx in OutletChanIx[OutletWidth<=PhysicalPars['MinOutletWidth']]:
@@ -338,6 +338,9 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
             OutletChanIx = np.empty(0)
         elif np.min(OutletWidth) < PhysicalPars['MinOutletWidth'] * 3:
             logging.debug('Narrow outlet, min outlet width = %f' % (np.min(OutletWidth)))
+        
+    else: # Outlet already closed in previous timestep and not reopened by mor
+        OutletChanIx = np.empty(0)
     
     # TODO: Account for potentially dry parts of the lagoon when 
     #       calculating ChanArea
