@@ -198,8 +198,6 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     if np.any(ShoreY[OutletPresent,1] < ShoreY[OutletPresent,2]):
         logging.info('Overwashing occuring into closed channel in barrier - redistributing overwash onto barrier top')
         # Find locations where the outlet channel width is negative after applying overwash
-#        NegativeOutletWidth = np.zeros(ShoreX.size, dtype=bool)
-#        NegativeOutletWidth[OutletPresent] = ShoreY[OutletPresent,1] < ShoreY[OutletPresent,2]
         NegativeOutletWidth = np.where(OutletPresent)[0][ShoreY[OutletPresent,1] < ShoreY[OutletPresent,2]]
         
         # Quantify how much we need to move to fix things while retaining mass balance
@@ -209,12 +207,12 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         
         # Where to move it depends on whether the barrier is higher in front or behind the closed outlet channel
         VolUntilLevel = ShoreZ[NegativeOutletWidth,2] - ShoreZ[NegativeOutletWidth,0]
-        PutSedAtFront = VolUntilLevel > 0.0
+        PutSedAtFront = VolUntilLevel >= 0.0
         PutSedAtBack = VolUntilLevel < 0.0
         VolUntilLevel[PutSedAtFront] *= CrestWidth[NegativeOutletWidth][PutSedAtFront]
         VolUntilLevel[PutSedAtBack] *= -(ShoreY[NegativeOutletWidth,2][PutSedAtBack] - 
                                          ShoreY[NegativeOutletWidth,3][PutSedAtBack])
-        assert np.all(VolUntilLevel > 0.0), "Vol until level should not be negative"
+        assert np.all(VolUntilLevel >= 0.0), "Vol until level should not be negative"
         LeveledSections = VolToMove > VolUntilLevel
         
         # Update the barrier morphology
