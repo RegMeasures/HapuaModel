@@ -210,6 +210,7 @@ def loadModel(ModelConfigFile):
                 'HydDt': pd.Timedelta(seconds=Config['Time']['HydDt']),
                 'MorDtMin': pd.Timedelta(seconds=Config['Time']['MorDtMin']),
                 'MorDtMax': pd.Timedelta(seconds=Config['Time']['MorDtMax'])}
+    # Note: If hotstart 'ContinueSimulation' Flag is set then StartTime will be overwritten later
     # TODO: check mortime is a multiple of hydtime (or replace with morscaling?)
     
     #%% Read physical parameters
@@ -287,10 +288,10 @@ def loadModel(ModelConfigFile):
                                  mode='r', format='NETCDF4_CLASSIC') 
         
         DatetimeOfInterest = pd.to_datetime(Config['HotStart']['HotStartTime'])
-        TimeIx = out.closestTimeIx(NcFile, DatetimeOfInterest)
+        (TimeIx, ActualHotStartTime) = out.closestTimeIx(NcFile, DatetimeOfInterest)
         logging.info('Closest time available in netCDF file to desired hotstart time of %s is %s' % 
                      (DatetimeOfInterest.strftime("%b %d %Y %H:%M:%S"), 
-                      netCDF4.num2date(NcFile.variables['time'][TimeIx][0], NcFile.variables['time'].units).strftime("%b %d %Y %H:%M:%S")))
+                      ActualHotStartTime.strftime("%b %d %Y %H:%M:%S")))
         
         (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
          OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
@@ -592,6 +593,14 @@ def loadModel(ModelConfigFile):
                                  index_col=0, parse_dates=[0],
                                  date_parser=to_datetime)
         SeaLevelTs = SeaLevelTs.SeaLevel
+    
+    #%% If Hotstart ContinueSimulation flag set then adjust start time
+    # (This needs to happen after generating synthetic timeseries...)
+    if Config['HotStart']['InitialConditionsNetCDF'] is not None:
+        if Config['HotStart']['ContinueSimulation']:
+            logging.info('ContinueSimulation flag set: Adjusting start time to %s',
+                         ActualHotStartTime.strftime("%b %d %Y %H:%M:%S"))
+            TimePars['StartTime'] = ActualHotStartTime
     
     #%% Trim time-series inputs to model time
     assert (FlowTs.index[0] <= TimePars['StartTime'] 

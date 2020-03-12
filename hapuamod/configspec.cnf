@@ -26,6 +26,7 @@ SeaLevel = string
 [HotStart]
 InitialConditionsNetCDF = string(default=None)
 HotStartTime = string(default=None)
+ContinueSimulation = boolean(default=False)
 
 [SpatialInputs]
 Shoreline = string(default=None)

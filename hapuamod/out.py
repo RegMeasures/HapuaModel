@@ -467,5 +467,6 @@ def closestTimeIx(NcFile, DatetimeOfInterest):
     
     TimeDiffs = abs(OutputTimes - DatetimeOfInterest)
     TimeIx = np.where(TimeDiffs==min(TimeDiffs))[0]
+    ClosestTime = OutputTimes[TimeIx].to_pydatetime()[0]
     
-    return TimeIx
+    return (TimeIx, ClosestTime)
