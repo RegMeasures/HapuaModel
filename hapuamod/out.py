@@ -86,11 +86,12 @@ def newOutFile(FileName, ModelName, StartTime,
     NcFile.MaxOutletElev = PhysicalPars['MaxOutletElev']
     NcFile.OT_coef = PhysicalPars['OT_coef']
     NcFile.OT_exp = PhysicalPars['OT_exp']
-    NcFile.OwProp_coef = PhysicalPars['OwProp_coef']
-    NcFile.MinOpForOw = PhysicalPars['MinOpForOw']
     NcFile.BeachTopElev = PhysicalPars['BeachTopElev']
     NcFile.SpitWidth = PhysicalPars['SpitWidth']
+    NcFile.TargetBarHeight = PhysicalPars['TargetBarHeight']
+    NcFile.TargetBarWidth = PhysicalPars['TargetBarWidth']
     NcFile.MinOutletWidth = PhysicalPars['MinOutletWidth']
+    NcFile.OutletSedSpreadDist = PhysicalPars['OutletSedSpreadDist']
     
     # create coordinate variables
     XVar = NcFile.createVariable(XDim.name, np.float32, (XDim.name,))
