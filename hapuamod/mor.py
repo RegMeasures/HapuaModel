@@ -52,6 +52,16 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     if not Closed:
         WaterLevel[OutletChanIx] = (OutletDep[OutletChanIx] + ShoreZ[OutletChanIx,1])
     
+    # Width of barrier crest (the part of the barrier backing the shoreface)
+    CrestWidth = ShoreY[:,0] - ShoreY[:,3]
+    CrestWidth[OutletPresent] = ShoreY[OutletPresent,0] - ShoreY[OutletPresent,1]
+    assert np.all(CrestWidth>0), 'Negative CrestWidth at the start of updateMorphology'
+    
+    # Height of barrier backshore (the part of hte barrier backing the shoreface)
+    BackBarHeight = (ShoreZ[:,0] - ShoreZ[:,3])
+    BackBarHeight[OutletPresent] = ShoreZ[OutletPresent,0] - ShoreZ[OutletPresent,1]
+    assert np.all(CrestWidth>0), 'Negative BackBarHeight at the start of updateMorphology'
+    
     #%% Calculate rates of movement of morphology due to river forcing
     ShoreYChangeRate = np.zeros(ShoreY.shape)
     ShoreZChangeRate = np.zeros(ShoreZ.shape)
@@ -134,11 +144,6 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         OutletEndXMoveRate = 0
     
     #%% Rates of change of morphology due to cross-shore morphology (overtopping etc)
-    CrestWidth = ShoreY[:,0] - ShoreY[:,3]
-    CrestWidth[OutletPresent] = ShoreY[OutletPresent,0] - ShoreY[OutletPresent,1]
-    
-    BackBarHeight = (ShoreZ[:,0] - ShoreZ[:,3])
-    BackBarHeight[OutletPresent] = ShoreZ[OutletPresent,0] - ShoreZ[OutletPresent,1]
     
     # Accumulation of sediment on top of the barrier
     ShoreZChangeRate[:,0] += (1-OverwashProp) * CST_tot / CrestWidth
@@ -162,7 +167,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     
     while MorDt.seconds > TimePars['MorDtMin'].seconds and MaxMorChangeRate * MorDt.seconds > NumericalPars['MaxMorChange']:
         MorDt /= 2
-        logging.debug('Decreasing morphological timestep to %fs', MorDt.seconds)
+        logging.debug('Decreasing morphological timestep to %.1fs', MorDt.seconds)
     
     if MaxMorChangeRate * MorDt.seconds > NumericalPars['MaxMorChange']:
         assert MorDt.seconds <= TimePars['MorDtMin'].seconds
@@ -171,7 +176,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     
     while MorDt.seconds < TimePars['MorDtMax'].seconds and MaxMorChangeRate * MorDt.seconds < NumericalPars['MaxMorChange']/2:
         MorDt *= 2
-        logging.debug('Increasing morphological timestep to %fs', MorDt.seconds)
+        logging.debug('Increasing morphological timestep to %.1fs', MorDt.seconds)
     
     #%% Update morphology
         
@@ -189,12 +194,13 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     if np.any(CliffCollision):
         logging.info('Shoreline/cliff collision - retreating cliff')
         CliffOverlapDist = ShoreY[CliffCollision,4] - ShoreY[CliffCollision,0]
-        CliffRetDist = (CliffOverlapDist * ShorefaceHeight[CliffCollision] / 
-                        (PhysicalPars['ClosureDepth'] + PhysicalPars['BackshoreElev']))
+        CliffRetDist = (CliffOverlapDist / 
+                        (1 + ((PhysicalPars['ClosureDepth'] + PhysicalPars['BackshoreElev']) / 
+                              ShorefaceHeight[CliffCollision])))
         ShoreY[CliffCollision, 4] -= CliffRetDist
         ShoreY[CliffCollision, 0] += (CliffOverlapDist - CliffRetDist)
     
-    #%% Check if outlet channel (online or offline) has closed due to overwash and adjust to prevent negative width channel
+    #%% Check if outlet channel (online or offline) has negative width due to overwash and adjust to prevent negative width channel
     if np.any(ShoreY[OutletPresent,1] < ShoreY[OutletPresent,2]):
         logging.info('Overwashing occuring into closed channel in barrier - redistributing overwash onto barrier top')
         # Find locations where the outlet channel width is negative after applying overwash
@@ -224,7 +230,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         if np.any(LeveledSections):
             print('weird')
             for XcoordOfSec in ShoreX[NegativeOutletWidth[LeveledSections]]:
-                logging.info('Overwash into closed channel has leveled barrier at X = %f. Removing channel from model.' % XcoordOfSec)
+                logging.info('Overwash into closed channel has leveled barrier at X = %.1fm. Removing channel from model.' % XcoordOfSec)
             ShoreY[NegativeOutletWidth[LeveledSections],1] = np.nan
             ShoreY[NegativeOutletWidth[LeveledSections],2] = np.nan
             ShoreZ[NegativeOutletWidth[LeveledSections],0] = (np.maximum(ShoreZ[NegativeOutletWidth[LeveledSections],0],
@@ -234,9 +240,11 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                                                                ShoreY[NegativeOutletWidth[LeveledSections],3]))
             ShoreZ[NegativeOutletWidth[LeveledSections],1] = np.nan
             ShoreZ[NegativeOutletWidth[LeveledSections],2] = np.nan
+            # Update OutletPresent variable to reflect removed section of channel
+            OutletPresent = ~np.isnan(ShoreY[:,1])
     
     
-    #%% Check if d/s end of outlet channel has migrated across a transect line and adjust as necessary...
+    #%% Check if d/s end of outlet channel has elongated across a transect line and adjust as necessary...
     if not Closed:
         if OutletEndX[0] < OutletEndX[1]:
             # Outlet angles from L to R
@@ -244,7 +252,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                 Extend = True
                 ExtendMask = np.logical_and(ShoreX[OutletChanIx[-1]] < ShoreX,
                                             ShoreX <= OutletEndX[1])
-                logging.info('Outlet channel elongated rightwards across transect line x=%f' % ShoreX[ExtendMask][-1])
+                logging.info('Outlet channel elongated rightwards across transect line X = %.1fm' % ShoreX[ExtendMask][-1])
             else:
                 Extend = False    
         else:
@@ -253,7 +261,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                 Extend = True
                 ExtendMask = np.logical_and(ShoreX[OutletChanIx[-1]] > ShoreX,
                                             ShoreX >= OutletEndX[1])
-                logging.info('Outlet channel elongated leftwards across transect line x=%f' % ShoreX[ExtendMask][0])
+                logging.info('Outlet channel elongated leftwards across transect line X = %.1fm' % ShoreX[ExtendMask][0])
             else:
                 Extend = False
         
@@ -280,12 +288,27 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         
     
     #%% Check for outlet channel truncation
+    # Check for truncation of online outlet channel and move ends of channel if required
+    # (Several checks performed in specific order)
     # Note: have to be careful to leave at least 1 transect in outlet channel
     
-    # Check for truncation of online outlet channel and move ends of channel if required
-    # (Perform each check seperately incase multiple triggered in the same timestep...)
+    # First check for collision between outlet channel and sea in upstream most transect of online outlet
+    # Truncation is not possible here so we adjust the outlet channel position to prevent it...
+    if not Closed:
+        if ShoreY[OutletChanIx[0],1] >= ShoreY[OutletChanIx[0],0]:
+            logging.info('Preventing seaward truncation at X = %.1fm as it would result in a length 0 outlet channel' % 
+                         ShoreX[OutletChanIx[0]])
+            ShoreShiftDist = 0.001 + (ShoreY[OutletChanIx[0],1] - ShoreY[OutletChanIx[0],0])
+            ShoreY[OutletChanIx[0],1] -= ShoreShiftDist
+            ShoreY[OutletChanIx[0],2] -= (ShoreShiftDist * 
+                                          (ShoreZ[OutletChanIx[0],0] - ShoreZ[OutletChanIx[0],1]) /
+                                          (ShoreZ[OutletChanIx[0],2] - ShoreZ[OutletChanIx[0],1]))
+            # Note: this may have caused a new conflict between hte lagoonward 
+            #       edge of the outlet channel and the lagoon or cliff, but 
+            #       this will be delt with later.
     
-    # Check for truncation of lagoonward end of outlet channel 
+    # Check for collision between outlet channel and lagoon causing truncation 
+    # of lagoonward end of outlet channel 
     # (Only check for truncation if outlet channel crosses >1 transect)
     if OutletChanIx.size > 1:
         # (don't check last transect as trucation here would leave 0 transects)
@@ -293,37 +316,37 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             logging.info('Truncating lagoon end of outlet channel (due to erosion)')
             TruncationIx = OutletChanIx[:-1][ShoreY[OutletChanIx[:-1],2] <= ShoreY[OutletChanIx[:-1],3]]
             for AffectedX in TruncationIx:
-                logging.info('Truncation tiggered at X = %f' % ShoreX[AffectedX])
-                
+                logging.info('Truncation tiggered at X = %.1fm' % ShoreX[AffectedX])
+            
+            # Move the ustream end of the outlet channel and recompute OutletChanIx
             if OutletEndX[0] < OutletEndX[1]:
                 # Outlet angles from L to R
                 OutletEndX[0] = ShoreX[TruncationIx[0] + 1]
+                OutletChanIx = np.where(np.logical_and(OutletEndX[0] <= ShoreX, 
+                                                       ShoreX <= OutletEndX[1]))[0]
             else:
                 # Outlet angles from R to L
                 OutletEndX[0] = ShoreX[TruncationIx[0] - 1]
-                
-            if OutletEndX[0] < OutletEndX[1]:
-                # Outlet angles from L to R
-                OutletChanIx = np.where(np.logical_and(OutletEndX[0] <= ShoreX, 
-                                                       ShoreX <= OutletEndX[1]))[0]
-                if ShoreY[TruncationIx[0], 2] <= ShoreY[TruncationIx[0], 4]:
+                OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] <= ShoreX,
+                                                                 ShoreX <= OutletEndX[0]))[0])
+            
+            # Check if truncation is a collision between outlet channel and cliff
+            # i.e. where there is no lagoon. If so then extend lagoon.
+            if ShoreY[TruncationIx[0], 2] <= ShoreY[TruncationIx[0], 4]:    
+                if OutletEndX[0] < OutletEndX[1]:
+                    # Outlet angles from L to R
                     logging.info('Extending R end of lagoon via outletchannel to cliffline collision.')
                     Extend = True
                     CurLagEndIx = np.where(ShoreY[:,3] > ShoreY[:,4])[0][-1]
                     LagExtension = np.arange(CurLagEndIx + 1, TruncationIx[0] + 1)
                 else:
-                    Extend = False
-            else:
-                # Outlet angles from R to L
-                OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] <= ShoreX,
-                                                                 ShoreX <= OutletEndX[0]))[0])
-                if ShoreY[TruncationIx[0], 2] <= ShoreY[TruncationIx[0], 4]:
+                    # Outlet angles from R to L
                     logging.info('Extending L end of lagoon via outletchannel to cliffline collision.')
                     Extend = True
                     CurLagEndIx = np.where(ShoreY[:,3] > ShoreY[:,4])[0][0]
                     LagExtension = np.arange(TruncationIx[0], CurLagEndIx)
-                else:
-                    Extend = False
+            else:
+                Extend = False
             
             if Extend:
                 logging.info('Schematisation requires removal of any remaining gravel between new lagoon and cliff-toe as part of extension')
@@ -353,38 +376,35 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                 OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] <= ShoreX,
                                                                  ShoreX <= OutletEndX[0]))[0])
     
-    # if outlet is open but truncation would result in a outlet channel with no transects... 
-    # then adjust shoreline/lagoonline to preserve it's width when we adjust ShoreY in the next step
+    # Check for collision between outlet channel and lagoon at downstream end
+    # Truncation is not possible here so we adjust the outlet channel position to prevent it...
     if not Closed:
-        # Preserve channel width by extending into lagoon as required 
-        # (not extending into sea as this would mess with LST)
-        if ShoreY[OutletChanIx[0],1] >= ShoreY[OutletChanIx[0],0]:
-            logging.info('Preventing seaward truncation at X = %.1f as it would result in a length 0 outlet channel' % 
-                         ShoreX[OutletChanIx[0]])
-            ShoreY[OutletChanIx[0],2] -= ShoreY[OutletChanIx[0],1] - ShoreY[OutletChanIx[0],0]
-            ShoreY[OutletChanIx[0],1] = ShoreY[OutletChanIx[0],0] - 0.0001
         if ShoreY[OutletChanIx[-1],3] >= ShoreY[OutletChanIx[-1],2]:
-            logging.info('Preventing lagoonward truncation at X = %.1f as it would result in a length 0 outlet channel' % 
+            logging.info('Preventing lagoonward truncation at X = %.1fm as it would result in a length 0 outlet channel' % 
                          ShoreX[OutletChanIx[-1]])
             ShoreY[OutletChanIx[-1],3] = ShoreY[OutletChanIx[-1],2] - 0.0001
+            
             # if this pushes into cliff then assume cliff erodes into outlet channel...
             if ShoreY[OutletChanIx[-1],3] < ShoreY[OutletChanIx[-1],4]:
-                logging.info('Preventing lagoonward truncation means outlet channel pushed into cliff at X = %.1f' % 
+                logging.info('Preventing lagoonward truncation means outlet channel pushed into cliff at X = %.1fm' % 
                              ShoreX[OutletChanIx[-1]])
-                CliffRetDist = ShoreY[OutletChanIx[-1],4] - ShoreY[OutletChanIx[-1],3]
-                ShoreY[OutletChanIx[-1], 4] = ShoreY[OutletChanIx[-1], 3]
-                ShoreZ[OutletChanIx[-1], 1] += (CliffRetDist * (PhysicalPars['BackshoreElev'] - ShoreZ[OutletChanIx[-1],1]) / 
-                                                (ShoreY[OutletChanIx[-1], 1] - ShoreY[OutletChanIx[-1], 2]))
-                logging.debug('CliffRetDist = %f, OutletWidth = %f, NewOutletBedLevel = %f' % 
-                              (CliffRetDist, (ShoreY[OutletChanIx[-1], 1] - ShoreY[OutletChanIx[-1], 2]), 
-                               ShoreZ[OutletChanIx[-1], 1]))
+                CliffOverlapDist = ShoreY[OutletChanIx[-1],4] - ShoreY[OutletChanIx[-1],3]
+                
+                CliffRetDist = (CliffOverlapDist / 
+                                (1 + ((PhysicalPars['BackshoreElev'] - ShoreZ[OutletChanIx[-1],2]) / 
+                                      (ShoreZ[OutletChanIx[-1],2] - ShoreZ[OutletChanIx[-1],1]))))
+                ShoreY[OutletChanIx[-1], 4] -= CliffRetDist
+                ShoreY[OutletChanIx[-1], [2,3]] += (CliffOverlapDist - CliffRetDist)
     
+    #%% Check for complete erosion of barrier between offline lagoon and sea/lagoon.
     # Adjust ShoreY where outlet banks intersects coast or lagoon
-    # Note this can include offline/disconnected bits of outlet as well as online bits
+    # This *should* only include offline/disconnected bits of outlet as online 
+    # bits have already been dealt with...
     ShoreIntersect = ~np.greater(ShoreY[:,0], ShoreY[:,1], where=~np.isnan(ShoreY[:,1]))
     if np.any(ShoreIntersect):
-        logging.info('Outlet intersects shoreline at %i transects - filling outlet with sediment from shoreface' % 
-                     np.sum(ShoreIntersect))
+        for IntersectIx in np.where(ShoreIntersect)[0]:
+            logging.info('Outlet intersects shoreline at X = %.1fm - filling outlet with sediment from shoreface' % 
+                         ShoreX[IntersectIx])
         ShoreY[ShoreIntersect, 0] -= ((ShoreY[ShoreIntersect, 1] - ShoreY[ShoreIntersect, 2]) 
                                       * (ShoreZ[ShoreIntersect, 2] - ShoreZ[ShoreIntersect, 1]) 
                                       / (ShoreZ[ShoreIntersect, 2] + PhysicalPars['ClosureDepth']))
@@ -399,7 +419,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     LagoonIntersect = ~np.greater(ShoreY[:,2], ShoreY[:,3], where=~np.isnan(ShoreY[:,1]))
     if np.any(LagoonIntersect):
         for IntersectIx in np.where(LagoonIntersect)[0]:
-            logging.info('Outlet intersects lagoon at X = %.1f: adding channel width into lagoon' % 
+            logging.info('Outlet intersects lagoon at X = %.1fm - adding channel width into lagoon' % 
                          ShoreX[IntersectIx])
         ShoreZ[LagoonIntersect, 3] = (((ShoreY[LagoonIntersect, 1] - ShoreY[LagoonIntersect, 2]) * ShoreZ[LagoonIntersect, 1] 
                                       + (ShoreY[LagoonIntersect, 3] - ShoreY[LagoonIntersect, 4]) * ShoreZ[LagoonIntersect, 3]) 
@@ -412,7 +432,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         
     #%% Breaching
     
-    # Check for breach
+    # Check for erosion breach
     Breach = False
     EroTsects = np.where(np.logical_and(ShoreY[:,3]>=ShoreY[:,0], ShoreY[:,3]>ShoreY[:,4]))[0]
     
@@ -420,7 +440,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         for TsectNo in EroTsects:
             logging.info('Barrier completely eroded at X = %i' % ShoreX[TsectNo])
         if Closed:
-            # If closed then any eorion of barrier causes breach
+            # If closed then any erosion of barrier causes breach
             BreachIx = EroTsects[np.argmin(np.abs(ShoreX[EroTsects]))]
             Breach = True
         elif np.min(np.abs(ShoreX[EroTsects])) < np.abs(OutletEndX[0]):
