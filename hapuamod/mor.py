@@ -195,7 +195,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         logging.info('Shoreline/cliff collision - retreating cliff')
         CliffOverlapDist = ShoreY[CliffCollision,4] - ShoreY[CliffCollision,0]
         CliffRetDist = (CliffOverlapDist / 
-                        (1 + ((PhysicalPars['ClosureDepth'] + PhysicalPars['BackshoreElev']) / 
+                        (1 + ((PhysicalPars['BackshoreElev'] - ShoreZ[CliffCollision,1]) / 
                               ShorefaceHeight[CliffCollision])))
         ShoreY[CliffCollision, 4] -= CliffRetDist
         ShoreY[CliffCollision, 0] += (CliffOverlapDist - CliffRetDist)
@@ -432,30 +432,43 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         
     #%% Breaching
     
-    # Check for erosion breach
+    # ID locations barrier completely eroded
     Breach = False
     EroTsects = np.where(np.logical_and(ShoreY[:,3]>=ShoreY[:,0], ShoreY[:,3]>ShoreY[:,4]))[0]
     
     if EroTsects.size > 0:
+        # Decide whether erosion causes breach
         for TsectNo in EroTsects:
             logging.info('Barrier completely eroded at X = %i' % ShoreX[TsectNo])
         if Closed:
             # If closed then any erosion of barrier causes breach
-            BreachIx = EroTsects[np.argmin(np.abs(ShoreX[EroTsects]))]
             Breach = True
         elif np.min(np.abs(ShoreX[EroTsects])) < np.abs(OutletEndX[0]):
             # if open then barrier erosion only causes breach if it is closer to the river than the existing outlet
             # (as the model cannot handle multiple outlets)
-            BreachIx = EroTsects[np.argmin(np.abs(ShoreX[EroTsects]))]
             Breach = True
-            NotBreachIx = EroTsects[EroTsects != BreachIx]
-            ShoreY[NotBreachIx,3] = ShoreY[NotBreachIx,0] - 0.001
         else:
             # barrier eroded but further from river than existing outlet 
             logging.info('Preventing breach as eroded barrier is further from river than existing outlet')
-            ShoreY[EroTsects,3] = ShoreY[EroTsects,0] - 0.001
+        
+        # ID which eroded transect is the breach (if any) and which should not breach (if any)
+        if Breach:
+            BreachIx = EroTsects[np.argmin(np.abs(ShoreX[EroTsects]))]
+            NotBreachIx = EroTsects[EroTsects != BreachIx]
+        else:
+            NotBreachIx = EroTsects
+        
+        # Adjust any transects which are not breaching (in a mass conservative way) to restore barrier
+        if NotBreachIx.size > 0:
+            OverlapDist = 0.001 + (ShoreY[NotBreachIx,3] - ShoreY[NotBreachIx,0])
+            ShoreShiftDist = OverlapDist / (1 + ((ShorefaceHeight[NotBreachIx]) / 
+                                                 (ShoreZ[NotBreachIx, 0] - ShoreZ[NotBreachIx, 3])))
+            ShoreY[NotBreachIx,0] += ShoreShiftDist
+            ShoreY[NotBreachIx,3] -= ShoreShiftDist
         
     elif np.any(ShoreZ[:,0] < WaterLevel):
+        # This is an elif to prevent overtopping breach occuring if an erosion breach has already occured in the same timestep
+        # i.e. erosion breach takes precedence.
         if Closed:
             # If lagoon closed then assume any overtopping causes breach, 
             # and that breach occurs where overtopping is deepest
