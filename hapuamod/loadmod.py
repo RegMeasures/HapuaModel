@@ -264,7 +264,8 @@ def loadModel(ModelConfigFile):
     
     PhysicalPars['BarRatSlope'] = ((PhysicalPars['TargetBarHeight'] - PhysicalPars['BeachTopElev']) / 
                                    (PhysicalPars['TargetBarWidth'] - PhysicalPars['SpitWidth']))
-    PhysicalPars['BarRatInt'] = PhysicalPars['BeachTopElev'] / PhysicalPars['BarRatSlope']
+    PhysicalPars['BarRatInt'] = (PhysicalPars['BeachTopElev'] - 
+                                 PhysicalPars['BarRatSlope'] * PhysicalPars['SpitWidth'])
     
     #%% Read numerical parameters
     Dx = Config['NumericalParameters']['AlongShoreDx']
