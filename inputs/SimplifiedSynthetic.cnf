@@ -119,7 +119,7 @@ BeachTopElev = 2
 SpitWidth = 10
 # Target crest height and width for fully developed barrier [m]
 TargetBarHeight = 4.5
-TargetBarWidth = 150
+TargetBarWidth = 80
 # Threshold width for setting outlet channel to closed [m]
 MinOutletWidth = 1.0
 # Distance river gravel spread along shoreline from outlet channel [m]
