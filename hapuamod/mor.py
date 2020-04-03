@@ -220,15 +220,18 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                                          ShoreY[NegativeOutletWidth,3][PutSedAtBack])
         assert np.all(VolUntilLevel >= 0.0), "Vol until level should not be negative"
         LeveledSections = VolToMove > VolUntilLevel
+        PutSedAtFront[LeveledSections] = False
+        PutSedAtBack[LeveledSections] = False
         
         # Update the barrier morphology
         ShoreY[NegativeOutletWidth,1] += WidthToMove
-        ShoreZ[NegativeOutletWidth[PutSedAtFront],0] += VolToMove[PutSedAtFront] / CrestWidth[NegativeOutletWidth[PutSedAtFront]]
-        ShoreZ[NegativeOutletWidth[PutSedAtBack],2] += VolToMove[PutSedAtBack] / (ShoreY[NegativeOutletWidth[PutSedAtBack],2] - 
-                                                                                  ShoreY[NegativeOutletWidth[PutSedAtBack],3])
+        ShoreZ[NegativeOutletWidth[PutSedAtFront],0] += (VolToMove[PutSedAtFront] / 
+                                                         CrestWidth[NegativeOutletWidth[PutSedAtFront]])
+        ShoreZ[NegativeOutletWidth[PutSedAtBack],2] += (VolToMove[PutSedAtBack] / 
+                                                        (ShoreY[NegativeOutletWidth[PutSedAtBack],2] - 
+                                                                                   ShoreY[NegativeOutletWidth[PutSedAtBack],3]))
         
         if np.any(LeveledSections):
-            print('weird')
             for XcoordOfSec in ShoreX[NegativeOutletWidth[LeveledSections]]:
                 logging.info('Overwash into closed channel has leveled barrier at X = %.1fm. Removing channel from model.' % XcoordOfSec)
             ShoreY[NegativeOutletWidth[LeveledSections],1] = np.nan
@@ -242,7 +245,6 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             ShoreZ[NegativeOutletWidth[LeveledSections],2] = np.nan
             # Update OutletPresent variable to reflect removed section of channel
             OutletPresent = ~np.isnan(ShoreY[:,1])
-    
     
     #%% Check if d/s end of outlet channel has elongated across a transect line and adjust as necessary...
     if not Closed:
