@@ -133,21 +133,31 @@ def loadModel(ModelConfigFile):
                 the minimum sea level.
             OT_coef (float): Overtopping coefficient
             OT_exp (float): Overtopping exponent
-            OwProp_coef (float): Overwash proportion coefficient
-            MinOpForOw (float):
             BeachTopElev (float): Crest height of 'new' barrier created by 
                 longshore transport across river mouth. also used as the 
                 elevation of the transition from sloped beach to vertical 
                 barrier front when plotting [m]
             SpitWidth (float): Crest width of 'new' barrier created by 
                 longshore transport across river mouth [m]
-            MinOutletWidth (float): Threshold width to trigger outlet closure
+            TargetBarHeight (float): Target equilibroum crest height of 
+                barrier [m]
+            TargetBarWidth (float): Target equilibrium width of barrier [m]
+            MinOutletWidth (float): Threshold width to trigger outlet 
+                closure [m]
+            OutletSedSpreadDist (float): Maximum distance of shoreline either 
+                side of river mouth to spread river sediment over [m]
             K2coef (float): Calculated from other inputs for use in calculation
                 of longshore transport rate. 
                 K2 = K / (RhoSed - RhoSea) * g * (1 - VoidRatio))
             BreakerCoef (float): Calculated from other inputs for use in 
                 calculation of depth of breaking waves. 
                 BreakerCoef = 8 / (RhoSea * Gravity^1.5 * GammaRatio^2)
+            BarRatSlope (float): Slope of the target Bar height vs bar width 
+                relationship - used for partitioning overtopping/overwashing 
+                and calculated from BeachTopElev, SpitWidth, TargetBarHeight
+                and TargetBarWidth [m/m]
+            BarRatInt (float): Intercept of target bar height vs target bar 
+                width relationship [m]
         NumericalPars (dict):
             Dx (float): Discretisation interval for shoreline and river (m)
             Beta (float): Momentum (Boussinesq) coefficient
@@ -236,13 +246,14 @@ def loadModel(ModelConfigFile):
                     'MaxOutletElev': Config['PhysicalParameters']['MaxOutletElev'],
                     'OT_coef': Config['PhysicalParameters']['OT_coef'],
                     'OT_exp': Config['PhysicalParameters']['OT_exp'],
-                    'OwProp_coef': Config['PhysicalParameters']['OwProp_coef'],
-                    'MinOpForOw': Config['PhysicalParameters']['MinOpForOw'],
                     'BeachTopElev': Config['PhysicalParameters']['BeachTopElev'],
                     'SpitWidth': Config['PhysicalParameters']['SpitWidth'],
+                    'TargetBarHeight': Config['PhysicalParameters']['TargetBarHeight'],
+                    'TargetBarWidth': Config['PhysicalParameters']['TargetBarWidth'],
                     'MinOutletWidth': Config['PhysicalParameters']['MinOutletWidth'],
                     'OutletSedSpreadDist': Config['PhysicalParameters']['OutletSedSpreadDist']}
-
+    
+    # Some additional calculated parameters
     GammaLST = ((PhysicalPars['RhoSed'] - PhysicalPars['RhoSea']) * 
                 PhysicalPars['Gravity'] * (1 - PhysicalPars['VoidRatio']))
     
@@ -250,6 +261,11 @@ def loadModel(ModelConfigFile):
     PhysicalPars['BreakerCoef'] = 8.0 / (PhysicalPars['RhoSea'] *
                                          PhysicalPars['Gravity']**1.5 *
                                          PhysicalPars['GammaRatio']**2.0)
+    
+    PhysicalPars['BarRatSlope'] = ((PhysicalPars['TargetBarHeight'] - PhysicalPars['BeachTopElev']) / 
+                                   (PhysicalPars['TargetBarWidth'] - PhysicalPars['SpitWidth']))
+    PhysicalPars['BarRatInt'] = (PhysicalPars['BeachTopElev'] - 
+                                 PhysicalPars['BarRatSlope'] * PhysicalPars['SpitWidth'])
     
     #%% Read numerical parameters
     Dx = Config['NumericalParameters']['AlongShoreDx']

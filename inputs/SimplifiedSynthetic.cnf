@@ -114,13 +114,12 @@ MaxOutletElev = -2.0
 OT_coef = 0.0002
 # Overtopping exponent (recommended value = 2)
 OT_exp = 2
-# Overwash proportion coefficient
-OwProp_coef = 10
-# Minimum overtopping potential for overwash to initiate
-MinOpForOw = 0.0
 # Crest height and width of 'new' barrier created by longshore transport across river mouth [m]
 BeachTopElev = 2
 SpitWidth = 10
+# Target crest height and width for fully developed barrier [m]
+TargetBarHeight = 4.5
+TargetBarWidth = 80
 # Threshold width for setting outlet channel to closed [m]
 MinOutletWidth = 1.0
 # Distance river gravel spread along shoreline from outlet channel [m]

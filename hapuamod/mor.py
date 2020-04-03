@@ -220,15 +220,18 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                                          ShoreY[NegativeOutletWidth,3][PutSedAtBack])
         assert np.all(VolUntilLevel >= 0.0), "Vol until level should not be negative"
         LeveledSections = VolToMove > VolUntilLevel
+        PutSedAtFront[LeveledSections] = False
+        PutSedAtBack[LeveledSections] = False
         
         # Update the barrier morphology
         ShoreY[NegativeOutletWidth,1] += WidthToMove
-        ShoreZ[NegativeOutletWidth[PutSedAtFront],0] += VolToMove[PutSedAtFront] / CrestWidth[NegativeOutletWidth[PutSedAtFront]]
-        ShoreZ[NegativeOutletWidth[PutSedAtBack],2] += VolToMove[PutSedAtBack] / (ShoreY[NegativeOutletWidth[PutSedAtBack],2] - 
-                                                                                  ShoreY[NegativeOutletWidth[PutSedAtBack],3])
+        ShoreZ[NegativeOutletWidth[PutSedAtFront],0] += (VolToMove[PutSedAtFront] / 
+                                                         CrestWidth[NegativeOutletWidth[PutSedAtFront]])
+        ShoreZ[NegativeOutletWidth[PutSedAtBack],2] += (VolToMove[PutSedAtBack] / 
+                                                        (ShoreY[NegativeOutletWidth[PutSedAtBack],2] - 
+                                                                                   ShoreY[NegativeOutletWidth[PutSedAtBack],3]))
         
         if np.any(LeveledSections):
-            print('weird')
             for XcoordOfSec in ShoreX[NegativeOutletWidth[LeveledSections]]:
                 logging.info('Overwash into closed channel has leveled barrier at X = %.1fm. Removing channel from model.' % XcoordOfSec)
             ShoreY[NegativeOutletWidth[LeveledSections],1] = np.nan
@@ -242,7 +245,6 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             ShoreZ[NegativeOutletWidth[LeveledSections],2] = np.nan
             # Update OutletPresent variable to reflect removed section of channel
             OutletPresent = ~np.isnan(ShoreY[:,1])
-    
     
     #%% Check if d/s end of outlet channel has elongated across a transect line and adjust as necessary...
     if not Closed:
@@ -425,7 +427,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                                       + (ShoreY[LagoonIntersect, 3] - ShoreY[LagoonIntersect, 4]) * ShoreZ[LagoonIntersect, 3]) 
                                       / (ShoreY[LagoonIntersect, 1] - ShoreY[LagoonIntersect, 4]))
         ShoreY[LagoonIntersect, 3] += (ShoreY[LagoonIntersect, 1] - ShoreY[LagoonIntersect, 2]) 
-        # Remove outlet channel from transect now it has been dissolved into shoreline
+        # Remove outlet channel from transect now it has been dissolved into lagoon
         ShoreY[LagoonIntersect, 1] = np.nan
         ShoreY[LagoonIntersect, 2] = np.nan
         ShoreZ[LagoonIntersect, 1] = np.nan
@@ -437,13 +439,28 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     EroTsects = np.where(np.logical_and(ShoreY[:,3]>=ShoreY[:,0], ShoreY[:,3]>ShoreY[:,4]))[0]
     
     if EroTsects.size > 0:
+        # Check which eroded locations are hydraulically connected to river
+        PossBreachTsects = []
+        LagoonOpen = (ShoreY[:,3] - ShoreY[:,4]) > PhysicalPars['MinOutletWidth']
+        X0Ix = np.where(ShoreX==0)[0]
+        for TsectIx in EroTsects:
+            logging.info('Barrier completely eroded at X = %i' % ShoreX[TsectIx])
+            if TsectIx > X0Ix:
+                if np.all(LagoonOpen[np.arange(X0Ix+1, TsectIx+1)]):
+                    PossBreachTsects.append(TsectIx)
+            elif TsectIx < X0Ix:
+                if np.all(LagoonOpen[np.arange(TsectIx, X0Ix)]):
+                    PossBreachTsects.append(TsectIx)
+            else: # TsectIx == X0Ix
+                PossBreachTsects.append(TsectIx)
+        
         # Decide whether erosion causes breach
-        for TsectNo in EroTsects:
-            logging.info('Barrier completely eroded at X = %i' % ShoreX[TsectNo])
-        if Closed:
-            # If closed then any erosion of barrier causes breach
+        if len(PossBreachTsects) == 0:
+            logging.info('Not possible for breach to occur as eroded barrier is on disconnected part of lagoon')
+        elif Closed:
+            # If closed then any (connected) erosion of barrier causes breach
             Breach = True
-        elif np.min(np.abs(ShoreX[EroTsects])) < np.abs(OutletEndX[0]):
+        elif np.min(np.abs(ShoreX[PossBreachTsects])) < np.abs(OutletEndX[0]):
             # if open then barrier erosion only causes breach if it is closer to the river than the existing outlet
             # (as the model cannot handle multiple outlets)
             Breach = True
@@ -453,7 +470,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         
         # ID which eroded transect is the breach (if any) and which should not breach (if any)
         if Breach:
-            BreachIx = EroTsects[np.argmin(np.abs(ShoreX[EroTsects]))]
+            BreachIx = PossBreachTsects[np.argmin(np.abs(ShoreX[PossBreachTsects]))]
             NotBreachIx = EroTsects[EroTsects != BreachIx]
         else:
             NotBreachIx = EroTsects
@@ -466,15 +483,35 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             ShoreY[NotBreachIx,0] += ShoreShiftDist
             ShoreY[NotBreachIx,3] -= ShoreShiftDist
         
-    elif np.any(ShoreZ[:,0] < WaterLevel):
-        # This is an elif to prevent overtopping breach occuring if an erosion breach has already occured in the same timestep
-        # i.e. erosion breach takes precedence.
-        if Closed:
+    if not Breach and np.any(ShoreZ[:,0] < WaterLevel):
+        # Overtopping breach 
+        # Note: only allowed if an erosion breach has not already occured in the same timestep
+        
+        SpillTsects = np.where(ShoreZ[:,0] < WaterLevel)[0]
+        # Check which overtopped locations are hydraulically connected to river
+        PossBreachTsects = []
+        LagoonOpen = (ShoreY[:,3] - ShoreY[:,4]) > PhysicalPars['MinOutletWidth']
+        X0Ix = np.where(ShoreX==0)[0]
+        for TsectIx in SpillTsects:
+            logging.info('Potential lagoon spill at X = %f' % ShoreX[TsectIx])
+            if TsectIx > X0Ix:
+                if np.all(LagoonOpen[np.arange(X0Ix+1, TsectIx+1)]):
+                    PossBreachTsects.append(TsectIx)
+            elif TsectIx < X0Ix:
+                if np.all(LagoonOpen[np.arange(TsectIx, X0Ix)]):
+                    PossBreachTsects.append(TsectIx)
+            else: # TsectIx == X0Ix
+                PossBreachTsects.append(TsectIx)
+        
+        if len(PossBreachTsects) == 0:
+            logging.info('Not possible for breach to occur as spill is on disconnected part of lagoon')
+        elif Closed:
             # If lagoon closed then assume any overtopping causes breach, 
             # and that breach occurs where overtopping is deepest
-            BreachIx = np.argmax(WaterLevel-ShoreZ[:,0])
+            BreachIx = PossBreachTsects[np.argmax(WaterLevel[PossBreachTsects] -
+                                                  ShoreZ[PossBreachTsects,0])]
             Breach = True
-            logging.info('Closed lagoon overtopping at X = %f' % ShoreX[BreachIx])
+            logging.info('Spill breach of closed lagoon at X = %f' % ShoreX[BreachIx])
         else:
             # If lagoon open then assume overtopping only causes breach if it 
             # is closer to where river enters lagoon than existing outlet 
@@ -482,10 +519,10 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             # would leave a 0-transect outlet)
             CloserToRiv = np.abs(ShoreX) < np.max(np.abs(OutletEndX))
             CloserToRiv[OutletChanIx[0]] = False
-            if np.any(ShoreZ[CloserToRiv,0] < WaterLevel[CloserToRiv]):
-                BreachIx = np.argmax((WaterLevel-ShoreZ[:,0]) * CloserToRiv)
+            if np.any(CloserToRiv[PossBreachTsects]):
+                BreachIx = PossBreachTsects[np.argmin(np.abs(ShoreX[PossBreachTsects]))]
                 Breach = True
-                logging.info('Lagoon overtopping barrier at X = %f' % ShoreX[BreachIx])
+                logging.info('Spill breach of open lagoon at X = %f' % ShoreX[BreachIx])
     
     # Create breach
     if Breach:
@@ -512,6 +549,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             ShoreY[BreachIx,1] = min(ShoreY[BreachIx,0]-PhysicalPars['SpitWidth'],
                                      (ShoreY[BreachIx,0]+ShoreY[BreachIx,3])/2 + Dx/2)
             ShoreY[BreachIx,2] = ShoreY[BreachIx,1] - Dx
+            
             OutletEndX[:] = ShoreX[BreachIx]
             
             ShoreZ[BreachIx, 2] = ShoreZ[BreachIx, 0]
@@ -519,6 +557,14 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             OutletEndElev[0] = 0.25 * PhysicalPars['MaxOutletElev'] + 0.75 * ShoreZ[BreachIx,3]
             ShoreZ[BreachIx,1] = 0.5 * PhysicalPars['MaxOutletElev'] + 0.5 * ShoreZ[BreachIx,3]
             OutletEndElev[1] = 0.75 * PhysicalPars['MaxOutletElev'] + 0.25 * ShoreZ[BreachIx,3]
+            
+            # Check the newly created outlet channel fits into the barrier...
+            if ShoreY[BreachIx,3] >= ShoreY[BreachIx,2]:
+                logging.warning('barrier widened to fit breach outlet channel')
+                ShoreY[BreachIx,3] = ShoreY[BreachIx,2] - 0.001
+            if ShoreY[BreachIx,4] >= ShoreY[BreachIx,2]:
+                logging.warning('cliff retreated to fit breach outlet channel')
+                ShoreY[BreachIx,4] = ShoreY[BreachIx,2] - 0.001
     
     #%% Return updated MorDt (adaptive timestepping) and Closed/open status (opening happens in mor, closing in riv.assembleChannel)
     return (MorDt, Breach)

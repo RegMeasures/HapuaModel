@@ -387,7 +387,7 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
     if np.any(LagoonWidth[OnlineLagoon] < PhysicalPars['MinOutletWidth']):
         LagCloseIx = np.where(LagoonWidth[OnlineLagoon] < PhysicalPars['MinOutletWidth'])[0][0]
         if not Closed:
-            logging.info('Closure occured in lagoon at X=%.0f', ShoreX[LagCloseIx])
+            logging.info('Closure occured in lagoon at X=%.0f', ShoreX[OnlineLagoon[LagCloseIx]])
             Closed = True
         EndArea += np.nansum(LagoonWidth[OnlineLagoon[LagCloseIx:]] * Dx)
         OnlineLagoon = OnlineLagoon[:LagCloseIx]

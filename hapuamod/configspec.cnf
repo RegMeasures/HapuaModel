@@ -73,10 +73,10 @@ BackshoreElev = float(min=0)
 MaxOutletElev = float
 OT_coef = float(min=0, default=0.0002)
 OT_exp = float(min=1, default=2)
-OwProp_coef = float(min=0)
-MinOpForOw = float(min=0)
 BeachTopElev = float(min=0)
 SpitWidth = float(min=0)
+TargetBarHeight = float(min=0)
+TargetBarWidth = float(min=0)
 MinOutletWidth = float(min=0)
 OutletSedSpreadDist = float(min=0)
 

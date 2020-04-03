@@ -115,7 +115,6 @@ def overtopping(Runup, SeaLevel, ShoreY, ShoreZ, PhysicalPars):
         
     """
     
-    
     # Overtopping potential
     OP = np.maximum(Runup + SeaLevel - ShoreZ[:,0], 0.0)
     
@@ -129,15 +128,16 @@ def overtopping(Runup, SeaLevel, ShoreY, ShoreZ, PhysicalPars):
     CrestWidth = np.maximum(ShoreY[:,0] - ShoreY[:,3], 0.001)
     CrestWidth[OutletPresent] = ShoreY[OutletPresent,0] - ShoreY[OutletPresent,1]
     
-    # Split sed flux between crest and backshore (except where no lagoon/outlet)
+    # Partition sed flux between crest and backshore (except where no lagoon/outlet)
     NoLagoon = ShoreY[:,3] <= ShoreY[:,4]
     NoLagoon[OutletPresent] = False
-    OverwashProp = np.maximum(np.minimum(PhysicalPars['OwProp_coef'] * (OP-PhysicalPars['MinOpForOw']) / CrestWidth, 1.),0.)
-    OverwashProp[NoLagoon] = 0.0
+    OverwashProp = ShoreZ[:,0] > (CrestWidth * PhysicalPars['BarRatSlope'] + PhysicalPars['BarRatInt'])
+    OverwashProp[NoLagoon] = False
+    
     # Where there is a zero width outlet channel make CST all overwash into channel - as it will then get redistributed in mor
     ZeroWidthOutlet = OutletPresent.copy()
     ZeroWidthOutlet[OutletPresent] = ShoreY[OutletPresent,1] <= ShoreY[OutletPresent,2]
-    OverwashProp[ZeroWidthOutlet] = 1.0
+    OverwashProp[ZeroWidthOutlet] = True
     
     # Checks
     assert np.all(np.logical_and(OverwashProp>=0.0, OverwashProp<=1.0)), 'OverwashProp outside of range 0-1 in overtopping function'
