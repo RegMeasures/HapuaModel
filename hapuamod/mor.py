@@ -315,34 +315,40 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     if OutletChanIx.size > 1:
         # (don't check last transect as trucation here would leave 0 transects)
         if np.any(ShoreY[OutletChanIx[:-1],2] <= ShoreY[OutletChanIx[:-1],3]):
-            logging.info('Truncating lagoon end of outlet channel (due to erosion)')
             TruncationIx = OutletChanIx[:-1][ShoreY[OutletChanIx[:-1],2] <= ShoreY[OutletChanIx[:-1],3]]
             for AffectedX in TruncationIx:
-                logging.info('Truncation tiggered at X = %.1fm' % ShoreX[AffectedX])
+                logging.info('Truncating lagoon end of outlet channel (due to erosion) at X = %.1fm' % ShoreX[AffectedX])
             
-            # Move the ustream end of the outlet channel and recompute OutletChanIx
+            # Move the ustream end of the outlet channel
             if OutletEndX[0] < OutletEndX[1]:
                 # Outlet angles from L to R
                 OutletEndX[0] = ShoreX[TruncationIx[0] + 1]
+            else:
+                # Outlet angles from R to L
+                OutletEndX[0] = ShoreX[TruncationIx[0] - 1]
+            
+            # Recompute OutletChanIx
+            if OutletEndX[0] < OutletEndX[1]:
+                # Outlet angles from L to R
                 OutletChanIx = np.where(np.logical_and(OutletEndX[0] <= ShoreX, 
                                                        ShoreX <= OutletEndX[1]))[0]
             else:
                 # Outlet angles from R to L
-                OutletEndX[0] = ShoreX[TruncationIx[0] - 1]
                 OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] <= ShoreX,
                                                                  ShoreX <= OutletEndX[0]))[0])
+            assert OutletChanIx.size > 0, 'zero length outlet channel after lagoonward truncation'
             
             # Check if truncation is a collision between outlet channel and cliff
             # i.e. where there is no lagoon. If so then extend lagoon.
             if ShoreY[TruncationIx[0], 2] <= ShoreY[TruncationIx[0], 4]:    
-                if OutletEndX[0] < OutletEndX[1]:
-                    # Outlet angles from L to R
+                if ShoreX[TruncationIx[0]] > 0:
+                    # Extend right end of lagoon
                     logging.info('Extending R end of lagoon via outletchannel to cliffline collision.')
                     Extend = True
                     CurLagEndIx = np.where(ShoreY[:,3] > ShoreY[:,4])[0][-1]
                     LagExtension = np.arange(CurLagEndIx + 1, TruncationIx[0] + 1)
                 else:
-                    # Outlet angles from R to L
+                    # Extend left end of lagoon
                     logging.info('Extending L end of lagoon via outletchannel to cliffline collision.')
                     Extend = True
                     CurLagEndIx = np.where(ShoreY[:,3] > ShoreY[:,4])[0][0]
