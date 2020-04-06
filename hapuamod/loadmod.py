@@ -251,7 +251,8 @@ def loadModel(ModelConfigFile):
                     'TargetBarHeight': Config['PhysicalParameters']['TargetBarHeight'],
                     'TargetBarWidth': Config['PhysicalParameters']['TargetBarWidth'],
                     'MinOutletWidth': Config['PhysicalParameters']['MinOutletWidth'],
-                    'OutletSedSpreadDist': Config['PhysicalParameters']['OutletSedSpreadDist']}
+                    'OutletSedSpreadDist': Config['PhysicalParameters']['OutletSedSpreadDist'],
+                    'OutletBankEroFac': Config['PhysicalParameters']['OutletBankEroFac']}
     
     # Some additional calculated parameters
     GammaLST = ((PhysicalPars['RhoSed'] - PhysicalPars['RhoSea']) * 

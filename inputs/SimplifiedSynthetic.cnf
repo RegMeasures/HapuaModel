@@ -124,6 +124,9 @@ TargetBarWidth = 80
 MinOutletWidth = 1.0
 # Distance river gravel spread along shoreline from outlet channel [m]
 OutletSedSpreadDist = 100.0
+# Outlet bank erosion factor 
+# (0.0 = even split between banks, 1.0 = all erosion on outside bank)
+OutletBankEroFac = 0.5
 
 [NumericalParameters]
 # Alongshore discretisation resolution (transect spacing) [m]

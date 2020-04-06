@@ -78,7 +78,8 @@ SpitWidth = float(min=0)
 TargetBarHeight = float(min=0)
 TargetBarWidth = float(min=0)
 MinOutletWidth = float(min=0)
-OutletSedSpreadDist = float(min=0)
+OutletSedSpreadDist = float(min=0, default=100)
+OutletBankEroFac = float(min=0.0, max=1, default=0.0)
 
 [NumericalParameters]
 AlongShoreDx = float(min=0)
