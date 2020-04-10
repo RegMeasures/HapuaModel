@@ -21,7 +21,7 @@ SeaLevel = harmonic
     # Slow flow (baseflow) decay rate between events [/day]
     SlowDecayRate = 0.015
     # Proportion of event flow which is classified as fast flow
-    FastFlowProp = 0.8
+    FastFlowProp = 0.85
     # Time for flow to rise prior to event peak [days]
     RisingLimbTime = 1.0
     # Discretisation interval for generated flow timeseries [mins]
@@ -40,9 +40,9 @@ SeaLevel = harmonic
 
 [SpatialInputs]
 # Model domain extent to left of river centerline when looking to sea [m]
-ShorelineLengthLeft = 1000
+ShorelineLengthLeft = 2000
 # Model domain extent to right of river centerline when looking to sea [m]
-ShorelineLengthRight = 500
+ShorelineLengthRight = 700
 # Beach width in initial condition (uniform across whole model domain, no lagoon) [m]
 BeachWidth = 30
 
@@ -93,7 +93,7 @@ BeachSlope = 0.13
 # River bed slope upstream of lagoon [m/m]
 RiverSlope = 0.003
 # Grain size for fluvial sediment transport [m]
-GrainSize = 0.032
+GrainSize = 0.025
 # Critical shields stress for initiation of bedload transport
 CritShieldsStress = 0.03
 # Upstream river length to simulate [m]
@@ -101,7 +101,7 @@ UpstreamLength = 1000
 # River width upstream of hapua [m]
 RiverWidth = 100
 # Fluvial hydraulic roughness (Manning's n) [m^(-1/3).s]
-RoughnessManning = 0.03
+RoughnessManning = 0.04
 # Width-Depth ratio of eroding channel [dimensionless]
 WidthDepthRatio = 30
 # Elevation of top of lagoon backshore [m]
@@ -118,8 +118,8 @@ OT_exp = 2
 BeachTopElev = 2
 SpitWidth = 10
 # Target crest height and width for fully developed barrier [m]
-TargetBarHeight = 4.5
-TargetBarWidth = 80
+TargetBarHeight = 4.8
+TargetBarWidth = 90
 # Threshold width for setting outlet channel to closed [m]
 MinOutletWidth = 1.0
 # Distance river gravel spread along shoreline from outlet channel [m]
