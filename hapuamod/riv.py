@@ -309,6 +309,8 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
                 end?
     """
     
+    X0Ix = np.where(ShoreX==0)[0][0]
+    
     # Handle the postprocessing situation when we don't have (or need) a dummy XS in the sea
     if OutletEndDep.size == 2:
         OutletEndDep = np.append(OutletEndDep, np.nan)
@@ -347,38 +349,39 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
     
     # Calculate properties for the 'online' section of lagoon
     LagoonWidth = ShoreY[:,3] - ShoreY[:,4]
+    assert LagoonWidth[X0Ix] > 0, 'Zero/negtive lagoon width at X=0'
+    assert np.all(~np.isnan(LagoonWidth)), 'NaN values in lagoon width at X = %s' % ShoreX[np.isnan(LagoonWidth)]
     if OutletEndX[0] == 0:
         # Outlet directly inline with river (special case to ensure lagoon always has at least 1 XS)
         if Closed:
-            OnlineLagoon = np.arange(np.where(ShoreX == 0)[0], 
-                                     np.where(LagoonWidth > 0)[0][-1] + 1)
+            OnlineLagoon = np.arange(X0Ix, np.where(LagoonWidth > 0)[0][-1] + 1)
             EndArea = 0
         else:
-            OnlineLagoon = np.where(ShoreX == 0)[0]
+            OnlineLagoon = np.array([X0Ix])
             EndArea = np.nansum(LagoonWidth[ShoreX > OutletEndX[0]] * Dx)
-        StartArea = np.nansum(LagoonWidth[ShoreX > 0] * Dx)
+        StartArea = np.nansum(LagoonWidth[X0Ix+1:] * Dx)
     elif OutletEndX[0] > 0:
         # Outlet channel to right of river
         if Closed:
-            OnlineLagoon = np.arange(np.where(ShoreX == 0)[0], 
-                                     np.where(LagoonWidth > 0)[0][-1] + 1)
+            OnlineLagoon = np.arange(X0Ix, np.where(LagoonWidth > 0)[0][-1] + 1)
             EndArea = 0
         else:
-            OnlineLagoon = np.arange(np.where(ShoreX == 0)[0], 
-                                     np.where(ShoreX < OutletEndX[0])[0][-1] + 1)
+            OnlineLagoon = np.arange(X0Ix, np.where(ShoreX < OutletEndX[0])[0][-1] + 1)
             EndArea = np.nansum(LagoonWidth[ShoreX > OutletEndX[0]] * Dx)
-        StartArea = np.nansum(LagoonWidth[ShoreX < 0] * Dx)
+        StartArea = np.nansum(LagoonWidth[:X0Ix] * Dx)
     else:
         # Outlet channel to left of river
         if Closed:
-            OnlineLagoon = np.arange(np.where(ShoreX == 0)[0], 
-                                     np.where(LagoonWidth > 0)[0][0] - 1, -1)
+            OnlineLagoon = np.arange(X0Ix, np.where(LagoonWidth > 0)[0][0] - 1, -1)
             EndArea = 0
         else:
-            OnlineLagoon = np.arange(np.where(ShoreX == 0)[0], 
-                                     np.where(ShoreX > OutletEndX[0])[0][0] - 1, -1)
+            OnlineLagoon = np.arange(X0Ix, np.where(ShoreX > OutletEndX[0])[0][0] - 1, -1)
             EndArea = np.nansum(LagoonWidth[ShoreX < OutletEndX[0]] * Dx)
-        StartArea = np.nansum(LagoonWidth[ShoreX > 0] * Dx)
+        StartArea = np.nansum(LagoonWidth[X0Ix+1:] * Dx)
+    
+    # Check there is at least 1 transect in lagoon
+    # (zero length lagoon should now be prevented in mor)
+    assert OnlineLagoon.size > 0, 'No online transects in lagoon'
     
     # Check the lagoon hasn't closed anywhere
     # note this can happen:
@@ -393,7 +396,7 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
         OnlineLagoon = OnlineLagoon[:LagCloseIx]
     
     # These asserts *should* now be impossible to breach...
-    assert np.abs(OnlineLagoon[-1]-OnlineLagoon[0]) == (OnlineLagoon.size-1), 'Gap in online lagoon (possibly split lagoon and closed?) need to handle this'
+    assert np.abs(OnlineLagoon[-1]-OnlineLagoon[0]) == (OnlineLagoon.size-1), 'Gap in online lagoon (possibly split lagoon and closed?) need to handle this. OnlineLagoon = %s' % OnlineLagoon
     assert np.all(LagoonWidth[OnlineLagoon]>0), 'Lagoon closure in assembleChannel at X = %f' % ShoreX[OnlineLagoon[LagoonWidth[OnlineLagoon]<=0][0]]
     
     # Assemble the complete channel

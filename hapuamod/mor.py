@@ -26,6 +26,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     #%% Pre-calculate some useful parameters
     
     Dx = NumericalPars['Dx']
+    X0Ix = np.where(ShoreX==0)[0][0]
     
     # Find location outlet channel intersects shoreline
     if not Closed:
@@ -55,7 +56,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     # Width of barrier crest (the part of the barrier backing the shoreface)
     CrestWidth = ShoreY[:,0] - ShoreY[:,3]
     CrestWidth[OutletPresent] = ShoreY[OutletPresent,0] - ShoreY[OutletPresent,1]
-    assert np.all(CrestWidth>0), 'Negative CrestWidth at the start of updateMorphology'
+    assert np.all(CrestWidth>0), 'Negative CrestWidth at the start of updateMorphology. Negative at X = %s' % ShoreX[CrestWidth<=0]
     
     # Height of barrier backshore (the part of hte barrier backing the shoreface)
     BackBarHeight = (ShoreZ[:,0] - ShoreZ[:,3])
@@ -200,7 +201,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     #%% Check if shoreline has eroded into cliff anywhere
     CliffCollision = ShoreY[:,0] < ShoreY[:,4]
     if np.any(CliffCollision):
-        logging.info('Shoreline/cliff collision - retreating cliff')
+        logging.info('Shoreline/cliff collision - retreating cliff at X = %s' % ShoreX[CliffCollision])
         CliffOverlapDist = ShoreY[CliffCollision,4] - ShoreY[CliffCollision,0]
         CliffRetDist = (CliffOverlapDist / 
                         (1 + ((PhysicalPars['BackshoreElev'] - ShoreZ[CliffCollision,1]) / 
@@ -456,7 +457,6 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         # Check which eroded locations are hydraulically connected to river
         PossBreachTsects = []
         LagoonOpen = (ShoreY[:,3] - ShoreY[:,4]) > PhysicalPars['MinOutletWidth']
-        X0Ix = np.where(ShoreX==0)[0]
         for TsectIx in EroTsects:
             logging.info('Barrier completely eroded at X = %i' % ShoreX[TsectIx])
             if TsectIx > X0Ix:
@@ -505,7 +505,6 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         # Check which overtopped locations are hydraulically connected to river
         PossBreachTsects = []
         LagoonOpen = (ShoreY[:,3] - ShoreY[:,4]) > PhysicalPars['MinOutletWidth']
-        X0Ix = np.where(ShoreX==0)[0]
         for TsectIx in SpillTsects:
             logging.info('Potential lagoon spill at X = %f' % ShoreX[TsectIx])
             if TsectIx > X0Ix:
@@ -579,6 +578,15 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             if ShoreY[BreachIx,4] >= ShoreY[BreachIx,2]:
                 logging.warning('cliff retreated to fit breach outlet channel')
                 ShoreY[BreachIx,4] = ShoreY[BreachIx,2] - 0.001
+    
+    #%% Prevent lagoon closure at X=0 (where river enters)
+    # This ensures there is always one viable cross-section in the lagoon
+    if (ShoreY[X0Ix,3] - ShoreY[X0Ix,4]) < PhysicalPars['MinOutletWidth']:
+        logging.info('Modifying "backshore" location at X=0 to ensure at least 1 lagoon XS is maintained')
+        ShoreY[X0Ix,4] = ShoreY[X0Ix,3] - PhysicalPars['MinOutletWidth'] - 0.001
+    
+    assert np.all(~np.isnan(ShoreY[:,3])), 'NaN value(s) in ShoreY[:,3] at X = %s' % ShoreX[np.isnan(ShoreY[:,3])]
+    assert np.all(~np.isnan(ShoreY[:,4])), 'NaN value(s) in ShoreY[:,4] at X = %s' % ShoreX[np.isnan(ShoreY[:,4])]
     
     #%% Return updated MorDt (adaptive timestepping) and Closed/open status (opening happens in mor, closing in riv.assembleChannel)
     return (MorDt, Breach)
