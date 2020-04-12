@@ -146,6 +146,9 @@ def loadModel(ModelConfigFile):
                 closure [m]
             OutletSedSpreadDist (float): Maximum distance of shoreline either 
                 side of river mouth to spread river sediment over [m]
+            OutletBankEroFac (float): Proportion of bank erosion occuring on 
+                outside bend of the downstream end of the outlet channel
+                [0 <= OutletBankEroFac <= 1].
             K2coef (float): Calculated from other inputs for use in calculation
                 of longshore transport rate. 
                 K2 = K / (RhoSed - RhoSea) * g * (1 - VoidRatio))
@@ -227,7 +230,7 @@ def loadModel(ModelConfigFile):
     logging.info('Processing physical parameters')
     PhysicalPars = {'RhoSed': Config['PhysicalParameters']['RhoSed'],
                     'RhoSea': Config['PhysicalParameters']['RhoSea'],
-                    'RhoRiv': Config['PhysicalParameters']['RhoSea'],
+                    'RhoRiv': Config['PhysicalParameters']['RhoRiv'],
                     'Kcoef': Config['PhysicalParameters']['Kcoef'],
                     'Gravity': Config['PhysicalParameters']['Gravity'],
                     'VoidRatio': Config['PhysicalParameters']['VoidRatio'],

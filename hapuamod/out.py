@@ -69,6 +69,7 @@ def newOutFile(FileName, ModelName, StartTime,
     NcFile.Kcoef = PhysicalPars['Kcoef']
     NcFile.RhoSed = PhysicalPars['RhoSed']
     NcFile.RhoSea = PhysicalPars['RhoSea']
+    NcFile.RhoRiv = PhysicalPars['RhoRiv']
     NcFile.VoidRatio = PhysicalPars['VoidRatio']
     NcFile.Gravity = PhysicalPars['Gravity']
     NcFile.GammaRatio = PhysicalPars['GammaRatio']
@@ -92,6 +93,7 @@ def newOutFile(FileName, ModelName, StartTime,
     NcFile.TargetBarWidth = PhysicalPars['TargetBarWidth']
     NcFile.MinOutletWidth = PhysicalPars['MinOutletWidth']
     NcFile.OutletSedSpreadDist = PhysicalPars['OutletSedSpreadDist']
+    NcFile.OutletBankEroFac = PhysicalPars['OutletBankEroFac']
     
     # create coordinate variables
     XVar = NcFile.createVariable(XDim.name, np.float32, (XDim.name,))
