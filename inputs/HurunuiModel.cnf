@@ -30,7 +30,7 @@ OutletBed = -1.0
 # Lagoon bed elevation [m]
 LagoonBed = -1.0
 # Barrier crest height [m]
-BarrierElev = 3.0
+BarrierElev = 4.0
 
 [Time]
 # Simulation start date
@@ -40,7 +40,7 @@ EndTime = '30 Jun 2016'
 # Hydraulic Timestep [s]
 HydDt = 5
 # Minimum morphology timestep [s]
-MorDtMin = 60
+MorDtMin = 15
 # Maximum morphology Timestep [s]
 MorDtMax = 1920
 

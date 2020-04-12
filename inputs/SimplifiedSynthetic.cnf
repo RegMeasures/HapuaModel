@@ -54,7 +54,7 @@ OutletBed = -1.0
 # Lagoon bed elevation [m]
 LagoonBed = -1.0
 # Barrier crest height [m]
-BarrierElev = 3.0
+BarrierElev = 4.0
 
 [Time]
 # Simulation start date [D MMM YYYY]
@@ -64,7 +64,7 @@ EndTime = '1 Jan 2018'
 # Hydraulic Timestep [s]
 HydDt = 5
 # Minimum morphology timestep [s]
-MorDtMin = 60
+MorDtMin = 15
 # Maximum morphology Timestep [s]
 MorDtMax = 3840
 
@@ -150,7 +150,7 @@ MaxMorChange = 0.1
 
 [OutputOptions]
 # Interval to save data to netCDF file [s]
-OutInt = 3600
+OutInt = 10800
 # Interval at which progress will be logged to console/logfile during simulation [s]
 LogInt = 3600
 # Interval to update plots (zero means no plotting will occur) [s]
