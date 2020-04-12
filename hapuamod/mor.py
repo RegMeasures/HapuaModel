@@ -199,14 +199,15 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         OutletEndX[1] += OutletEndXMoveRate * MorDt.seconds
     
     #%% Check if shoreline has eroded into cliff anywhere
-    CliffCollision = ShoreY[:,0] < ShoreY[:,4]
+    CliffCollision = ShoreY[:,0] <= ShoreY[:,4]
     if np.any(CliffCollision):
-        logging.info('Shoreline/cliff collision - retreating cliff at X = %s' % ShoreX[CliffCollision])
-        CliffOverlapDist = ShoreY[CliffCollision,4] - ShoreY[CliffCollision,0]
+        logging.info('Shoreline/cliff collision - retreating cliff at X = %s', ShoreX[CliffCollision])
+        CliffOverlapDist = (ShoreY[CliffCollision,4] - ShoreY[CliffCollision,0]) + 0.001
         CliffRetDist = (CliffOverlapDist / 
-                        (1 + ((PhysicalPars['BackshoreElev'] - ShoreZ[CliffCollision,1]) / 
+                        (1 + ((PhysicalPars['BackshoreElev'] - ShoreZ[CliffCollision,0]) / 
                               ShorefaceHeight[CliffCollision])))
         ShoreY[CliffCollision, 4] -= CliffRetDist
+        ShoreY[CliffCollision, 3] = ShoreY[CliffCollision, 4]
         ShoreY[CliffCollision, 0] += (CliffOverlapDist - CliffRetDist)
     
     #%% Check if outlet channel (online or offline) has negative width due to overwash and adjust to prevent negative width channel
@@ -585,6 +586,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         logging.info('Modifying "backshore" location at X=0 to ensure at least 1 lagoon XS is maintained')
         ShoreY[X0Ix,4] = ShoreY[X0Ix,3] - PhysicalPars['MinOutletWidth'] - 0.001
     
+    assert np.all(~np.isnan(ShoreY[:,0])), 'NaN value(s) in ShoreY[:,0] at X = %s' % ShoreX[np.isnan(ShoreY[:,0])]
     assert np.all(~np.isnan(ShoreY[:,3])), 'NaN value(s) in ShoreY[:,3] at X = %s' % ShoreX[np.isnan(ShoreY[:,3])]
     assert np.all(~np.isnan(ShoreY[:,4])), 'NaN value(s) in ShoreY[:,4] at X = %s' % ShoreX[np.isnan(ShoreY[:,4])]
     
