@@ -63,7 +63,8 @@ def mapView(ShoreX, ShoreY, Origin, ShoreNormDir):
     # tidy up the plot
     plt.axis('equal')
 
-def modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, RiverWidth,
+def modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, 
+              RiverWidth, SpitWidth,
               ShoreZ=None, WavePower=None, EDir_h=0, LST=None, CST=None, 
               WaveScaling=0.01, CstScaling=0.00005, LstScaling=0.0001,
               QuiverWidth=0.002, AreaOfInterest=None, PlotTime=None):
@@ -75,6 +76,7 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, RiverWid
             OutletEndX
             OutletChanIx
             RiverWidth
+            SpitWidth
             ShoreZ (optional)
             WavePower (optional)
             EDir_h (optional)
@@ -157,9 +159,9 @@ def modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, RiverWid
     ModelFig = {'PlanFig':PlanFig, 'PlanAx':PlanAx, 'ShoreLine':ShoreLine, 
                 'OutletLine':OutletLine, 'RiverLine':RiverLine,
                 'LagoonLine':LagoonLine, 'CliffLine':CliffLine, 
-                'WaterFill':WaterFill, 'RiverWidth':RiverWidth,
-                'ShoreDots':ShoreDots, 'ChannelLine':ChannelLine,
-                'CliffFill':CliffFill}
+                'ChannelLine':ChannelLine,'ShoreDots':ShoreDots, 
+                'WaterFill':WaterFill, 'CliffFill':CliffFill,
+                'RiverWidth':RiverWidth,'SpitWidth':SpitWidth}
     if not ShoreZ is None:
         ModelFig['CrestLine'] = CrestLine
     if not WavePower is None:
@@ -183,6 +185,7 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
                     PlotTime=None):
     
     RiverWidth = ModelFig['RiverWidth']
+    SpitWidth = ModelFig['SpitWidth']
     
     # Prep the bits of the plotting which are the same whether the outlet is closed or not:
     
@@ -271,7 +274,7 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
                             LagoonLineY[0],         # Close the loop
                             np.nan,                 # Break to separate sea and lagoon polygons
                             ShoreLineY,             # Coast
-                            5000.0, 5000.0,         # Offshore
+                            10000.0, 10000.0,       # Offshore
                             ShoreLineY[0]])         # Close the loop
         
     else: # Outlet open
@@ -288,32 +291,67 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
         OutletDsRbX = OutletEndX[1] + OutletEndWidth[1]/2
         
         # Outlet plotting position
-        if OutletEndX[0] < OutletEndX[1]:
-            # Outlet angkles L to R
+        if OutletUsLbPlotX < OutletDsLbX:
+            # Outlet left bank angles L to R
             L_Ok = ShoreX[OutletChanIx] < OutletDsLbX
-            R_Ok = ShoreX[OutletChanIx] > OutletUsRbPlotX
-            OutletLbY = np.hstack([np.interp(OutletUsLbPlotX, ShoreX, ShoreY[:,3]),
-                                   ShoreY[OutletChanIx[0],1], 
-                                   ShoreY[OutletChanIx[L_Ok],1], 
-                                   np.interp(OutletDsLbX, ShoreX[OutletChanIx], 
+            OutletLbX = np.hstack([OutletUsLbPlotX,                                 # Upstream end of channel
+                                   OutletUsLbPlotX,                                 # 2nd point on channel
+                                   ShoreX[OutletChanIx[L_Ok]],                      # Transects crossed by channel
+                                   OutletDsLbX,                                     # 2nd last point on channel
+                                   OutletDsLbX])                                    # Downstream end of channel
+            OutletLbY = np.hstack([np.interp(OutletUsLbPlotX, ShoreX, ShoreY[:,3]), # Upstream end of channel
+                                   ShoreY[OutletChanIx[0],1],                       # 2nd point on channel
+                                   ShoreY[OutletChanIx[L_Ok],1],                    # Transects crossed by channel
+                                   np.interp(OutletDsLbX, ShoreX[OutletChanIx],     # 2nd last point on channel
                                              ShoreY[OutletChanIx, 1]),
-                                   np.interp(OutletDsLbX, ShoreX, ShoreY[:,0])])
-            OutletRbY = np.hstack([np.interp(OutletUsRbPlotX, ShoreX, ShoreY[:,3]),
-                                   np.interp(OutletUsRbPlotX, ShoreX[OutletChanIx], 
-                                             ShoreY[OutletChanIx, 2]),
-                                   ShoreY[OutletChanIx[R_Ok],2],
-                                   ShoreY[OutletChanIx[-1],2],
-                                   np.interp(OutletDsRbX, ShoreX, ShoreY[:,0])])
+                                   np.interp(OutletDsLbX, ShoreX, ShoreY[:,0])])    # Downstream end of channel
         else:
-            # Outlet angkles R to L
+            # Outlet left bank angles R to L
             L_Ok = ShoreX[OutletChanIx] < OutletUsLbPlotX
-            R_Ok = ShoreX[OutletChanIx] > OutletDsRbX
+            OutletLbX = np.hstack([OutletUsLbPlotX,
+                                   OutletUsLbPlotX,
+                                   ShoreX[OutletChanIx[L_Ok]],
+                                   min(OutletEndX[1], OutletUsLbPlotX),
+                                   OutletDsLbX, # This point is extra when angling in this direction
+                                   OutletDsLbX])
             OutletLbY = np.hstack([np.interp(OutletUsLbPlotX, ShoreX, ShoreY[:,3]),
                                    np.interp(OutletUsLbPlotX, ShoreX[np.flip(OutletChanIx)], 
                                              ShoreY[np.flip(OutletChanIx), 2]),
                                    ShoreY[OutletChanIx[L_Ok],2],
-                                   ShoreY[OutletChanIx[-1],2],
+                                   max(np.interp(OutletLbX[-2], ShoreX, ShoreY[:,0]) - SpitWidth - OutletEndWidth[1],
+                                       np.interp(OutletLbX[-2], ShoreX, ShoreY[:,3])),
+                                   np.NaN, # This point is extra - gets interpolated below
                                    np.interp(OutletDsLbX, ShoreX, ShoreY[:,0])])
+            OutletLbY[-2] = (OutletLbY[-1]-SpitWidth + OutletLbY[-3])/2
+            OutletLbY[-3] = np.min(OutletLbY[[-1,-3]])
+        
+        if OutletUsRbPlotX < OutletDsRbX:
+            # Outlet right bank angles L to R
+            R_Ok = ShoreX[OutletChanIx] > OutletUsRbPlotX
+            OutletRbX = np.hstack([OutletUsRbPlotX, 
+                                   OutletUsRbPlotX,
+                                   ShoreX[OutletChanIx[R_Ok]],
+                                   max(OutletEndX[1], OutletUsRbPlotX), 
+                                   OutletDsRbX, # Extra point
+                                   OutletDsRbX])
+            OutletRbY = np.hstack([np.interp(OutletUsRbPlotX, ShoreX, ShoreY[:,3]),
+                                   np.interp(OutletUsRbPlotX, ShoreX[OutletChanIx],
+                                             ShoreY[OutletChanIx, 2]),
+                                   ShoreY[OutletChanIx[R_Ok],2],
+                                   max(np.interp(OutletRbX[-2], ShoreX, ShoreY[:,0]) - SpitWidth - OutletEndWidth[1],
+                                       np.interp(OutletRbX[-2], ShoreX, ShoreY[:,3])),
+                                   np.NaN, # Extra point
+                                   np.interp(OutletDsRbX, ShoreX, ShoreY[:,0])])
+            OutletRbY[-2] = (OutletRbY[-1]-SpitWidth + OutletRbY[-3])/2
+            OutletLbY[-3] = np.min(OutletRbY[[-1,-3]])
+        else:
+            # Outlet right bank angles R to L
+            R_Ok = ShoreX[OutletChanIx] > OutletDsRbX
+            OutletRbX = np.hstack([OutletUsRbPlotX, 
+                                   OutletUsRbPlotX,
+                                   ShoreX[OutletChanIx[R_Ok]],
+                                   OutletDsRbX, 
+                                   OutletDsRbX])
             OutletRbY = np.hstack([np.interp(OutletUsRbPlotX, ShoreX, ShoreY[:,3]),
                                    ShoreY[OutletChanIx[0],1],
                                    ShoreY[OutletChanIx[R_Ok],1],
@@ -327,12 +365,6 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
         OutletRbY[-2] = np.min(OutletRbY[-2:])
         
         OutletY = np.hstack([OutletLbY, np.nan, OutletRbY])
-        OutletLbX = np.hstack([OutletUsLbPlotX, OutletUsLbPlotX,
-                               ShoreX[OutletChanIx[L_Ok]],
-                               OutletDsLbX, OutletDsLbX])
-        OutletRbX = np.hstack([OutletUsRbPlotX, OutletUsRbPlotX,
-                               ShoreX[OutletChanIx[R_Ok]],
-                               OutletDsRbX, OutletDsRbX])
         OutletX = np.hstack([OutletLbX, np.nan, OutletRbX])
     
         # Some useful masks for the transects
@@ -427,7 +459,7 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
                                                           color='red', zorder=10)
     
     if not PlotTime is None:
-        ModelFig['PlanAx'].set_title(PlotTime.strftime('%d/%m/%y %H:%M'), loc='right')
+        ModelFig['PlanAx'].set_title(PlotTime.strftime('%d-%b-%Y %H:%M'), loc='right')
     
     # Redraw
     ModelFig['PlanFig'].canvas.draw()

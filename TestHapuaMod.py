@@ -40,7 +40,7 @@ plt.plot((ShoreX[0:-1]+ShoreX[1:])/2, LST)
                         np.zeros(ShoreX.size), np.zeros(ShoreX.size),
                         np.zeros(3), np.zeros(3), NumericalPars['Dx'],
                         PhysicalPars)
-visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, PhysicalPars['RiverWidth'])
+visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, PhysicalPars['RiverWidth'], PhysicalPars['SpitWidth'])
     
 # Steady state hydraulics
 RivFlow = core.interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']])).values

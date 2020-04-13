@@ -181,7 +181,9 @@ def main(ResultsFile, AnimationFile, StartTimestep=0, EndTimestep=None,
         
         # Set up initial figure
         RiverWidth = NcFile.RiverWidth
-        ModelFig = visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, OutletChanIx, RiverWidth,
+        SpitWidth = NcFile.SpitWidth
+        ModelFig = visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth, 
+                                       OutletChanIx, RiverWidth, SpitWidth,
                                        ShoreZ=None, WavePower=None, EDir_h=0, LST=None, CST=None, 
                                        WaveScaling=0.01, CstScaling=0.00005, LstScaling=0.0001,
                                        QuiverWidth=0.002, AreaOfInterest=AreaOfInterest)
@@ -195,7 +197,7 @@ def main(ResultsFile, AnimationFile, StartTimestep=0, EndTimestep=None,
                                       interval=1000/FrameRate)
         
     # Run the animation and save to a file
-    ani.save(AnimationFile, fps=FrameRate)
+    ani.save(AnimationFile, fps=FrameRate, dpi=200)
     
     ani.event_source.stop()
     del ani

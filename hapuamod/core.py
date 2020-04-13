@@ -7,6 +7,7 @@
 import logging
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 # import local modules
 from . import loadmod
@@ -74,16 +75,17 @@ def main(ModelConfigFile, Overwrite=False):
     #%% Prepare plotting
     LivePlot = OutputOpts['PlotInt'] > pd.Timedelta(0)
     if LivePlot:
+        plt.ion()
         LongSecFig = visualise.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, 
                                            np.zeros(ChanElev.size-1))
         BdyFig = visualise.bdyCndFig(OutputTs)
         ModelFig = visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth,
                                        OutletChanIx, PhysicalPars['RiverWidth'],
-                                       ShoreZ=ShoreZ, 
+                                       PhysicalPars['SpitWidth'], ShoreZ=ShoreZ, 
                                        WavePower=0, EDir_h=0, 
                                        LST=np.zeros(ShoreX.size-1),
                                        CST=np.zeros(ShoreX.size))
-    
+        
     #%% Main timestepping loop
     MorTime = TimePars['StartTime']
     OutTime = TimePars['StartTime'] + OutputOpts['OutInt']
