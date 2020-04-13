@@ -546,13 +546,11 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             if OutletEndX[0] < OutletEndX[1]:
                 # Outlet angles from L to R
                 OutletEndX[1] = ShoreX[BreachIx] - Dx/2
-                OutletEndWidth[1] = Dx
-                OutletEndElev[1] = (ShoreZ[BreachIx-1,1] + PhysicalPars['MaxOutletElev'])/2
             else:
                 # Outlet angles from R to L 
                 OutletEndX[1] = ShoreX[BreachIx] + Dx/2
-                OutletEndWidth[1] = Dx
-                OutletEndElev[1] = (ShoreZ[BreachIx+1,1] + PhysicalPars['MaxOutletElev'])/2
+            OutletEndWidth[1] = Dx
+            OutletEndElev[1] = (ShoreZ[BreachIx,1] + PhysicalPars['MaxOutletElev'])/2
             # TODO: close sediment balance by putting breach eroded sed onto shore
         else:
             # Lagoon breach (i.e. new outlet channel)
