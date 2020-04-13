@@ -212,7 +212,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     
     #%% Check if outlet channel (online or offline) has negative width due to overwash and adjust to prevent negative width channel
     if np.any(ShoreY[OutletPresent,1] < ShoreY[OutletPresent,2]):
-        logging.info('Overwashing occuring into closed channel in barrier - redistributing overwash onto barrier top')
+        logging.debug('Overwashing occuring into closed channel in barrier - redistributing overwash onto barrier top')
         # Find locations where the outlet channel width is negative after applying overwash
         NegativeOutletWidth = np.where(OutletPresent)[0][ShoreY[OutletPresent,1] < ShoreY[OutletPresent,2]]
         
@@ -496,7 +496,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             ShoreShiftDist = OverlapDist / (1 + ((ShorefaceHeight[NotBreachIx]) / 
                                                  (ShoreZ[NotBreachIx, 0] - ShoreZ[NotBreachIx, 3])))
             ShoreY[NotBreachIx,0] += ShoreShiftDist
-            ShoreY[NotBreachIx,3] -= ShoreShiftDist
+            ShoreY[NotBreachIx,3] -= (OverlapDist - ShoreShiftDist)
         
     if not Breach and np.any(ShoreZ[:,0] < WaterLevel):
         # Overtopping breach 
