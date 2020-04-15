@@ -81,7 +81,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         AspectRatio = ChanWidth[1:-1]/ChanDep[1:-1]
         RivXS = ChanFlag[1:-1]==0
         LagXS = ChanFlag[1:-1]==1
-        OutXS = ChanFlag[1:-1]==2
+        OutXS = ChanFlag==2
         OutEndXS = ChanFlag[1:-1]==3
     TooWide = AspectRatio > PhysicalPars['WidthRatio']
     

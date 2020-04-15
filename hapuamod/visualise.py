@@ -284,11 +284,12 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
         LagoonLeftEndX = np.min(ShoreX[LagoonPresent]) - Dx
         LagoonRightEndX = np.max(ShoreX[LagoonPresent]) + Dx
         
-        OutletUsLbPlotX = max(OutletEndX[0] - OutletEndWidth[0]/2, LagoonLeftEndX)
-        OutletUsRbPlotX = min(OutletEndX[0] + OutletEndWidth[0]/2, LagoonRightEndX)
+        UsOutletEndWidth = ShoreY[OutletChanIx[0],1] - ShoreY[OutletChanIx[0],2]
+        OutletUsLbPlotX = max(OutletEndX[0] - UsOutletEndWidth/2, LagoonLeftEndX)
+        OutletUsRbPlotX = min(OutletEndX[0] + UsOutletEndWidth/2, LagoonRightEndX)
         
-        OutletDsLbX = OutletEndX[1] - OutletEndWidth[1]/2
-        OutletDsRbX = OutletEndX[1] + OutletEndWidth[1]/2
+        OutletDsLbX = OutletEndX[1] - OutletEndWidth/2
+        OutletDsRbX = OutletEndX[1] + OutletEndWidth/2
         
         # Outlet plotting position
         if OutletUsLbPlotX < OutletDsLbX:
@@ -318,7 +319,7 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
                                    np.interp(OutletUsLbPlotX, ShoreX[np.flip(OutletChanIx)], 
                                              ShoreY[np.flip(OutletChanIx), 2]),
                                    ShoreY[OutletChanIx[L_Ok],2],
-                                   max(np.interp(OutletLbX[-2], ShoreX, ShoreY[:,0]) - SpitWidth - OutletEndWidth[1],
+                                   max(np.interp(OutletLbX[-2], ShoreX, ShoreY[:,0]) - SpitWidth - OutletEndWidth,
                                        np.interp(OutletLbX[-2], ShoreX, ShoreY[:,3])),
                                    np.NaN, # This point is extra - gets interpolated below
                                    np.interp(OutletDsLbX, ShoreX, ShoreY[:,0])])
@@ -338,7 +339,7 @@ def updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth,
                                    np.interp(OutletUsRbPlotX, ShoreX[OutletChanIx],
                                              ShoreY[OutletChanIx, 2]),
                                    ShoreY[OutletChanIx[R_Ok],2],
-                                   max(np.interp(OutletRbX[-2], ShoreX, ShoreY[:,0]) - SpitWidth - OutletEndWidth[1],
+                                   max(np.interp(OutletRbX[-2], ShoreX, ShoreY[:,0]) - SpitWidth - OutletEndWidth,
                                        np.interp(OutletRbX[-2], ShoreX, ShoreY[:,3])),
                                    np.NaN, # Extra point
                                    np.interp(OutletDsRbX, ShoreX, ShoreY[:,0])])

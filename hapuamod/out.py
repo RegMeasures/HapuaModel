@@ -16,9 +16,10 @@ def newOutFile(FileName, ModelName, StartTime,
                Overwrite=False):
     """ Create new netCDF output file for hapuamod results
     
-        newOutFile(FileName, ModelName, ShoreX, Dx, RiverElev, 
-                   Origin, ShoreNormDir, RiverWidth,
-                   StartTime, Overwrite=False)
+        newOutFile(FileName, ModelName, StartTime, 
+                   ShoreX, Dx, RiverElev, 
+                   Origin, ShoreNormDir, PhysicalPars,
+                   Overwrite=False)
     
         Parameters:
             FileName (string):

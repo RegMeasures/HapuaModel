@@ -312,9 +312,9 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
     X0Ix = np.where(ShoreX==0)[0][0]
     
     # Handle the postprocessing situation when we don't have (or need) a dummy XS in the sea
-    if OutletEndDep.size == 2:
+    if OutletEndDep.size == 1:
         OutletEndDep = np.append(OutletEndDep, np.nan)
-    if OutletEndVel.size == 2:
+    if OutletEndVel.size == 1:
         OutletEndVel = np.append(OutletEndVel, np.nan)
     
     if not Closed:
@@ -331,7 +331,7 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
         OutletWidth[np.isnan(OutletWidth)] = 0.
     
         # Check if closure has occured in outlet channel (only if not already closed from previous timestep).
-        if np.any(OutletWidth<=PhysicalPars['MinOutletWidth']) | OutletEndWidth<=PhysicalPars['MinOutletWidth']:
+        if np.any(OutletWidth<=PhysicalPars['MinOutletWidth']) | (OutletEndWidth<=PhysicalPars['MinOutletWidth']):
             Closed = True
             for ClosedIx in OutletChanIx[OutletWidth<=PhysicalPars['MinOutletWidth']]:
                 logging.info('Outlet channel closed by wave washover at X = %f' % ShoreX[ClosedIx])

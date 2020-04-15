@@ -102,20 +102,19 @@ Runup = coast.runup(WavePeriod, Hs_offshore, PhysicalPars['BeachSlope'])
 #%% Morphology updating
 OldShoreY = ShoreY.copy()
 MorDt = TimePars['MorDtMin']
-(MorDt, Breach) =  = mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
-                                          OutletEndX, OutletEndWidth, OutletEndElev, 
-                                          RiverElev, OnlineLagoon, 
-                                          OutletChanIx, LagoonWL, OutletDep,
-                                          ChanWidth, ChanDep, ChanDx, ChanFlag, 
-                                          Closed, LST, Bedload, CST_tot, OverwashProp,
-                                          MorDt, PhysicalPars, TimePars, NumericalPars)
+(MorDt, Breach) = mor.updateMorphology(ShoreX, ShoreY, ShoreZ,
+                                       OutletEndX, OutletEndWidth, OutletEndElev, 
+                                       RiverElev, OnlineLagoon, 
+                                       OutletChanIx, LagoonWL, OutletDep,
+                                       ChanWidth, ChanDep, ChanDx, ChanFlag, 
+                                       Closed, LST, Bedload, CST_tot, OverwashProp,
+                                       MorDt, PhysicalPars, TimePars, NumericalPars)
 plt.plot(ShoreX, (ShoreY[:,0]-OldShoreY[:,0]))
 
 #%% Create output netcdf file and write initial condition
 out.newOutFile('test.nc', ModelName, TimePars['StartTime'], 
                ShoreX, NumericalPars['Dx'],  RiverElev, 
-               Origin, ShoreNormDir, PhysicalPars['RiverWidth'],
-               False)
+               Origin, ShoreNormDir, PhysicalPars, False)
 out.writeCurrent('test.nc', TimePars['StartTime'], SeaLevel[-1], RivFlow[-1],
                  ShoreY, ShoreZ, LagoonWL, LagoonVel, np.zeros(ShoreX.size), 
                  OutletDep, OutletVel, np.zeros(ShoreX.size), 
@@ -126,4 +125,4 @@ out.writeCurrent('test.nc', TimePars['StartTime'], SeaLevel[-1], RivFlow[-1],
 
 #%% Test core timestepping
 ModelConfigFile = 'inputs\HurunuiModel.cnf'
-OutputTs = core.run(ModelConfigFile)
+OutputTs = core.main(ModelConfigFile)
