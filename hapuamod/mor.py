@@ -178,14 +178,24 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         MorDt /= 2
         logging.debug('Decreasing morphological timestep to %.1fs', MorDt.seconds)
     
-    if MaxMorChangeRate * MorDt.seconds > NumericalPars['MaxMorChange']:
-        assert MorDt.seconds <= TimePars['MorDtMin'].seconds
-        logging.warning('Max morphological change (%.3fm) exceeds "MaxMorChange" but MorDt already at minimum',
-                        MaxMorChangeRate * MorDt.seconds)
-    
     while MorDt.seconds < TimePars['MorDtMax'].seconds and MaxMorChangeRate * MorDt.seconds < NumericalPars['MaxMorChange']/2:
         MorDt *= 2
         logging.debug('Increasing morphological timestep to %.1fs', MorDt.seconds)
+    
+    # If morphological change is going to exceed MaxMorChange despite adaptive timestepping then:
+    #  1. issue warning
+    #  2. limit change (while preserving sign) to prevent model blowing up (even though this may be at the expense of mass balance)
+    if MaxMorChangeRate * MorDt.seconds > NumericalPars['MaxMorChange']:
+        assert MorDt.seconds <= TimePars['MorDtMin'].seconds
+        logging.warning('Max morphological change (%.3fm) exceeds "MaxMorChange (%.3fm)" but MorDt already at minimum. Limiting change to +/- %.3fm',
+                        MaxMorChangeRate * MorDt.seconds, NumericalPars['MaxMorChange'], NumericalPars['MaxMorChange'])
+        MorChangeRateLimit = NumericalPars['MaxMorChange'] / MorDt.seconds
+        RivBedAggRate = np.minimum(np.maximum(RivBedAggRate, -MorChangeRateLimit), MorChangeRateLimit)
+        ShoreYChangeRate = np.minimum(np.maximum(ShoreYChangeRate, -MorChangeRateLimit), MorChangeRateLimit)
+        ShoreZChangeRate = np.minimum(np.maximum(ShoreZChangeRate, -MorChangeRateLimit), MorChangeRateLimit)
+        OutletEndWideningRate = np.minimum(np.maximum(OutletEndWideningRate, -MorChangeRateLimit), MorChangeRateLimit)
+        OutletEndAggRate = np.minimum(np.maximum(OutletEndAggRate, -MorChangeRateLimit), MorChangeRateLimit)
+        OutletEndXMoveRate = min(max(OutletEndXMoveRate, -MorChangeRateLimit), MorChangeRateLimit)
     
     #%% Update morphology
         
