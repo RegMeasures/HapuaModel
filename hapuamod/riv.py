@@ -304,7 +304,7 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
                 'online' - similar to OnlineLagoon
             ChanFlag: Flags showing the origin of the different cross-sections
                 making up the outlet channel. 0 = river, 1 = lagoon,
-                2 = outlet channel ends, 3 = outlet channel.
+                2 = outlet channel, 3 = outlet channel end, 4 = dummy XS in sea.
             Closed (boolean): Is the channel closed or open at its downstream 
                 end?
     """
@@ -312,9 +312,9 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
     X0Ix = np.where(ShoreX==0)[0][0]
     
     # Handle the postprocessing situation when we don't have (or need) a dummy XS in the sea
-    if OutletEndDep.size == 2:
+    if OutletEndDep.size == 1:
         OutletEndDep = np.append(OutletEndDep, np.nan)
-    if OutletEndVel.size == 2:
+    if OutletEndVel.size == 1:
         OutletEndVel = np.append(OutletEndVel, np.nan)
     
     if not Closed:
@@ -331,11 +331,11 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
         OutletWidth[np.isnan(OutletWidth)] = 0.
     
         # Check if closure has occured in outlet channel (only if not already closed from previous timestep).
-        if np.any(OutletWidth<=PhysicalPars['MinOutletWidth']) | np.any(OutletEndWidth<=PhysicalPars['MinOutletWidth']):
+        if np.any(OutletWidth<=PhysicalPars['MinOutletWidth']) | (OutletEndWidth<=PhysicalPars['MinOutletWidth']):
             Closed = True
             for ClosedIx in OutletChanIx[OutletWidth<=PhysicalPars['MinOutletWidth']]:
                 logging.info('Outlet channel closed by wave washover at X = %f' % ShoreX[ClosedIx])
-            if OutletEndWidth[1] <= PhysicalPars['MinOutletWidth']:
+            if OutletEndWidth <= PhysicalPars['MinOutletWidth']:
                 logging.info('Downstream end of outlet channel closed by longshore transport (EndX = %f)' % OutletEndX[1])
             OutletChanIx = np.empty(0)
         elif np.min(OutletWidth) < PhysicalPars['MinOutletWidth'] * 3:
@@ -408,7 +408,7 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
         ChanWidth = np.concatenate([np.full(RiverElev.size, PhysicalPars['RiverWidth']), 
                                     LagoonWidth[OnlineLagoon]])
     else: # open
-        ChanDx = np.full(RiverElev.size + OnlineLagoon.size + OutletChanIx.size + 2, Dx)
+        ChanDx = np.full(RiverElev.size + OnlineLagoon.size + OutletChanIx.size + 1, Dx)
         if OutletEndX[0] < OutletEndX[1]:
             # Outlet angles from L to R
             ChanDx[-2] += OutletEndX[1] % Dx
@@ -417,13 +417,13 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
             ChanDx[-2] += Dx - (OutletEndX[1] % Dx)
         ChanFlag = np.concatenate([np.full(RiverElev.size, 0), 
                                    np.full(OnlineLagoon.size, 1), 
-                                   [2], np.full(OutletChanIx.size, 3), [2,4]])
+                                   np.full(OutletChanIx.size, 2), [3,4]])
         ChanElev = np.concatenate([RiverElev, ShoreZ[OnlineLagoon,3], 
-                                   [OutletEndElev[0]], ShoreZ[OutletChanIx,1], 
-                                   [OutletEndElev[1], min(PhysicalPars['MaxOutletElev'], OutletEndElev[1])]])
+                                   ShoreZ[OutletChanIx,1], 
+                                   [OutletEndElev, min(PhysicalPars['MaxOutletElev'], OutletEndElev)]])
         ChanWidth = np.concatenate([np.full(RiverElev.size, PhysicalPars['RiverWidth']), 
-                                    LagoonWidth[OnlineLagoon], [OutletEndWidth[0]],
-                                    OutletWidth, np.full(2, OutletEndWidth[1])])
+                                    LagoonWidth[OnlineLagoon], OutletWidth, 
+                                    np.full(2, OutletEndWidth)])
     LagArea = np.zeros(ChanElev.size)
     LagArea[RiverElev.size] = StartArea
     LagArea[RiverElev.size + OnlineLagoon.size - 1] = EndArea
@@ -438,14 +438,12 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
     else:
         ChanDep = np.concatenate([RivDep,
                                   LagoonWL[OnlineLagoon]-ShoreZ[OnlineLagoon,3],
-                                  [OutletEndDep[0]], 
                                   OutletDep[OutletChanIx], 
-                                  OutletEndDep[1:]])
+                                  OutletEndDep])
         ChanVel = np.concatenate([RivVel,
-                                  LagoonVel[OnlineLagoon],
-                                  [OutletEndVel[0]], 
+                                  LagoonVel[OnlineLagoon], 
                                   OutletVel[OutletChanIx], 
-                                  OutletEndVel[1:]])
+                                  OutletEndVel])
     # If depth is missing then interpolate it
     DepNan = np.isnan(ChanDep)
     if np.any(DepNan):
@@ -511,9 +509,9 @@ def storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, ChanFlag,
         OutletEndDep = np.full(3, np.nan)
         OutletEndVel = np.full(3, np.nan)
     else:        
-        OutletDep[OutletChanIx] = ChanDep[ChanFlag==3]
-        OutletVel[OutletChanIx] = ChanVel[ChanFlag==3]
-        EndNodes = np.logical_or(ChanFlag==2, ChanFlag==4)
+        OutletDep[OutletChanIx] = ChanDep[ChanFlag==2]
+        OutletVel[OutletChanIx] = ChanVel[ChanFlag==2]
+        EndNodes = np.logical_or(ChanFlag==3, ChanFlag==4)
         OutletEndDep = ChanDep[EndNodes]
         OutletEndVel = ChanVel[EndNodes]
     
@@ -589,11 +587,11 @@ def storeBedload(Bedload, NTransects, OnlineLagoon, OutletChanIx,
     OutletBedload = np.zeros(NTransects)
     LagoonBedload = np.zeros(NTransects)
     if Closed:
-        OutletEndBedload = np.zeros(2)
+        OutletEndBedload = 0.0
         LagoonBedload[OnlineLagoon[:-1]] = Bedload[ChanFlag[:-1]==1]
     else:        
-        OutletBedload[OutletChanIx] = Bedload[ChanFlag[:-1]==3]
-        OutletEndBedload = Bedload[ChanFlag[:-1]==2]
+        OutletBedload[OutletChanIx] = Bedload[ChanFlag[:-1]==2]
+        OutletEndBedload = Bedload[ChanFlag[:-1]==3]
         LagoonBedload[OnlineLagoon] = Bedload[ChanFlag[:-1]==1]
     
     return (LagoonBedload, OutletBedload, OutletEndBedload)

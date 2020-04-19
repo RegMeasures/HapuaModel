@@ -16,9 +16,10 @@ def newOutFile(FileName, ModelName, StartTime,
                Overwrite=False):
     """ Create new netCDF output file for hapuamod results
     
-        newOutFile(FileName, ModelName, ShoreX, Dx, RiverElev, 
-                   Origin, ShoreNormDir, RiverWidth,
-                   StartTime, Overwrite=False)
+        newOutFile(FileName, ModelName, StartTime, 
+                   ShoreX, Dx, RiverElev, 
+                   Origin, ShoreNormDir, PhysicalPars,
+                   Overwrite=False)
     
         Parameters:
             FileName (string):
@@ -268,30 +269,31 @@ def newOutFile(FileName, ModelName, StartTime,
     
     # Outlet end width
     OutletEndBVar = NcFile.createVariable('outlet_end_width', np.float32, 
-                                          (TimeDim.name, EndsDim.name))
+                                          TimeDim.name)
     OutletEndBVar.units = 'm'
     OutletEndBVar.long_name = 'Outlet end width'
     
     # Outlet end elevation
     OutletEndElevVar = NcFile.createVariable('outlet_end_z', np.float32, 
-                                             (TimeDim.name, EndsDim.name))
+                                             TimeDim.name)
     OutletEndElevVar.units = 'm'
     OutletEndElevVar.long_name = 'Outlet end bed elevation'
     
     # Outlet end water level
     OutletEndWlVar = NcFile.createVariable('outlet_end_wl', np.float32, 
-                                           (TimeDim.name, EndsDim.name))
+                                           TimeDim.name)
     OutletEndWlVar.units = 'm'
     OutletEndWlVar.long_name = 'Outlet end water level'
     
     # Outlet end velocity
     OutletEndVelVar = NcFile.createVariable('outlet_end_vel', np.float32, 
-                                            (TimeDim.name, EndsDim.name))
+                                            TimeDim.name)
     OutletEndVelVar.units = 'm/s'
     OutletEndVelVar.long_name = 'Outlet end velocity (+ve = outflowing i.e. towards sea)'
     
     # Outlet end bedload transport
-    OutletEndBedloadVar = NcFile.createVariable('outlet_end_bedload', np.float32, (TimeDim.name, EndsDim.name))
+    OutletEndBedloadVar = NcFile.createVariable('outlet_end_bedload', np.float32, 
+                                                TimeDim.name)
     OutletEndBedloadVar.units = 'm3(bulk including voids)/s'
     OutletEndBedloadVar.long_name = 'bedlaod transport at outlet channel ends (+ve = outflowing i.e. towards sea)'
     
@@ -369,10 +371,10 @@ def writeCurrent(FileName, CurrentTime, SeaLevel, RivFlow,
     
     # Append new data to outlet end variables
     NcFile.variables['outlet_end_x'][TimeIx,:] = OutletEndX
-    NcFile.variables['outlet_end_width'][TimeIx,:] = OutletEndWidth
-    NcFile.variables['outlet_end_z'][TimeIx,:] = OutletEndElev
-    NcFile.variables['outlet_end_wl'][TimeIx,:] = OutletEndElev + OutletEndDep[0:2]
-    NcFile.variables['outlet_end_vel'][TimeIx,:] = OutletEndVel[0:2]
+    NcFile.variables['outlet_end_width'][TimeIx] = OutletEndWidth
+    NcFile.variables['outlet_end_z'][TimeIx] = OutletEndElev
+    NcFile.variables['outlet_end_wl'][TimeIx] = OutletEndElev + OutletEndDep[0]
+    NcFile.variables['outlet_end_vel'][TimeIx] = OutletEndVel[0]
     NcFile.variables['outlet_closed'][TimeIx] = Closed
     
     NcFile.close()
@@ -427,10 +429,10 @@ def readTimestep(NcFile, TimeIx):
     OutletVel = NcFile.variables['outlet_vel'][TimeIx,:]
     
     OutletEndX = NcFile.variables['outlet_end_x'][TimeIx,:].squeeze()
-    OutletEndWidth = NcFile.variables['outlet_end_width'][TimeIx,:].squeeze()
-    OutletEndElev = NcFile.variables['outlet_end_z'][TimeIx,:].squeeze()
-    OutletEndVel = NcFile.variables['outlet_end_vel'][TimeIx,:].squeeze()
-    OutletEndWL = NcFile.variables['outlet_end_wl'][TimeIx,:].squeeze()
+    OutletEndWidth = NcFile.variables['outlet_end_width'][TimeIx]
+    OutletEndElev = NcFile.variables['outlet_end_z'][TimeIx]
+    OutletEndVel = NcFile.variables['outlet_end_vel'][TimeIx]
+    OutletEndWL = NcFile.variables['outlet_end_wl'][TimeIx]
     Closed = bool(NcFile.variables['outlet_closed'][TimeIx])
     
     WavePower=None

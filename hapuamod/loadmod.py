@@ -92,10 +92,10 @@ def loadModel(ModelConfigFile):
             upstream of lagoon (m)
         OutletEndX (np.ndarray(float64)): X-coordinate of upstream and 
             downstream ends of the outlet channel (m) 
-        OutletEndWidth (np.ndarray(float64)): Width of the upstream and 
-            downstream ends of the outlet channel (m)
-        OutletEndElev (np.ndarray(float64)): Bed level of the upstream and 
-            downstream ends of the outlet channel (m)
+        OutletEndWidth (float64): Width of the downstream end of the 
+            outlet channel (m)
+        OutletEndElev (float64): Bed level of the downstream end of the 
+            outlet channel (m)
         TimePars (dict): Time parameters including:
             StartTime (pd.datetime): Start date/time of simulation
             EndTime (pd.datetime): End date/time of simulation period
@@ -348,8 +348,8 @@ def loadModel(ModelConfigFile):
         
         # Setup outlet channel
         OutletEndX = np.asarray([0., 0.])
-        OutletEndWidth = np.full(2, IniCond['OutletWidth'])
-        OutletEndElev = np.asarray([IniCond['LagoonBed'], IniCond['OutletBed']])
+        OutletEndWidth = IniCond['OutletWidth']
+        OutletEndElev = IniCond['OutletBed']
         
         LagoonMask = ShoreX == 0
         ShoreY[LagoonMask, 1] = -PhysicalPars['SpitWidth']
@@ -538,18 +538,18 @@ def loadModel(ModelConfigFile):
                 OutletEndX[1] = np.min(ShoreX[OutletMask]) - Dx/2
                 
         # Set outlet end width
-        OutletEndWidth = np.full(2, IniCond['OutletWidth'])
+        OutletEndWidth = IniCond['OutletWidth']
         
         # Initialise lagoon bed elevation
         ShoreZ[: ,3] = np.full(ShoreX.size, IniCond['LagoonBed'])
         
         # Initialise outlet channel bed elevation
-        BedLevel = np.linspace(IniCond['LagoonBed'], IniCond['OutletBed'], np.sum(OutletMask)+2)
+        BedLevel = np.linspace(IniCond['LagoonBed'], IniCond['OutletBed'], np.sum(OutletMask)+1)
         if OutletToR:
-            ShoreZ[OutletMask, 1] = BedLevel[1:-1]
+            ShoreZ[OutletMask, 1] = BedLevel[:-1]
         else:
-            ShoreZ[OutletMask, 1] = np.flipud(BedLevel[1:-1])
-        OutletEndElev = BedLevel[[0,-1]]
+            ShoreZ[OutletMask, 1] = np.flipud(BedLevel[:-1])
+        OutletEndElev = BedLevel[-1]
         
         # Initialise barrier crest elevation
         ShoreZ[:, 0] = np.full(ShoreX.size, IniCond['BarrierElev'])

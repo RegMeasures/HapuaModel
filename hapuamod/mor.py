@@ -66,8 +66,8 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     #%% Calculate rates of movement of morphology due to river forcing
     ShoreYChangeRate = np.zeros(ShoreY.shape)
     ShoreZChangeRate = np.zeros(ShoreZ.shape)
-    OutletEndWideningRate = np.zeros(2)
-    OutletEndXMoveRate = 0
+    OutletEndWideningRate = 0.0
+    OutletEndXMoveRate = 0.0
     
     if Closed:
         # Rate of change in volume at each cross-section (except the upstream Bdy)
@@ -81,8 +81,8 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         AspectRatio = ChanWidth[1:-1]/ChanDep[1:-1]
         RivXS = ChanFlag[1:-1]==0
         LagXS = ChanFlag[1:-1]==1
-        OutXS = ChanFlag==3
-        OutEndXS = np.where(ChanFlag==2)[0]
+        OutXS = ChanFlag==2
+        OutEndXS = ChanFlag[1:-1]==3
     TooWide = AspectRatio > PhysicalPars['WidthRatio']
     
     EroVolRate = - np.minimum(DVolRate, 0.0)  # Total volumetric erosion rate (+ve = erosion)
@@ -100,7 +100,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                                           / ((ShoreY[OnlineLagoon, 3] - ShoreY[OnlineLagoon, 4]) * Dx))
     if not Closed:
         ShoreZChangeRate[OutletChanIx, 1] += (BedDepRate[OutXS[1:-1]] - BedEroRate[OutXS[1:-1]]) / (ChanWidth[OutXS] * Dx)
-        OutletEndAggRate = (BedDepRate[OutEndXS-1] - BedEroRate[OutEndXS-1]) / (OutletEndWidth * Dx)
+        OutletEndAggRate = (BedDepRate[OutEndXS] - BedEroRate[OutEndXS]) / (OutletEndWidth * Dx)
     else:
         OutletEndAggRate = 0.0
     
@@ -114,14 +114,13 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         ShoreYChangeRate[OutletChanIx,2] -= (BankEroRate[OutXS[1:-1]]/2) / ((ShoreZ[OutletChanIx,2] - ShoreZ[OutletChanIx,1]) * Dx)
         
         # Outlet end bank erosion
-        OutletEndWideningRate[0] += BankEroRate[OutEndXS[0]-1] / ((ShoreZ[OutletChanIx[0],0] - OutletEndElev[0]) * Dx)
-        OutletEndWideningRate[1] += BankEroRate[OutEndXS[1]-1] / ((PhysicalPars['BeachTopElev'] - OutletEndElev[1]) * PhysicalPars['SpitWidth'])
+        OutletEndWideningRate += BankEroRate[OutEndXS] / ((PhysicalPars['BeachTopElev'] - OutletEndElev) * PhysicalPars['SpitWidth'])
         if OutletEndX[0] < OutletEndX[1]:
             # Outlet angles from L to R
-            OutletEndXMoveRate += (OutletEndWideningRate[1] / 2) * PhysicalPars['OutletBankEroFac']
+            OutletEndXMoveRate += (OutletEndWideningRate / 2) * PhysicalPars['OutletBankEroFac']
         elif OutletEndX[0] > OutletEndX[1]:
             # Outlet angles from R to L
-            OutletEndXMoveRate -= (OutletEndWideningRate[1] / 2) * PhysicalPars['OutletBankEroFac']
+            OutletEndXMoveRate -= (OutletEndWideningRate / 2) * PhysicalPars['OutletBankEroFac']
         
         # Distribute sediment discharged from outlet onto shoreline 
         BedloadToShoreRate = ((Dx * Bedload[-1] / PhysicalPars['OutletSedSpreadDist']) * 
@@ -140,16 +139,16 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             ShoreYChangeRate[OutletRbShoreIx,0] -= (LST[OutletRbShoreIx-1]
                                                     / (ShorefaceHeight[OutletRbShoreIx] * Dx))
             WidthReductionRate = (LST[OutletRbShoreIx-1] 
-                                  / ((PhysicalPars['BeachTopElev'] - OutletEndElev[1]) * PhysicalPars['SpitWidth']))
-            OutletEndWideningRate[1] -= WidthReductionRate
+                                  / ((PhysicalPars['BeachTopElev'] - OutletEndElev) * PhysicalPars['SpitWidth']))
+            OutletEndWideningRate -= WidthReductionRate
             OutletEndXMoveRate += WidthReductionRate/2
         else:
             # Transport from R to L
             ShoreY[OutletRbShoreIx-1,0] += (LST[OutletRbShoreIx-1] 
                                             / (ShorefaceHeight[OutletRbShoreIx-1] * Dx))
             WidthReductionRate = (-LST[OutletRbShoreIx-1]
-                                  / ((PhysicalPars['BeachTopElev'] - OutletEndElev[1]) * PhysicalPars['SpitWidth']))
-            OutletEndWideningRate[1] -= WidthReductionRate
+                                  / ((PhysicalPars['BeachTopElev'] - OutletEndElev) * PhysicalPars['SpitWidth']))
+            OutletEndWideningRate -= WidthReductionRate
             OutletEndXMoveRate -= WidthReductionRate/2
     
     #%% Rates of change of morphology due to cross-shore morphology (overtopping etc)
@@ -170,8 +169,8 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     MaxMorChangeRate = max(np.max(np.abs(RivBedAggRate)),
                            np.max(np.abs(ShoreYChangeRate)),
                            np.max(np.abs(ShoreZChangeRate)),
-                           np.max(np.abs(OutletEndWideningRate)),
-                           np.max(np.abs(OutletEndAggRate)),
+                           abs(OutletEndWideningRate),
+                           abs(OutletEndAggRate),
                            abs(OutletEndXMoveRate))
     
     while MorDt.seconds > TimePars['MorDtMin'].seconds and MaxMorChangeRate * MorDt.seconds > NumericalPars['MaxMorChange']:
@@ -194,7 +193,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         ShoreYChangeRate = np.minimum(np.maximum(ShoreYChangeRate, -MorChangeRateLimit), MorChangeRateLimit)
         ShoreZChangeRate = np.minimum(np.maximum(ShoreZChangeRate, -MorChangeRateLimit), MorChangeRateLimit)
         OutletEndWideningRate = np.minimum(np.maximum(OutletEndWideningRate, -MorChangeRateLimit), MorChangeRateLimit)
-        OutletEndAggRate = np.minimum(np.maximum(OutletEndAggRate, -MorChangeRateLimit), MorChangeRateLimit)
+        OutletEndAggRate = min(max(OutletEndAggRate, -MorChangeRateLimit), MorChangeRateLimit)
         OutletEndXMoveRate = min(max(OutletEndXMoveRate, -MorChangeRateLimit), MorChangeRateLimit)
     
     #%% Update morphology
@@ -291,9 +290,9 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             # Dist from new outlet section to shoreline = PhysicalPars['SpitWidth']
             ShoreY[ExtendMask,1] = ShoreY[ExtendMask,0] - PhysicalPars['SpitWidth']
             # Width of new outlet section = end width
-            ShoreY[ExtendMask,2] = ShoreY[ExtendMask,1] - OutletEndWidth[1]
+            ShoreY[ExtendMask,2] = ShoreY[ExtendMask,1] - OutletEndWidth
             # Bed level of new outlet section  = end bed level
-            ShoreZ[ExtendMask,1] = OutletEndElev[1]
+            ShoreZ[ExtendMask,1] = OutletEndElev
             # Barrier height of inner barrier = Barrier height of old outer barrier
             ShoreZ[ExtendMask,2] = ShoreZ[ExtendMask,0]
             # Barrier height of outer barrier = PhysicalPars['BeachTopElev']
@@ -559,15 +558,15 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             else:
                 # Outlet angles from R to L 
                 OutletEndX[1] = ShoreX[BreachIx] + Dx/2
-            OutletEndWidth[1] = Dx
-            OutletEndElev[1] = (ShoreZ[BreachIx,1] + PhysicalPars['MaxOutletElev'])/2
+            OutletEndWidth = Dx
+            OutletEndElev = (ShoreZ[BreachIx,1] + PhysicalPars['MaxOutletElev'])/2
             # TODO: close sediment balance by putting breach eroded sed onto shore
         else:
             # Lagoon breach (i.e. new outlet channel)
             logging.info('Breach/creation of new outlet channel at X = %f' % ShoreX[BreachIx])
             # Assume breach of width Dx with bed level linearly interpolated 
             # between lagoon level at upstream end and PhysicalPars['MaxOutletElev']
-            OutletEndWidth[:] = Dx
+            OutletEndWidth = Dx
             ShoreY[BreachIx,1] = min(ShoreY[BreachIx,0]-PhysicalPars['SpitWidth'],
                                      (ShoreY[BreachIx,0]+ShoreY[BreachIx,3])/2 + Dx/2)
             ShoreY[BreachIx,2] = ShoreY[BreachIx,1] - Dx
@@ -576,9 +575,8 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             
             ShoreZ[BreachIx, 2] = ShoreZ[BreachIx, 0]
             
-            OutletEndElev[0] = 0.25 * PhysicalPars['MaxOutletElev'] + 0.75 * ShoreZ[BreachIx,3]
-            ShoreZ[BreachIx,1] = 0.5 * PhysicalPars['MaxOutletElev'] + 0.5 * ShoreZ[BreachIx,3]
-            OutletEndElev[1] = 0.75 * PhysicalPars['MaxOutletElev'] + 0.25 * ShoreZ[BreachIx,3]
+            ShoreZ[BreachIx,1] = 0.34 * PhysicalPars['MaxOutletElev'] + 0.66 * ShoreZ[BreachIx,3]
+            OutletEndElev = 0.66 * PhysicalPars['MaxOutletElev'] + 0.34 * ShoreZ[BreachIx,3]
             
             # Check the newly created outlet channel fits into the barrier...
             if ShoreY[BreachIx,3] >= ShoreY[BreachIx,2]:
