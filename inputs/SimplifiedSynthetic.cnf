@@ -44,7 +44,7 @@ ShorelineLengthLeft = 2000
 # Model domain extent to right of river centerline when looking to sea [m]
 ShorelineLengthRight = 700
 # Beach width in initial condition (uniform across whole model domain, no lagoon) [m]
-BeachWidth = 30
+BeachWidth = 40
 
 [InitialConditions]
 # Initial outlet width [m]
@@ -54,7 +54,7 @@ OutletBed = -1.0
 # Lagoon bed elevation [m]
 LagoonBed = -1.0
 # Barrier crest height [m]
-BarrierElev = 4.0
+BarrierElev = 3.5
 
 [Time]
 # Simulation start date [D MMM YYYY]
@@ -70,7 +70,7 @@ MorDtMax = 3840
 
 [PhysicalParameters]
 # K coefficient for longshore transport calculation (non-dimensional)
-Kcoef = 0.015
+Kcoef = 0.017
 # Sediment density [kg/m^3]
 RhoSed = 2650
 # Seawater density [kg/m^3]
@@ -93,7 +93,7 @@ BeachSlope = 0.13
 # River bed slope upstream of lagoon [m/m]
 RiverSlope = 0.003
 # Grain size for fluvial sediment transport [m]
-GrainSize = 0.025
+GrainSize = 0.018
 # Critical shields stress for initiation of bedload transport
 CritShieldsStress = 0.03
 # Upstream river length to simulate [m]
@@ -111,14 +111,14 @@ BackshoreElev = 10
 # cross-section and should be below the minimum sea level.
 MaxOutletElev = -2.0
 # Overtopping coefficient - controls magnitude of overtopping sediment flux [s^-1]
-OT_coef = 0.0002
+OT_coef = 0.00015
 # Overtopping exponent (recommended value = 2)
 OT_exp = 2
 # Crest height and width of 'new' barrier created by longshore transport across river mouth [m]
 BeachTopElev = 2
 SpitWidth = 10
 # Target crest height and width for fully developed barrier [m]
-TargetBarHeight = 4.8
+TargetBarHeight = 5.5
 TargetBarWidth = 90
 # Threshold width for setting outlet channel to closed [m]
 MinOutletWidth = 1.0
