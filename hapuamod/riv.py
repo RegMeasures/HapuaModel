@@ -506,8 +506,8 @@ def storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, ChanFlag,
     OutletDep = np.full(LagoonElev.size, np.nan)
     OutletVel = np.full(LagoonElev.size, np.nan)
     if Closed:
-        OutletEndDep = np.full(3, np.nan)
-        OutletEndVel = np.full(3, np.nan)
+        OutletEndDep = np.full(2, np.nan)
+        OutletEndVel = np.full(2, np.nan)
     else:        
         OutletDep[OutletChanIx] = ChanDep[ChanFlag==2]
         OutletVel[OutletChanIx] = ChanVel[ChanFlag==2]
@@ -521,7 +521,9 @@ def storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, ChanFlag,
 def calcBedload(z, B, h, V, dx, PhysicalPars, Psi):
     """ Calculate bedload transport using Bagnold 1980 streampower approach
     
-        Uses a central weighting approach
+        Note that output is reach, rather than cross-section bedload transport.
+        The conversion from cross-section to reach uses a partial upwinding 
+        approach controlled by the spatial weighting factor Psi.
         
         Parameters:
             z = bed level at each cross-section [m]
@@ -534,7 +536,7 @@ def calcBedload(z, B, h, V, dx, PhysicalPars, Psi):
             Psi = spatial weighting factor for bedload transport
         
         Returns:
-            Qs = numpy array of bedload transport at each cross-section 
+            Qs = numpy array of bedload transport in each reach 
                  [m3(bulk including voids)/s]
         
         Bagnold R.A. (1980) An empirical correlation of bedload transport rates
@@ -581,7 +583,7 @@ def storeBedload(Bedload, NTransects, OnlineLagoon, OutletChanIx,
         lagoon itself, and the outlet channel. This function extracts the 
         bedload in the lagoon and outlet channel and stores them in the
         shore parallel model schematisation. This is necessary for saving the 
-        bedload transpor trate into the output netCDF file.
+        bedload transport rate into the output netCDF file.
     """
     
     OutletBedload = np.zeros(NTransects)

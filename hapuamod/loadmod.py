@@ -92,10 +92,10 @@ def loadModel(ModelConfigFile):
             upstream of lagoon (m)
         OutletEndX (np.ndarray(float64)): X-coordinate of upstream and 
             downstream ends of the outlet channel (m) 
-        OutletEndWidth (float64): Width of the downstream end of the 
-            outlet channel (m)
-        OutletEndElev (float64): Bed level of the downstream end of the 
-            outlet channel (m)
+        OutletEndWidth (0-dimensional np.ndarray(float64)): Width of the 
+            downstream end of the outlet channel (m)
+        OutletEndElev (0-dimensional np.ndarray(float64)): Bed level of the 
+            downstream end of the outlet channel (m)
         TimePars (dict): Time parameters including:
             StartTime (pd.datetime): Start date/time of simulation
             EndTime (pd.datetime): End date/time of simulation period
@@ -348,8 +348,8 @@ def loadModel(ModelConfigFile):
         
         # Setup outlet channel
         OutletEndX = np.asarray([0., 0.])
-        OutletEndWidth = IniCond['OutletWidth']
-        OutletEndElev = IniCond['OutletBed']
+        OutletEndWidth = np.asarray(IniCond['OutletWidth'])
+        OutletEndElev = np.asarray(IniCond['OutletBed'])
         
         LagoonMask = ShoreX == 0
         ShoreY[LagoonMask, 1] = -PhysicalPars['SpitWidth']
@@ -538,7 +538,7 @@ def loadModel(ModelConfigFile):
                 OutletEndX[1] = np.min(ShoreX[OutletMask]) - Dx/2
                 
         # Set outlet end width
-        OutletEndWidth = IniCond['OutletWidth']
+        OutletEndWidth = np.asarray(IniCond['OutletWidth'])
         
         # Initialise lagoon bed elevation
         ShoreZ[: ,3] = np.full(ShoreX.size, IniCond['LagoonBed'])
@@ -549,7 +549,7 @@ def loadModel(ModelConfigFile):
             ShoreZ[OutletMask, 1] = BedLevel[:-1]
         else:
             ShoreZ[OutletMask, 1] = np.flipud(BedLevel[:-1])
-        OutletEndElev = BedLevel[-1]
+        OutletEndElev = np.asarray(BedLevel[-1])
         
         # Initialise barrier crest elevation
         ShoreZ[:, 0] = np.full(ShoreX.size, IniCond['BarrierElev'])
