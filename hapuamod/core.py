@@ -116,8 +116,8 @@ def main(ModelConfigFile, Overwrite=False):
         try:
             riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed,
                                     ChanDep, ChanVel, ChanDx, 
-                                    TimePars['HydDt'], PhysicalPars['Roughness'], 
-                                    RivFlow, SeaLevel, NumericalPars)
+                                    TimePars['HydDt'], RivFlow, SeaLevel, 
+                                    NumericalPars, PhysicalPars)
         except Exception as ErrMsg:
             logging.warning(ErrMsg)
             logging.warning('Unsteady hydraulics failed at %s. Falling back to quasi-steady for this timestep.' % 

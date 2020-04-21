@@ -149,6 +149,9 @@ def loadModel(ModelConfigFile):
             OutletBankEroFac (float): Proportion of bank erosion occuring on 
                 outside bend of the downstream end of the outlet channel
                 [0 <= OutletBankEroFac <= 1].
+            BarrierPermeability (float): Permeability of barrier expressed in 
+                m3/s, per m length of barrier, per m head difference accross
+                barrier [m/s].
             K2coef (float): Calculated from other inputs for use in calculation
                 of longshore transport rate. 
                 K2 = K / (RhoSed - RhoSea) * g * (1 - VoidRatio))
@@ -255,7 +258,8 @@ def loadModel(ModelConfigFile):
                     'TargetBarWidth': Config['PhysicalParameters']['TargetBarWidth'],
                     'MinOutletWidth': Config['PhysicalParameters']['MinOutletWidth'],
                     'OutletSedSpreadDist': Config['PhysicalParameters']['OutletSedSpreadDist'],
-                    'OutletBankEroFac': Config['PhysicalParameters']['OutletBankEroFac']}
+                    'OutletBankEroFac': Config['PhysicalParameters']['OutletBankEroFac'],
+                    'BarrierPermeability': Config['PhysicalParameters']['BarrierPermeability']}
     
     # Some additional calculated parameters
     GammaLST = ((PhysicalPars['RhoSed'] - PhysicalPars['RhoSea']) * 

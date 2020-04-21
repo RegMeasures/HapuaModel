@@ -75,8 +75,8 @@ plt.plot(ChanDist, ChanDep+ChanElev, 'b-')
 # Unsteady hydraulics
 riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, 
                         ChanDep, ChanVel, ChanDx,
-                        TimePars['HydDt'], PhysicalPars['Roughness'], 
-                        RivFlow, SeaLevel, NumericalPars)
+                        TimePars['HydDt'], RivFlow, SeaLevel, 
+                        NumericalPars, PhysicalPars)
 plt.plot(ChanDist, ChanDep+ChanElev, 'r:')
 
 #%% Test transect plot

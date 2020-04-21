@@ -95,6 +95,7 @@ def newOutFile(FileName, ModelName, StartTime,
     NcFile.MinOutletWidth = PhysicalPars['MinOutletWidth']
     NcFile.OutletSedSpreadDist = PhysicalPars['OutletSedSpreadDist']
     NcFile.OutletBankEroFac = PhysicalPars['OutletBankEroFac']
+    NcFile.BarrierPermeability = PhysicalPars['BarrierPermeability']
     
     # create coordinate variables
     XVar = NcFile.createVariable(XDim.name, np.float32, (XDim.name,))

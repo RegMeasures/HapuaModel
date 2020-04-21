@@ -71,12 +71,13 @@ def solveSteady(ChanDx, ChanElev, ChanWidth, Roughness, Qin, DsWL,
     return ChanDep, ChanVel
 
 def solveFullPreissmann(z, B, LagArea, Closed, h, V, 
-                        dx, dt, n, Q_Ts, DsWl_Ts, NumericalPars):
+                        dx, dt, Q_Ts, DsWl_Ts, NumericalPars, PhysicalPars):
     """ Solve full S-V eqns for a rectangular channel using preissmann scheme.
         Uses a newton raphson solution to the preissmann discretisation of the 
         Saint-Venant equations.
         
-        solveFullPreissmann(z, B, h, V, dx, dt, n, Q, DsWl, Theta, Tol, MaxIt)
+        solveFullPreissmann(z, B, h, V, dx, dt, n, Q_Ts, DsWl_Ts, 
+                            NumericalPars, PhysicalPars))
         
         Parameters:
             z (np.ndarray(float64)): Bed elevation at each node (m)
@@ -90,7 +91,7 @@ def solveFullPreissmann(z, B, LagArea, Closed, h, V,
             dx (np.ndarray(float64)): Length of each reach between nodes (m)
                 note the dx array should be one shorter than for z, B, etc
             dt (pd.timedelta): timestep
-            n (float): mannings 'n' roughness
+            
             Qin (np.ndarray(float64)): List (as np.array) of inflows at 
                 upstream end of channel corresponding to each timestep. 
                 Function will loop over each inflow in turn (m^3/s)
@@ -98,17 +99,25 @@ def solveFullPreissmann(z, B, LagArea, Closed, h, V,
                 boundary water levels at upstream end of channel corresponding 
                 to each timestep. Function will loop over each inflow in turn 
                 (m^3/s)
-            Theta (float): temporal weighting coefficient for preissmann scheme
-            Tol (float): error tolerance (both m and m/s)
-            MaxIt (integer): maximum number of iterations to find solution
-            g (float): 
+            NumericalPars (dict): Numerical parameters including:
+                Theta (float): temporal weighting coefficient for preissmann scheme
+                Tol (float): error tolerance (both m and m/s)
+                MaxIt (integer): maximum number of iterations to find solution
+            PhysicalPars (dict): Physical parameters including:
+                Gravity (float): gravity [m/s2]
+                Roughness (float): mannings 'n' roughness
+                Barrier Permeability (float): permeability of the gravel 
+                    barrier in m3/s, per m length of barrier, per m head 
+                    difference accross barrier [m/s].
         
         Modifies in place:
             h
             V
         
     """
-    g = 9.81                    # gravity [m/s^2]
+    g = PhysicalPars['Gravity']
+    n = PhysicalPars['Roughness']
+    P = PhysicalPars['BarrierPermeability']
     
     Theta = NumericalPars['Theta']
     Beta = NumericalPars['Beta']
@@ -129,13 +138,22 @@ def solveFullPreissmann(z, B, LagArea, Closed, h, V,
     dx2[-1] = dx[-1]
     Be = B + LagArea/dx2
     
-    # Pre-compute some variables required within the loop
-    A = h*B                     # area of flow at each XS [m^2]
+    # Pre compute some constant values which get used a lot 
+    # (to save having to calculate them in the loop)
+    dt_P_Theta = dt*P*Theta
+    g_dt_Theta = g*dt*Theta
+    dtdx = dt/dx
+    Theta1 = 1-Theta
+    
+    # Pre-compute some variables required for the start of the first timestep of the loop
+    A = h*B                                # area of flow at each XS [m^2]
     Sf = V*np.abs(V) * (n**2) / (h**(4/3)) # friction slope at each XS [m/m]
+    DsWl = z[-1] + h[-1]
     
     # Main timestepping loop
     for StepNo in range(Q_Ts.shape[0]):
         Q = Q_Ts[StepNo]
+        DsWl_old = DsWl
         DsWl = DsWl_Ts[StepNo]
         
         V_old = V
@@ -145,16 +163,19 @@ def solveFullPreissmann(z, B, LagArea, Closed, h, V,
         
         # Constant parts of the S-V Equations which can be computed outside the loop
         # For continuity equation
-        C1 = (h_old[:-1]*Be[:-1] + h_old[1:]*Be[1:] 
-              - 2*(dt/dx)*(1-Theta) * (V_old[1:]*A_old[1:] - V_old[:-1]*A_old[:-1]))
+        C1 = (h_old[1:]*Be[1:] + h_old[:-1]*Be[:-1]
+              - 2*(dtdx)*(1-Theta) * (V_old[1:]*A_old[1:] - V_old[:-1]*A_old[:-1])
+              - dt*P*(z[1:] + z[:-1] 
+                      - 2*Theta * DsWl 
+                      + Theta1 * (h_old[1:] + h_old[:-1] - 2*DsWl_old)))
         
         # For momentum equation
         C2 = (V_old[:-1]*A_old[:-1] + V_old[1:]*A_old[1:]
-              -2*Beta*(dt/dx)*(1-Theta) * (V_old[1:]*np.abs(V_old[1:])*A_old[1:]
-                                           - V_old[:-1]*np.abs(V_old[:-1])*A_old[:-1])
-              - g*(dt/dx)*(1-Theta) * (A_old[1:] + A_old[:-1]) * (h_old[1:]-h_old[:-1])
-              + g*dt*(1-Theta) * (A_old[1:]*(S_0 - Sf_old[1:]) 
-                                  + A_old[:-1]*(S_0 - Sf_old[:-1])))
+              -2*Beta*(dtdx)*Theta1 * (V_old[1:]*np.abs(V_old[1:])*A_old[1:]
+                                       - V_old[:-1]*np.abs(V_old[:-1])*A_old[:-1])
+              - g*(dtdx)*Theta1 * (A_old[1:] + A_old[:-1]) * (h_old[1:]-h_old[:-1])
+              + g*dt*Theta1 * (A_old[1:]*(S_0 - Sf_old[1:]) 
+                               + A_old[:-1]*(S_0 - Sf_old[:-1])))
         
         # Iterative solution
         ItCount = 0
@@ -165,16 +186,18 @@ def solveFullPreissmann(z, B, LagArea, Closed, h, V,
             Err[0] = A[0]*V[0]-Q
             
             # Error in continuity equation
-            Err[np.arange(1,2*N-1,2)] = (h[:-1]*Be[:-1] + h[1:]*Be[1:]
-                                         + 2*(dt/dx)*Theta * (V[1:]*A[1:] - V[:-1]*A[:-1])) - C1
+            Err[np.arange(1,2*N-1,2)] = (h[1:]*Be[1:] + h[:-1]*Be[:-1]
+                                         + 2*dtdx*Theta * (V[1:]*A[1:] - V[:-1]*A[:-1])
+                                         + dt_P_Theta * (h[1:] + h[:-1]) 
+                                         - C1)
             
             # Error in momentum equation
             Err[np.arange(2,2*N-1,2)] = (V[:-1]*A[:-1] + V[1:]*A[1:]
-                                         + 2*Beta*(dt/dx)*Theta * (V[1:]*np.abs(V[1:])*A[1:]
+                                         + 2*Beta*dtdx*Theta * (V[1:]*np.abs(V[1:])*A[1:]
                                                                    - V[:-1]*np.abs(V[:-1])*A[:-1])
-                                         + g*(dt/dx)*Theta * (A[1:] + A[:-1]) * (h[1:]-h[:-1])
-                                         - g*dt*Theta * (A[1:]*(S_0-Sf[1:]) + A[:-1]*(S_0-Sf[:-1]))
-                                        ) - C2
+                                         + g*(dtdx)*Theta * (A[1:] + A[:-1]) * (h[1:]-h[:-1])
+                                         - g_dt_Theta * (A[1:]*(S_0-Sf[1:]) + A[:-1]*(S_0-Sf[:-1]))
+                                         - C2)
             
             # Error in Ds Bdy
             if Closed:
@@ -194,33 +217,33 @@ def solveFullPreissmann(z, B, LagArea, Closed, h, V,
             
             # Continuity equation derivatives
             # d/dh[0]
-            a_banded[3,np.arange(0,2*(N)-2,2)] = Be[:-1] - 2*dt/dx*Theta*V[:-1]*B[:-1]
+            a_banded[3,np.arange(0,2*(N)-2,2)] = Be[:-1] - 2*dtdx*Theta*V[:-1]*B[:-1] + dt_P_Theta
             # d/dV[0]
-            a_banded[2,np.arange(1,2*(N)-2,2)] = -2*dt/dx*Theta*A[:-1]
+            a_banded[2,np.arange(1,2*(N)-2,2)] = -2*dtdx*Theta*A[:-1]
             # d/dh[1]
-            a_banded[1,np.arange(2,2*(N),2)] = Be[1:] + 2*dt/dx*Theta*V[1:]*B[1:]
+            a_banded[1,np.arange(2,2*(N),2)]   = Be[1:] + 2*dtdx*Theta*V[1:]*B[1:] + dt_P_Theta
             # d/dV[1]
-            a_banded[0,np.arange(3,2*(N),2)] = 2*dt/dx*Theta*A[1:]
+            a_banded[0,np.arange(3,2*(N),2)]   = 2*dtdx*Theta*A[1:]
             
             # Momentum equation derivatives
             # d/dh[0]
             a_banded[4,np.arange(0,2*(N)-2,2)] = (V[:-1]*B[:-1] 
-                                                  - 2*Beta*(dt/dx)*Theta*V[:-1]**2*B[:-1]
-                                                  + g*Theta*(dt/dx)*(-2*A[:-1] + B[:-1]*h[1:] - A[1:])
-                                                  - g*dt*Theta*B[:-1]*(S_0+(1/3)*Sf[:-1]))
+                                                  - 2*Beta*dtdx*Theta*V[:-1]**2*B[:-1]
+                                                  + g*Theta*dtdx*(-2*A[:-1] + B[:-1]*h[1:] - A[1:])
+                                                  - g_dt_Theta*B[:-1]*(S_0+(1/3)*Sf[:-1]))
             # d/dV[0]
             a_banded[3,np.arange(1,2*(N)-2,2)] = (A[:-1] 
-                                                  - 4*Beta*(dt/dx)*Theta*V[:-1]*A[:-1] 
-                                                  + 2*g*dt*Theta*A[:-1]*Sf[:-1]/V[:-1])
+                                                  - 4*Beta*dtdx*Theta*V[:-1]*A[:-1] 
+                                                  + 2*g_dt_Theta*A[:-1]*Sf[:-1]/V[:-1])
             # d/dh[1]
-            a_banded[2,np.arange(2,2*(N),2)] = (V[1:]*B[1:] 
-                                                + 2*Beta*(dt/dx)*Theta*V[1:]**2*B[1:]
-                                                + g*Theta*(dt/dx)*(2*A[1:] - B[1:]*h[:-1] + A[:-1])
-                                                - g*dt*Theta*B[1:]*(S_0+(1/3)*Sf[1:]))
+            a_banded[2,np.arange(2,2*(N),2)]   = (V[1:]*B[1:] 
+                                                  + 2*Beta*dtdx*Theta*V[1:]**2*B[1:]
+                                                  + g*Theta*dtdx*(2*A[1:] - B[1:]*h[:-1] + A[:-1])
+                                                  - g_dt_Theta*B[1:]*(S_0+(1/3)*Sf[1:]))
             # d/dV[1]
-            a_banded[1,np.arange(3,2*(N),2)] = (A[1:] 
-                                                + 4*Beta*dt/dx*Theta*V[1:]*A[1:] 
-                                                + 2*g*dt*Theta*A[1:]*Sf[1:]/V[1:])
+            a_banded[1,np.arange(3,2*(N),2)]   = (A[1:] 
+                                                  + 4*Beta*dtdx*Theta*V[1:]*A[1:] 
+                                                  + 2*g_dt_Theta*A[1:]*Sf[1:]/V[1:])
             
             # Ds Bdy condition derivatives
             if Closed:
