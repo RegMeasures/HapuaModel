@@ -34,7 +34,7 @@ def main(ModelConfigFile, Overwrite=False):
     RivFlow = interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']])).values
     SeaLevel = interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartTime']])).values
     
-    (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
+    (ChanDx, ChanElev, ChanWidth, LagArea, LagLen, ChanDep, ChanVel, 
      OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
         riv.assembleChannel(ShoreX, ShoreY, ShoreZ,
                             OutletEndX, OutletEndWidth, OutletEndElev, 
@@ -96,7 +96,7 @@ def main(ModelConfigFile, Overwrite=False):
     while MorTime <= TimePars['EndTime']:
         
         # Re-assemble the combined river channel incase it has evolved
-        (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
+        (ChanDx, ChanElev, ChanWidth, LagArea, LagLen, ChanDep, ChanVel, 
          OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
             riv.assembleChannel(ShoreX, ShoreY, ShoreZ, 
                                 OutletEndX, OutletEndWidth, OutletEndElev, 
@@ -114,8 +114,8 @@ def main(ModelConfigFile, Overwrite=False):
         SeaLevel = interpolate_at(SeaLevelTs, HydTimes).values
         
         try:
-            riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed,
-                                    ChanDep, ChanVel, ChanDx, 
+            riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, 
+                                    Closed, ChanDep, ChanVel, ChanDx, 
                                     TimePars['HydDt'], RivFlow, SeaLevel, 
                                     NumericalPars, PhysicalPars)
         except Exception as ErrMsg:

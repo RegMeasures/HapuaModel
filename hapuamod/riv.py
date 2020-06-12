@@ -70,19 +70,21 @@ def solveSteady(ChanDx, ChanElev, ChanWidth, Roughness, Qin, DsWL,
     
     return ChanDep, ChanVel
 
-def solveFullPreissmann(z, B, LagArea, Closed, h, V, 
+def solveFullPreissmann(z, B, LagArea, LagLen, Closed, h, V, 
                         dx, dt, Q_Ts, DsWl_Ts, NumericalPars, PhysicalPars):
     """ Solve full S-V eqns for a rectangular channel using preissmann scheme.
         Uses a newton raphson solution to the preissmann discretisation of the 
         Saint-Venant equations.
         
-        solveFullPreissmann(z, B, h, V, dx, dt, n, Q_Ts, DsWl_Ts, 
-                            NumericalPars, PhysicalPars))
+        solveFullPreissmann(z, B, LagArea, ChanFlag, Closed, h, V, dx, dt, 
+                            Q_Ts, DsWl_Ts, NumericalPars, PhysicalPars))
         
         Parameters:
             z (np.ndarray(float64)): Bed elevation at each node (m)
             B (np.ndarray(float64)): Channel width at each node (m)
             LagArea(np.ndarray(float64)): Offline area connected to each node (m2)
+            LagLen(np.ndarray(float64)): Length of lagoon connected to each 
+                node - used for barrier seepage calculation (m)
             Closed (boolean): Flag indicating zero flow downstream boundary
                 condition.
             h (np.ndarray(float64)): Depth at each node at the last timestep (m)
@@ -123,20 +125,23 @@ def solveFullPreissmann(z, B, LagArea, Closed, h, V,
     Beta = NumericalPars['Beta']
     Tol = NumericalPars['ErrTol']
     MaxIt = NumericalPars['MaxIt']
-    dt = dt.seconds             # timestep for hydraulics [s]
-    N = z.size                  # number of cross-sections
-    S_0 = (z[:-1]-z[1:])/dx     # bed slope in each reach between XS [m/m]
+    dt = dt.seconds          # timestep for hydraulics [s]
+    N = z.size               # number of cross-sections
+    S_0 = (z[:-1]-z[1:])/dx  # bed slope in each reach between XS [m/m]
     
     # Prevent unexpected errors
     h[h<=0] = 0.0001 # Prevent negative depths
     V[V==0] = 0.0001 # Prevent zero velocities
     
-    # Calculate effective width for volume change i.e. total planform area/reach length. 
+    # Calculate effective width of each XS for volume change i.e. total planform area/reach length. 
     dx2 = np.zeros(z.size)
     dx2[0] = dx[0]
     dx2[1:-1] = (dx[:-1]+dx[1:])/2
     dx2[-1] = dx[-1]
     Be = B + LagArea/dx2
+    
+    # Calculate ratio of length over which seepage occurs, to length of reach, for each reach
+    SeepLen = (LagLen[:-1]+LagLen[1:]) / (2*dx)
     
     # Pre compute some constant values which get used a lot 
     # (to save having to calculate them in the loop)
@@ -165,9 +170,9 @@ def solveFullPreissmann(z, B, LagArea, Closed, h, V,
         # For continuity equation
         C1 = (h_old[1:]*Be[1:] + h_old[:-1]*Be[:-1]
               - 2*(dtdx)*(1-Theta) * (V_old[1:]*A_old[1:] - V_old[:-1]*A_old[:-1])
-              - dt*P*(z[1:] + z[:-1] 
-                      - 2*Theta * DsWl 
-                      + Theta1 * (h_old[1:] + h_old[:-1] - 2*DsWl_old)))
+              - SeepLen*dt*P*(z[1:] + z[:-1] 
+                              - 2*Theta * DsWl 
+                              + Theta1 * (h_old[1:] + h_old[:-1] - 2*DsWl_old)))
         
         # For momentum equation
         C2 = (V_old[:-1]*A_old[:-1] + V_old[1:]*A_old[1:]
@@ -188,7 +193,7 @@ def solveFullPreissmann(z, B, LagArea, Closed, h, V,
             # Error in continuity equation
             Err[np.arange(1,2*N-1,2)] = (h[1:]*Be[1:] + h[:-1]*Be[:-1]
                                          + 2*dtdx*Theta * (V[1:]*A[1:] - V[:-1]*A[:-1])
-                                         + dt_P_Theta * (h[1:] + h[:-1]) 
+                                         + SeepLen * dt_P_Theta * (h[1:] + h[:-1]) 
                                          - C1)
             
             # Error in momentum equation
@@ -217,11 +222,15 @@ def solveFullPreissmann(z, B, LagArea, Closed, h, V,
             
             # Continuity equation derivatives
             # d/dh[0]
-            a_banded[3,np.arange(0,2*(N)-2,2)] = Be[:-1] - 2*dtdx*Theta*V[:-1]*B[:-1] + dt_P_Theta
+            a_banded[3,np.arange(0,2*(N)-2,2)] = (Be[:-1] 
+                                                  - 2*dtdx*Theta*V[:-1]*B[:-1] 
+                                                  + SeepLen*dt_P_Theta)
             # d/dV[0]
             a_banded[2,np.arange(1,2*(N)-2,2)] = -2*dtdx*Theta*A[:-1]
             # d/dh[1]
-            a_banded[1,np.arange(2,2*(N),2)]   = Be[1:] + 2*dtdx*Theta*V[1:]*B[1:] + dt_P_Theta
+            a_banded[1,np.arange(2,2*(N),2)]   = (Be[1:] 
+                                                  + 2*dtdx*Theta*V[1:]*B[1:] 
+                                                  + SeepLen*dt_P_Theta)
             # d/dV[1]
             a_banded[0,np.arange(3,2*(N),2)]   = 2*dtdx*Theta*A[1:]
             
@@ -301,7 +310,7 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
                     OutletEndDep, OutletEndVel, Dx, PhysicalPars):
     """ Combine river, lagoon and outlet into single channel for hyd-calcs
         
-        (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
+        (ChanDx, ChanElev, ChanWidth, LagArea, LagLen, ChanDep, ChanVel, 
          OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
             riv.assembleChannel(ShoreX, ShoreY, ShoreZ, 
                                 OutletEndX, OutletEndWidth, OutletEndElev, 
@@ -310,14 +319,16 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
                                 OutletEndDep, OutletEndVel, Dx, PhysicalPars)
         
         Returns:
-            ChanDx: distance between each cross-section in combined channel\
-            ChanElev: Bed level at each cross-section
-            ChanWidth: Width of each cross-section
+            ChanDx: distance between each cross-section in combined channel (m)
+            ChanElev: Bed level at each cross-section (m)
+            ChanWidth: Width of each cross-section (m)
             LagArea: Surface area of offline lagoon storage attached to each 
-                node (all zero except for first and last 'lagoon'
-                cross-section).
-            ChanDep: Water depth in each cross-section
-            ChanVel: Water velocity in each cross-section
+                node - all zero except for first and last 'lagoon'
+                cross-section (m2)
+            LagLen: Length of lagoon connected to node - used to calculate 
+                barrier seepage (m)
+            ChanDep: Water depth in each cross-section (m)
+            ChanVel: Water velocity in each cross-section (m/s)
             OnlineLagoon: indices of lagoon transects which are 'online'. Note
                 that the indices are given in the order in which the lagoon 
                 sections appear in the combined channel. i.e. if the outlet 
@@ -332,7 +343,7 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
                 end?
     """
     
-    X0Ix = np.where(ShoreX==0)[0][0]
+    X0Ix = np.where(ShoreX==0)[0][0] # Index of shore transect where X=0 (i.e. inline with river)
     
     # Handle the postprocessing situation when we don't have (or need) a dummy XS in the sea
     if OutletEndDep.size == 1:
@@ -379,28 +390,37 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
         if Closed:
             OnlineLagoon = np.arange(X0Ix, np.where(LagoonWidth > 0)[0][-1] + 1)
             EndArea = 0
+            EndLen = 0
         else:
             OnlineLagoon = np.array([X0Ix])
             EndArea = np.nansum(LagoonWidth[ShoreX > OutletEndX[0]] * Dx)
+            EndLen = np.nansum((LagoonWidth[ShoreX > OutletEndX[0]] > 0) * Dx)
         StartArea = np.nansum(LagoonWidth[X0Ix+1:] * Dx)
+        StartLen = np.nansum((LagoonWidth[X0Ix+1:] > 0) * Dx)
     elif OutletEndX[0] > 0:
         # Outlet channel to right of river
         if Closed:
             OnlineLagoon = np.arange(X0Ix, np.where(LagoonWidth > 0)[0][-1] + 1)
             EndArea = 0
+            EndLen = 0
         else:
             OnlineLagoon = np.arange(X0Ix, np.where(ShoreX < OutletEndX[0])[0][-1] + 1)
             EndArea = np.nansum(LagoonWidth[ShoreX > OutletEndX[0]] * Dx)
+            EndLen = np.nansum((LagoonWidth[ShoreX > OutletEndX[0]] > 0) * Dx)
         StartArea = np.nansum(LagoonWidth[:X0Ix] * Dx)
+        StartLen = np.nansum((LagoonWidth[:X0Ix] > 0) * Dx)
     else:
         # Outlet channel to left of river
         if Closed:
             OnlineLagoon = np.arange(X0Ix, np.where(LagoonWidth > 0)[0][0] - 1, -1)
             EndArea = 0
+            EndLen = 0
         else:
             OnlineLagoon = np.arange(X0Ix, np.where(ShoreX > OutletEndX[0])[0][0] - 1, -1)
             EndArea = np.nansum(LagoonWidth[ShoreX < OutletEndX[0]] * Dx)
+            EndLen = np.nansum((LagoonWidth[ShoreX < OutletEndX[0]] > 0) * Dx)
         StartArea = np.nansum(LagoonWidth[X0Ix+1:] * Dx)
+        StartLen = np.nansum((LagoonWidth[X0Ix+1:] > 0) * Dx)
     
     # Check there is at least 1 transect in lagoon
     # (zero length lagoon should now be prevented in mor)
@@ -416,6 +436,7 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
             logging.info('Closure occured in lagoon at X=%.0f', ShoreX[OnlineLagoon[LagCloseIx]])
             Closed = True
         EndArea += np.nansum(LagoonWidth[OnlineLagoon[LagCloseIx:]] * Dx)
+        EndLen += np.nansum((LagoonWidth[OnlineLagoon[LagCloseIx:]] > 0) * Dx)
         OnlineLagoon = OnlineLagoon[:LagCloseIx]
     
     # These asserts *should* now be impossible to breach...
@@ -450,6 +471,9 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
     LagArea = np.zeros(ChanElev.size)
     LagArea[RiverElev.size] = StartArea
     LagArea[RiverElev.size + OnlineLagoon.size - 1] = EndArea
+    LagLen = (ChanFlag==1) * Dx
+    LagLen[RiverElev.size] += StartLen
+    LagLen[RiverElev.size + OnlineLagoon.size - 1] += EndLen
     
     # Assemble the hydraulic initial conditions
     if Closed:
@@ -492,7 +516,7 @@ def assembleChannel(ShoreX, ShoreY, ShoreZ,
     # Check consistency of key outputs
     assert OnlineLagoon.size == sum(ChanFlag==1), 'Missmatch between length of online lagoon in "OnlineLagoon" (%i) and "ChanFlag" (%i)' % (OnlineLagoon.size, sum(ChanFlag[:-1]==1))
     
-    return (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
+    return (ChanDx, ChanElev, ChanWidth, LagArea, LagLen, ChanDep, ChanVel, 
             OnlineLagoon, OutletChanIx, ChanFlag, Closed)
 
 def storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, ChanFlag, 
