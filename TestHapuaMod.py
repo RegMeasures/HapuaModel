@@ -30,7 +30,7 @@ plt.plot((ShoreX[0:-1]+ShoreX[1:])/2, LST)
 
 #%% Test river routines
 # Join river and outlet through lagoon
-(ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
+(ChanDx, ChanElev, ChanWidth, LagArea, LagLen, ChanDep, ChanVel, 
  OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
     riv.assembleChannel(ShoreX, ShoreY, ShoreZ,
                         OutletEndX, OutletEndWidth, OutletEndElev, 
@@ -53,7 +53,7 @@ SeaLevel = core.interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartTime
 (LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, OutletEndVel) = \
     riv.storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, 
                         ChanFlag, ShoreZ[:,3], Closed)
-(ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
+(ChanDx, ChanElev, ChanWidth, LagArea, LagLen, ChanDep, ChanVel, 
  OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
     riv.assembleChannel(ShoreX, ShoreY, ShoreZ, 
                         OutletEndX, OutletEndWidth, OutletEndElev, 
@@ -73,8 +73,8 @@ ChanDist = np.insert(np.cumsum(ChanDx),0,0)
 plt.figure()
 plt.plot(ChanDist, ChanDep+ChanElev, 'b-')
 # Unsteady hydraulics
-riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, 
-                        ChanDep, ChanVel, ChanDx,
+riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, 
+                        Closed, ChanDep, ChanVel, ChanDx, 
                         TimePars['HydDt'], RivFlow, SeaLevel, 
                         NumericalPars, PhysicalPars)
 plt.plot(ChanDist, ChanDep+ChanElev, 'r:')

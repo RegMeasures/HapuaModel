@@ -226,7 +226,10 @@ def interpolate_at(Df, New_idxs):
         New_df: new data frame containing linearly interpolated data at the 
                 specified time.
     """
-    Df = Df.reindex(Df.index.append(New_idxs).unique())
-    Df = Df.sort_index()
-    Df = Df.interpolate(method='time')
-    return Df.loc[New_idxs]
+    FromIx = np.where(Df.index <= New_idxs[0])[0][-1]
+    ToIx = np.where(Df.index >= New_idxs[-1])[0][0]
+    Selected = Df[FromIx:ToIx+1]
+    Selected = Selected.reindex(Selected.index.append(New_idxs).unique())
+    Selected = Selected.sort_index()
+    Selected = Selected.interpolate(method='time')
+    return Selected.loc[New_idxs]
