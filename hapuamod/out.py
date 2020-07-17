@@ -430,10 +430,10 @@ def readTimestep(NcFile, TimeIx):
     OutletVel = NcFile.variables['outlet_vel'][TimeIx,:]
     
     OutletEndX = NcFile.variables['outlet_end_x'][TimeIx,:].squeeze()
-    OutletEndWidth = NcFile.variables['outlet_end_width'][TimeIx]
-    OutletEndElev = NcFile.variables['outlet_end_z'][TimeIx]
-    OutletEndVel = NcFile.variables['outlet_end_vel'][TimeIx]
-    OutletEndWL = NcFile.variables['outlet_end_wl'][TimeIx]
+    OutletEndWidth = np.asarray(NcFile.variables['outlet_end_width'][TimeIx].squeeze())
+    OutletEndElev = np.asarray(NcFile.variables['outlet_end_z'][TimeIx].squeeze())
+    OutletEndVel = np.asarray(NcFile.variables['outlet_end_vel'][TimeIx].squeeze())
+    OutletEndWL = np.asarray(NcFile.variables['outlet_end_wl'][TimeIx].squeeze())
     Closed = bool(NcFile.variables['outlet_closed'][TimeIx])
     
     WavePower=None

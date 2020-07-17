@@ -27,8 +27,8 @@ def main(ModelConfigFile, Overwrite=False):
     
     #%% Load the model
     (ModelName, FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, ShoreX, 
-     ShoreY, ShoreZ, RiverElev, OutletEndX, OutletEndWidth, OutletEndElev,
-     TimePars, PhysicalPars, NumericalPars, OutputOpts) = loadmod.loadModel(ModelConfigFile)
+     ShoreY, ShoreZ, RiverElev, OutletEndX, OutletEndWidth, OutletEndElev, 
+     Closed, TimePars, PhysicalPars, NumericalPars, OutputOpts) = loadmod.loadModel(ModelConfigFile)
     
     #%% Generate initial conditions for river model
     RivFlow = interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']])).values
@@ -38,11 +38,11 @@ def main(ModelConfigFile, Overwrite=False):
      OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
         riv.assembleChannel(ShoreX, ShoreY, ShoreZ,
                             OutletEndX, OutletEndWidth, OutletEndElev, 
-                            False, RiverElev, 
+                            Closed, RiverElev, 
                             np.zeros(RiverElev.size), np.zeros(RiverElev.size),
                             np.zeros(ShoreX.size), np.zeros(ShoreX.size), 
                             np.zeros(ShoreX.size), np.zeros(ShoreX.size),
-                            np.zeros(3), np.zeros(3), NumericalPars['Dx'],
+                            np.zeros(2), np.zeros(2), NumericalPars['Dx'],
                             PhysicalPars)
     
     (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 

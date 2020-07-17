@@ -7,7 +7,7 @@ from hapuamod import loadmod, visualise, coast, riv, core, mor, out
 #%% Test model load (particularly geometry processing)
 ModelConfigFile = 'inputs\HurunuiModel.cnf'
 (ModelName, FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, ShoreX, 
- ShoreY, ShoreZ, RiverElev, OutletEndX, OutletEndWidth, OutletEndElev,
+ ShoreY, ShoreZ, RiverElev, OutletEndX, OutletEndWidth, OutletEndElev, Closed,
  TimePars, PhysicalPars, NumericalPars, OutputOpts) = loadmod.loadModel(ModelConfigFile)
 
 plt.figure()
@@ -34,7 +34,7 @@ plt.plot((ShoreX[0:-1]+ShoreX[1:])/2, LST)
  OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
     riv.assembleChannel(ShoreX, ShoreY, ShoreZ,
                         OutletEndX, OutletEndWidth, OutletEndElev, 
-                        False, RiverElev, 
+                        Closed, RiverElev, 
                         np.zeros(RiverElev.size), np.zeros(RiverElev.size),
                         np.zeros(ShoreX.size), np.zeros(ShoreX.size), 
                         np.zeros(ShoreX.size), np.zeros(ShoreX.size),

@@ -38,7 +38,7 @@ def loadModel(ModelConfigFile):
     
     (FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, 
      ShoreX, ShoreY, LagoonElev, BarrierElev, OutletElev, 
-     RiverElev, OutletEndX, OutletEndWidth, OutletEndElev,
+     RiverElev, OutletEndX, OutletEndWidth, OutletEndElev, Closed,
      TimePars, PhysicalPars, NumericalPars, OutputOpts) = loadModel(Config)
     
     Parameters:
@@ -96,6 +96,8 @@ def loadModel(ModelConfigFile):
             downstream end of the outlet channel (m)
         OutletEndElev (0-dimensional np.ndarray(float64)): Bed level of the 
             downstream end of the outlet channel (m)
+        Closed (boolean): True if the outlet is closed (always false unless 
+            hotstarting)
         TimePars (dict): Time parameters including:
             StartTime (pd.datetime): Start date/time of simulation
             EndTime (pd.datetime): End date/time of simulation period
@@ -351,6 +353,7 @@ def loadModel(ModelConfigFile):
         ShoreZ[:, 0] = IniCond['BarrierElev']
         
         # Setup outlet channel
+        Closed = False
         OutletEndX = np.asarray([0., 0.])
         OutletEndWidth = np.asarray(IniCond['OutletWidth'])
         OutletEndElev = np.asarray(IniCond['OutletBed'])
@@ -416,6 +419,7 @@ def loadModel(ModelConfigFile):
         CliffCoords = np.asarray(CliffShp.shape(0).points[:])
         
         # Read the initial outlet position polyline
+        Closed = False
         Config['SpatialInputs']['OutletLocation'] = \
                 os.path.join(ConfigFilePath, Config['SpatialInputs']['OutletLocation'])
         logging.info('Reading lagoon outline from from "%s"' %
@@ -675,5 +679,5 @@ def loadModel(ModelConfigFile):
     
     return (ModelName, FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, 
             ShoreX, ShoreY, ShoreZ, RiverElev, 
-            OutletEndX, OutletEndWidth, OutletEndElev,
+            OutletEndX, OutletEndWidth, OutletEndElev, Closed,
             TimePars, PhysicalPars, NumericalPars, OutputOpts)
