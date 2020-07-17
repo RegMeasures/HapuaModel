@@ -557,7 +557,7 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None,
     
     # Add timestamp
     if not PlotTime is None:
-        RivFig.suptitle(PlotTime.strftime('%d/%m/%y %H:%M'))
+        RivFig.suptitle(PlotTime.strftime('%d-%b-%Y %H:%M'))
     
     # Compile outputs
     LongSecFig = {'RivFig':RivFig, 'ElevAx':ElevAx, 'WidthAx':WidthAx, 

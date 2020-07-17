@@ -61,14 +61,13 @@ def animateLongSec(TimeIx, NcFile, LongSecFig, PhysicalPars):
     OutletEndDep = OutletEndWL - OutletEndElev
     RiverDep = RiverWL - RiverElev
     
-    (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
+    (ChanDx, ChanElev, ChanWidth, LagArea, LagLen, ChanDep, ChanVel, 
      OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
         riv.assembleChannel(ShoreX, ShoreY, ShoreZ, 
                             OutletEndX, OutletEndWidth, OutletEndElev, 
-                            RiverElev, RiverDep, RiverVel, 
+                            Closed, RiverElev, RiverDep, RiverVel, 
                             LagoonWL, LagoonVel, OutletDep, OutletVel, 
-                            OutletEndDep, OutletEndVel, 
-                            Dx, PhysicalPars)
+                            OutletEndDep, OutletEndVel, Dx, PhysicalPars)
             
     visualise.updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, 
                                 ChanDep, ChanVel, PlotTime=ModelTime)
@@ -157,11 +156,11 @@ def main(ResultsFile, AnimationFile, StartTimestep=0, EndTimestep=None,
         PhysicalPars = {'RiverWidth': NcFile.RiverWidth,
                         'MinOutletWidth': NcFile.MinOutletWidth,
                         'MaxOutletElev': NcFile.MaxOutletElev} 
-        (ChanDx, ChanElev, ChanWidth, LagArea, ChanDep, ChanVel, 
+        (ChanDx, ChanElev, ChanWidth, LagArea, LagLen, ChanDep, ChanVel, 
          OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
             riv.assembleChannel(ShoreX, ShoreY, ShoreZ, 
                                 OutletEndX, OutletEndWidth, OutletEndElev, 
-                                RiverElev, RiverDep, RiverVel, 
+                                Closed, RiverElev, RiverDep, RiverVel, 
                                 LagoonWL, LagoonVel, OutletDep, OutletVel, 
                                 OutletEndDep, OutletEndVel, Dx, PhysicalPars)
         LongSecFig = visualise.longSection(ChanDx, ChanElev, ChanWidth, 
