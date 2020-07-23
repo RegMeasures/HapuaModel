@@ -7,6 +7,7 @@
 import netCDF4
 import numpy as np
 import pandas as pd
+import datetime
 import os
 import logging
 
@@ -62,7 +63,7 @@ def newOutFile(FileName, ModelName, StartTime,
     
     # create attributes
     NcFile.ModelName = ModelName
-    NcFile.ModelStartTime = pd.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    NcFile.ModelStartTime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     NcFile.ModelOriginX = Origin[0]
     NcFile.ModelOriginY = Origin[1]
     NcFile.ModelOrientation = np.rad2deg(ShoreNormDir)

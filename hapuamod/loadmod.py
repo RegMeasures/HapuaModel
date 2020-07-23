@@ -3,6 +3,7 @@
 # import standard packages
 import pandas as pd
 import numpy as np
+import datetime
 import math
 from configobj import ConfigObj, flatten_errors
 from validate import Validator
@@ -564,7 +565,7 @@ def loadModel(ModelConfigFile):
         ShoreZ[OutletMask, 2] = np.full(np.sum(OutletMask), IniCond['BarrierElev'])
     
     #%% Read the boundary condition timeseries
-    to_datetime = lambda d: pd.datetime.strptime(d, '%d/%m/%Y %H:%M')
+    to_datetime = lambda d: datetime.datetime.strptime(d, '%d/%m/%Y %H:%M')
     
     # Flow timeseries
     if Config['BoundaryConditions']['RiverFlow'].lower() == 'shotnoise':
