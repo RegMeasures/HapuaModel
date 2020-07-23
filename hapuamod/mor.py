@@ -424,7 +424,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                 ShoreY[OutletChanIx[-1], 4] -= CliffRetDist
                 ShoreY[OutletChanIx[-1], [2,3]] += (CliffOverlapDist - CliffRetDist)
     
-    #%% Check for complete erosion of barrier between offline lagoon and sea/lagoon.
+    #%% Check for complete erosion of barrier between offline outlet channel and sea or lagoon.
     # Adjust ShoreY where outlet banks intersects coast or lagoon
     # This *should* only include offline/disconnected bits of outlet as online 
     # bits have already been dealt with...
@@ -469,7 +469,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         PossBreachTsects = []
         LagoonOpen = (ShoreY[:,3] - ShoreY[:,4]) > PhysicalPars['MinOutletWidth']
         for TsectIx in EroTsects:
-            logging.info('Barrier completely eroded at X = %i' % ShoreX[TsectIx])
+            logging.info('Barrier completely eroded at X = %.1fm' % ShoreX[TsectIx])
             if TsectIx > X0Ix:
                 if np.all(LagoonOpen[np.arange(X0Ix+1, TsectIx+1)]):
                     PossBreachTsects.append(TsectIx)
@@ -484,10 +484,12 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             logging.info('Not possible for breach to occur as eroded barrier is on disconnected part of lagoon')
         elif Closed:
             # If closed then any (connected) erosion of barrier causes breach
+            logging.info('Erosion breach of previously closed lagoon')
             Breach = True
         elif np.min(np.abs(ShoreX[PossBreachTsects])) < np.abs(OutletEndX[0]):
             # if open then barrier erosion only causes breach if it is closer to the river than the existing outlet
             # (as the model cannot handle multiple outlets)
+            logging.info('Erosion breach in open lagoon')
             Breach = True
         else:
             # barrier eroded but further from river than existing outlet 
@@ -507,9 +509,10 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                                                  (ShoreZ[NotBreachIx, 0] - ShoreZ[NotBreachIx, 3])))
             ShoreY[NotBreachIx,0] += ShoreShiftDist
             ShoreY[NotBreachIx,3] -= (OverlapDist - ShoreShiftDist)
-        
+    
+    # Check for overtopping breach 
     if not Breach and np.any(ShoreZ[:,0] < WaterLevel):
-        # Overtopping breach 
+        
         # Note: only allowed if an erosion breach has not already occured in the same timestep
         
         SpillTsects = np.where(ShoreZ[:,0] < WaterLevel)[0]
@@ -517,7 +520,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         PossBreachTsects = []
         LagoonOpen = (ShoreY[:,3] - ShoreY[:,4]) > PhysicalPars['MinOutletWidth']
         for TsectIx in SpillTsects:
-            logging.info('Potential lagoon spill at X = %f' % ShoreX[TsectIx])
+            logging.info('Potential overtopping breach at X = %.1f' % ShoreX[TsectIx])
             if TsectIx > X0Ix:
                 if np.all(LagoonOpen[np.arange(X0Ix+1, TsectIx+1)]):
                     PossBreachTsects.append(TsectIx)
@@ -535,7 +538,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             BreachIx = PossBreachTsects[np.argmax(WaterLevel[PossBreachTsects] -
                                                   ShoreZ[PossBreachTsects,0])]
             Breach = True
-            logging.info('Spill breach of closed lagoon at X = %f' % ShoreX[BreachIx])
+            logging.info('Spill breach of closed lagoon at X = %.1fm' % ShoreX[BreachIx])
         else:
             # If lagoon open then assume overtopping only causes breach if it 
             # is closer to where river enters lagoon than existing outlet 
@@ -546,38 +549,34 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             if np.any(CloserToRiv[PossBreachTsects]):
                 BreachIx = PossBreachTsects[np.argmin(np.abs(ShoreX[PossBreachTsects]))]
                 Breach = True
-                logging.info('Spill breach of open lagoon at X = %f' % ShoreX[BreachIx])
+                logging.info('Spill breach of open lagoon at X = %.1fm' % ShoreX[BreachIx])
     
     # Create breach
     if Breach:
         if BreachIx in OutletChanIx:
             # Outlet truncation breach
-            logging.info('Outlet truncation due to breach at X = %f' % ShoreX[BreachIx])
+            logging.info('Outlet truncation due to breach at X = %.1fm' % ShoreX[BreachIx])
             if OutletEndX[0] < OutletEndX[1]:
                 # Outlet angles from L to R
                 OutletEndX[1] = ShoreX[BreachIx] - Dx/2
             else:
                 # Outlet angles from R to L 
                 OutletEndX[1] = ShoreX[BreachIx] + Dx/2
-            OutletEndWidth.flat[0] = Dx
-            OutletEndElev.flat[0] = (ShoreZ[BreachIx,1] + PhysicalPars['MaxOutletElev'])/2
             # TODO: close sediment balance by putting breach eroded sed onto shore
         else:
             # Lagoon breach (i.e. new outlet channel)
-            logging.info('Breach/creation of new outlet channel at X = %f' % ShoreX[BreachIx])
-            # Assume breach of width Dx with bed level linearly interpolated 
-            # between lagoon level at upstream end and PhysicalPars['MaxOutletElev']
-            OutletEndWidth.flat[0] = Dx
-            ShoreY[BreachIx,1] = min(ShoreY[BreachIx,0]-PhysicalPars['SpitWidth'],
-                                     (ShoreY[BreachIx,0]+ShoreY[BreachIx,3])/2 + Dx/2)
-            ShoreY[BreachIx,2] = ShoreY[BreachIx,1] - Dx
+            logging.info('Breach/creation of new outlet channel at X = %.1fm' % ShoreX[BreachIx])
             
             OutletEndX[:] = ShoreX[BreachIx]
             
+            # Assume breach of width and bed level equal to the current outlet end
+            ShoreY[BreachIx,1] = min(ShoreY[BreachIx,0]-PhysicalPars['SpitWidth'],
+                                     (ShoreY[BreachIx,0]+ShoreY[BreachIx,3])/2 + OutletEndWidth/2)
+            ShoreY[BreachIx,2] = ShoreY[BreachIx,1] - OutletEndWidth
+            
             ShoreZ[BreachIx, 2] = ShoreZ[BreachIx, 0]
             
-            ShoreZ[BreachIx,1] = 0.34 * PhysicalPars['MaxOutletElev'] + 0.66 * ShoreZ[BreachIx,3]
-            OutletEndElev.flat[0] = 0.66 * PhysicalPars['MaxOutletElev'] + 0.34 * ShoreZ[BreachIx,3]
+            ShoreZ[BreachIx,1] = 0.5 * OutletEndElev + 0.5 * ShoreZ[BreachIx,3]
             
             # Check the newly created outlet channel fits into the barrier...
             if ShoreY[BreachIx,3] >= ShoreY[BreachIx,2]:
