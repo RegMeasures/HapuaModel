@@ -568,14 +568,16 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             logging.info('Breach/creation of new outlet channel at X = %.1fm' % ShoreX[BreachIx])
             
             OutletEndX[:] = ShoreX[BreachIx]
+            ShoreZ[BreachIx, 2] = ShoreZ[BreachIx, 0]
             
-            # Assume breach of width and bed level equal to the current outlet end
+            # Assume breach width equals the bigger of current outlet end width and 2 times the outlet width for closure
+            OutletEndWidth.flat[0] = max(OutletEndWidth, 2*PhysicalPars['MinOutletWidth'])
             ShoreY[BreachIx,1] = min(ShoreY[BreachIx,0]-PhysicalPars['SpitWidth'],
                                      (ShoreY[BreachIx,0]+ShoreY[BreachIx,3])/2 + OutletEndWidth/2)
             ShoreY[BreachIx,2] = ShoreY[BreachIx,1] - OutletEndWidth
             
-            ShoreZ[BreachIx, 2] = ShoreZ[BreachIx, 0]
-            
+            # Assume outlet end bed level is the lower of the current outlet end bed level, or the MaxOutletElev
+            OutletEndElev.flat[0] = min(OutletEndElev, PhysicalPars['MaxOutletElev'])
             ShoreZ[BreachIx,1] = 0.5 * OutletEndElev + 0.5 * ShoreZ[BreachIx,3]
             
             # Check the newly created outlet channel fits into the barrier...
