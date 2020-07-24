@@ -122,6 +122,12 @@ def loadModel(ModelConfigFile):
                 hapua (m/m)
             GrainSize (float): Sediment size for fluvial sediment transport 
                 calculation (assumed uniform) (m) 
+            CritShieldsStress (float): Critical shields stress for river 
+                bedload transport (non-dimensional)
+            MPM_coef (float): Coefficient for Meyer Peter Muller bedload
+                transport formula
+            MPM_exp (float): Exponent for Meyer Peter Muller bedload
+                transport formula
             UpstreamLength (float): Length of river upstream of hapua to 
                 include in model (m)
             RiverWidth (float): width of river upstream of hapua (assumed 
@@ -247,6 +253,8 @@ def loadModel(ModelConfigFile):
                     'RiverSlope': Config['PhysicalParameters']['RiverSlope'],
                     'GrainSize': Config['PhysicalParameters']['GrainSize'],
                     'CritShieldsStress': Config['PhysicalParameters']['CritShieldsStress'],
+                    'MPM_coef': Config['PhysicalParameters']['MPM_coef'],
+                    'MPM_exp': Config['PhysicalParameters']['MPM_exp'],
                     'UpstreamLength': Config['PhysicalParameters']['UpstreamLength'],
                     'RiverWidth': Config['PhysicalParameters']['RiverWidth'],
                     'Roughness': Config['PhysicalParameters']['RoughnessManning'],

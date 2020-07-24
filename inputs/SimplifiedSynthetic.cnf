@@ -94,8 +94,10 @@ BeachSlope = 0.13
 RiverSlope = 0.003
 # Grain size for fluvial sediment transport [m]
 GrainSize = 0.018
-# Critical shields stress for initiation of bedload transport
-CritShieldsStress = 0.03
+# Bedload transport formula inputs
+CritShieldsStress = 0.0495
+MPM_coef = 3.97
+MPM_exp = 1.5
 # Upstream river length to simulate [m]
 UpstreamLength = 1000
 # River width upstream of hapua [m]

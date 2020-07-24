@@ -566,7 +566,7 @@ def storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, ChanFlag,
             OutletEndDep, OutletEndVel)
     
 def calcBedload(z, B, h, V, dx, PhysicalPars, Psi):
-    """ Calculate bedload transport using Bagnold 1980 streampower approach
+    """ Calculate bedload transport using Meyer-Peter-Muller approach
     
         Note that output is reach, rather than cross-section bedload transport.
         The conversion from cross-section to reach uses a partial upwinding 
@@ -595,27 +595,23 @@ def calcBedload(z, B, h, V, dx, PhysicalPars, Psi):
     RhoS = PhysicalPars['RhoSed']
     g = PhysicalPars['Gravity']
     D = PhysicalPars['GrainSize']
-    VoidRatio = PhysicalPars['VoidRatio']
     
     # Use friction slope rather than actual energy or water surface slope as it is more reliable
     S = V**2 * PhysicalPars['Roughness']**2 / h**(4/3)
     
-    # Threshold streampower per unit width [kg/m/s]
-    omega_0 = 5.75*(PhysicalPars['CritShieldsStress']*(RhoS - Rho))**(3/2) * (g/Rho)**(1/2) * D**(3/2) * np.log10(12*h/D)
-    # TODO move constant part of above line into loadmod (i.e. out of loop)
-    
-    # streampower per unit width [kg/m/s]
-    omega = Rho * S * V * h 
+    # Total shear stress (N/m2) and dimensionless shear stress
+    Tau = Rho * g * h * S
+    Theta = Tau / ((RhoS - Rho) * g * D)
     
     # bedload transport rate at each node (bulk volume accounting for voids) [m^3/s]
-    Qs_node = RhoS/(RhoS-Rho) * 0.01 * (np.maximum(omega-omega_0,0.0)/0.5)**(3/2) * (h/0.1)**(-2/3) * (D/0.0011)**(-1/2) * B / (RhoS*(1-VoidRatio)) 
-    # TODO move constant part of above line into loadmod (i.e. out of loop)
-    Qs_node[V<0] *= -1
+    qs_star = PhysicalPars['MPM_coef'] * np.maximum(Theta - PhysicalPars['CritShieldsStress'], 0.0)**PhysicalPars['MPM_exp']
+    Qs_node_bulk = qs_star * B * ((RhoS/Rho - 1) * g * D**3)**0.5 / (1 - PhysicalPars['VoidRatio'])
+    Qs_node_bulk[V<0] *= -1
     
     # bedload transport in each reach
-    Qs_reach = (1-Psi)*Qs_node[:-1] + Psi*Qs_node[1:]
+    Qs_reach_bulk = (1-Psi)*Qs_node_bulk[:-1] + Psi*Qs_node_bulk[1:]
     
-    return(Qs_reach)
+    return(Qs_reach_bulk)
 
 def storeBedload(Bedload, NTransects, OnlineLagoon, OutletChanIx, 
                  ChanFlag, Closed):

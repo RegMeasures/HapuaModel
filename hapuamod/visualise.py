@@ -550,14 +550,9 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None,
         QsLine, = QsAx.plot(D2, Bedload*3600, 'k-')
         QsAx.set_ylabel(r'Bedload [$\mathrm{m^3/hr}$]')
         QsAx.set_xlabel('Distance downstream [m]')
-        QsAx.set_ylim([0,50])
         QsAx.grid(axis='x', which='both', linestyle=':')
     else:
         QsLine=None
-    
-    # Add timestamp
-    if not PlotTime is None:
-        RivFig.suptitle(PlotTime.strftime('%d-%b-%Y %H:%M'))
     
     # Compile outputs
     LongSecFig = {'RivFig':RivFig, 'ElevAx':ElevAx, 'WidthAx':WidthAx, 
@@ -566,6 +561,10 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None,
                   'EnergyLine':EnergyLine, 'WidthLine':WidthLine, 
                   'FlowLine':FlowLine, 'VelLine':VelLine, 'FrLine':FrLine,
                   'QsLine':QsLine}
+    
+    # Update to tidy up
+    updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep, 
+                      ChanVel, Bedload, PlotTime)
     
     return(LongSecFig)
 
@@ -602,6 +601,11 @@ def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep,
     Qmin = min(0.,np.nanmin(Q))
     Qmax = np.nanmax(Q)
     LongSecFig['FlowAx'].set_ylim(Qmin, Qmax + 0.1*(Qmax-Qmin))
+    
+    # Update bedload axis scaling
+    if not Bedload is None:
+        Qs_max = max(np.nanmax(Bedload*3600), 50)
+        LongSecFig['QsAx'].set_ylim(0, Qs_max * 1.1)
     
     # Redraw
     LongSecFig['RivFig'].canvas.draw()
