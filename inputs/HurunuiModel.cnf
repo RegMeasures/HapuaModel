@@ -35,14 +35,14 @@ BarrierElev = 4.0
 [Time]
 # Simulation start date
 StartTime = '1 Jul 2015'
-# Simulation end date '30 Jun 2016'
-EndTime = '30 Jun 2016'
+# Simulation end date
+EndTime = '30 Sep 2017'
 # Hydraulic Timestep [s]
 HydDt = 5
 # Minimum morphology timestep [s]
 MorDtMin = 15
 # Maximum morphology Timestep [s]
-MorDtMax = 1920
+MorDtMax = 3840
 
 [PhysicalParameters]
 # K coefficient for longshore transport calculation (non-dimensional)
@@ -80,6 +80,8 @@ UpstreamLength = 1000
 RiverWidth = 100
 # Fluvial hydraulic roughness (Manning's n) [m^(-1/3).s]
 RoughnessManning = 0.04
+# Grain roughness (Manning's n) [m^(-1/3).s]
+GrainRoughness = 0.035
 # Width-Depth ratio of eroding channel [dimensionless]
 WidthDepthRatio = 30
 # Elevation of top of lagoon backshore [m]

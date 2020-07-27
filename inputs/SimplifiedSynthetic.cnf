@@ -104,6 +104,8 @@ UpstreamLength = 1000
 RiverWidth = 100
 # Fluvial hydraulic roughness (Manning's n) [m^(-1/3).s]
 RoughnessManning = 0.04
+# Grain roughness (Manning's n) [m^(-1/3).s]
+GrainRoughness = 0.035
 # Width-Depth ratio of eroding channel [dimensionless]
 WidthDepthRatio = 30
 # Elevation of top of lagoon backshore [m]

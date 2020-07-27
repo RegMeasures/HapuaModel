@@ -133,6 +133,8 @@ def loadModel(ModelConfigFile):
             RiverWidth (float): width of river upstream of hapua (assumed 
                 uniform) (m)
             Roughness (float): Manning's 'n' for river hydraulics (m^(1/3)/s) 
+            GrainRoughness (float): Grain roughness (Manning's 'n' for shear 
+                stress calculation for sediment transport) (m^(1/3)/s) 
             WidthRatio (float): Ratio of channel width to depth for eroding 
                 river channel
             BackshoreElev (float): Elevation of lagoon backshore (m)
@@ -258,6 +260,7 @@ def loadModel(ModelConfigFile):
                     'UpstreamLength': Config['PhysicalParameters']['UpstreamLength'],
                     'RiverWidth': Config['PhysicalParameters']['RiverWidth'],
                     'Roughness': Config['PhysicalParameters']['RoughnessManning'],
+                    'GrainRoughness': Config['PhysicalParameters']['GrainRoughness'],
                     'WidthRatio': Config['PhysicalParameters']['WidthDepthRatio'],
                     'BackshoreElev': Config['PhysicalParameters']['BackshoreElev'],
                     'MaxOutletElev': Config['PhysicalParameters']['MaxOutletElev'],

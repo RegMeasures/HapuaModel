@@ -597,7 +597,7 @@ def calcBedload(z, B, h, V, dx, PhysicalPars, Psi):
     D = PhysicalPars['GrainSize']
     
     # Use friction slope rather than actual energy or water surface slope as it is more reliable
-    S = V**2 * PhysicalPars['Roughness']**2 / h**(4/3)
+    S = V**2 * PhysicalPars['GrainRoughness']**2 / h**(4/3)
     
     # Total shear stress (N/m2) and dimensionless shear stress
     Tau = Rho * g * h * S
