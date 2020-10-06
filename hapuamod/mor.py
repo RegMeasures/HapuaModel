@@ -83,7 +83,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         LagXS = ChanFlag[1:-1]==1
         OutXS = ChanFlag[1:-1]==2
         OutEndXS = ChanFlag[1:-1]==3
-    TooWide = AspectRatio > PhysicalPars['WidthRatio']
+    TooWide = AspectRatio > PhysicalPars['WidthDepthRatio']
     
     EroVolRate = - np.minimum(DVolRate, 0.0)  # Total volumetric erosion rate (+ve = erosion)
     BedEroRate = EroVolRate * TooWide       # Bed erosion volumetric rate (+ve)
@@ -164,6 +164,8 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     # Erosion of sediment off the shoreface (don't move ends)
     ShoreYChangeRate[1:-1,0] -= CST_tot[1:-1] / ShorefaceHeight[1:-1]
     
+    #%% Enforce shoreline end erosion rate
+    ShoreYChangeRate[[0,-1],0] = -PhysicalPars['ShorelineErosionRate']/(365.25*86400)
     
     #%% Set adaptive timestep
     

@@ -110,6 +110,8 @@ OutletBankEroFac = 0.5
 # Barrier permeability in m3/s, per m barrier length, per m head difference 
 # from lagoon to ocean [m/s]
 BarrierPermeability = 0.001
+# Erosion rate of shoreline at edges of model domain [m/yr]
+ShorelineErosionRate = 0.0 
 
 [NumericalParameters]
 # Alongshore discretisation resolution (transect spacing) [m]

@@ -46,7 +46,7 @@ def main(ModelConfigFile, Overwrite=False):
                             PhysicalPars)
     
     (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
-                                         PhysicalPars['Roughness'], 
+                                         PhysicalPars['RoughnessManning'], 
                                          RivFlow, SeaLevel, NumericalPars)
     
     (LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, OutletEndVel) = \
@@ -123,7 +123,7 @@ def main(ModelConfigFile, Overwrite=False):
             logging.warning('Unsteady hydraulics failed at %s. Falling back to quasi-steady for this timestep.' % 
                             HydTimes[-1].strftime("%m/%d/%Y, %H:%M:%S"))
             (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
-                                                PhysicalPars['Roughness'], 
+                                                PhysicalPars['RoughnessManning'], 
                                                 RivFlow[-1], SeaLevel[-1], 
                                                 NumericalPars)
         

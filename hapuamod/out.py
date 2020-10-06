@@ -83,8 +83,8 @@ def newOutFile(FileName, ModelName, StartTime,
     NcFile.CritShieldsStress = PhysicalPars['CritShieldsStress']
     NcFile.UpstreamLength = PhysicalPars['UpstreamLength']
     NcFile.RiverWidth = PhysicalPars['RiverWidth']
-    NcFile.RoughnessManning = PhysicalPars['Roughness']
-    NcFile.WidthDepthRatio = PhysicalPars['WidthRatio']
+    NcFile.RoughnessManning = PhysicalPars['RoughnessManning']
+    NcFile.WidthDepthRatio = PhysicalPars['WidthDepthRatio']
     NcFile.BackshoreElev = PhysicalPars['BackshoreElev']
     NcFile.MaxOutletElev = PhysicalPars['MaxOutletElev']
     NcFile.OT_coef = PhysicalPars['OT_coef']
@@ -97,6 +97,7 @@ def newOutFile(FileName, ModelName, StartTime,
     NcFile.OutletSedSpreadDist = PhysicalPars['OutletSedSpreadDist']
     NcFile.OutletBankEroFac = PhysicalPars['OutletBankEroFac']
     NcFile.BarrierPermeability = PhysicalPars['BarrierPermeability']
+    NcFile.ShorelineErosionRate = PhysicalPars['ShorelineErosionRate']
     
     # create coordinate variables
     XVar = NcFile.createVariable(XDim.name, np.float32, (XDim.name,))

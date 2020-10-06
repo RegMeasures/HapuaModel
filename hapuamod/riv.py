@@ -107,7 +107,7 @@ def solveFullPreissmann(z, B, LagArea, LagLen, Closed, h, V,
                 MaxIt (integer): maximum number of iterations to find solution
             PhysicalPars (dict): Physical parameters including:
                 Gravity (float): gravity [m/s2]
-                Roughness (float): mannings 'n' roughness
+                RoughnessManning (float): mannings 'n' roughness
                 Barrier Permeability (float): permeability of the gravel 
                     barrier in m3/s, per m length of barrier, per m head 
                     difference accross barrier [m/s].
@@ -118,7 +118,7 @@ def solveFullPreissmann(z, B, LagArea, LagLen, Closed, h, V,
         
     """
     g = PhysicalPars['Gravity']
-    n = PhysicalPars['Roughness']
+    n = PhysicalPars['RoughnessManning']
     P = PhysicalPars['BarrierPermeability']
     
     Theta = NumericalPars['Theta']

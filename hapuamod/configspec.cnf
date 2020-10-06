@@ -84,6 +84,7 @@ MinOutletWidth = float(min=0)
 OutletSedSpreadDist = float(min=0, default=100)
 OutletBankEroFac = float(min=0.0, max=1, default=0.0)
 BarrierPermeability = float(min=0, default=0)
+ShorelineErosionRate = float(default=0)
 
 [NumericalParameters]
 AlongShoreDx = float(min=0)

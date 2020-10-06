@@ -132,11 +132,12 @@ def loadModel(ModelConfigFile):
                 include in model (m)
             RiverWidth (float): width of river upstream of hapua (assumed 
                 uniform) (m)
-            Roughness (float): Manning's 'n' for river hydraulics (m^(1/3)/s) 
+            RoughnessManning (float): Manning's 'n' for river hydraulics 
+                (m^(1/3)/s) 
             GrainRoughness (float): Grain roughness (Manning's 'n' for shear 
                 stress calculation for sediment transport) (m^(1/3)/s) 
-            WidthRatio (float): Ratio of channel width to depth for eroding 
-                river channel
+            WidthDepthRatio (float): Ratio of channel width to depth for 
+                eroding river channel
             BackshoreElev (float): Elevation of lagoon backshore (m)
             MaxOutletElev (float): Maximum elevation of the downstream end of 
                 the outlet channel [m] This elevation is applied downstream of 
@@ -163,6 +164,8 @@ def loadModel(ModelConfigFile):
             BarrierPermeability (float): Permeability of barrier expressed in 
                 m3/s, per m length of barrier, per m head difference accross
                 barrier [m/s].
+            ShorelineErosionRate (float): Erosion rate of shoreline at edges
+                of model domain [m/yr].
             K2coef (float): Calculated from other inputs for use in calculation
                 of longshore transport rate. 
                 K2 = K / (RhoSed - RhoSea) * g * (1 - VoidRatio))
@@ -242,38 +245,7 @@ def loadModel(ModelConfigFile):
     
     #%% Read physical parameters
     logging.info('Processing physical parameters')
-    PhysicalPars = {'RhoSed': Config['PhysicalParameters']['RhoSed'],
-                    'RhoSea': Config['PhysicalParameters']['RhoSea'],
-                    'RhoRiv': Config['PhysicalParameters']['RhoRiv'],
-                    'Kcoef': Config['PhysicalParameters']['Kcoef'],
-                    'Gravity': Config['PhysicalParameters']['Gravity'],
-                    'VoidRatio': Config['PhysicalParameters']['VoidRatio'],
-                    'GammaRatio': Config['PhysicalParameters']['GammaRatio'],
-                    'WaveDataDepth': Config['PhysicalParameters']['WaveDataDepth'],
-                    'ClosureDepth': Config['PhysicalParameters']['ClosureDepth'],
-                    'BeachSlope': Config['PhysicalParameters']['BeachSlope'],
-                    'RiverSlope': Config['PhysicalParameters']['RiverSlope'],
-                    'GrainSize': Config['PhysicalParameters']['GrainSize'],
-                    'CritShieldsStress': Config['PhysicalParameters']['CritShieldsStress'],
-                    'MPM_coef': Config['PhysicalParameters']['MPM_coef'],
-                    'MPM_exp': Config['PhysicalParameters']['MPM_exp'],
-                    'UpstreamLength': Config['PhysicalParameters']['UpstreamLength'],
-                    'RiverWidth': Config['PhysicalParameters']['RiverWidth'],
-                    'Roughness': Config['PhysicalParameters']['RoughnessManning'],
-                    'GrainRoughness': Config['PhysicalParameters']['GrainRoughness'],
-                    'WidthRatio': Config['PhysicalParameters']['WidthDepthRatio'],
-                    'BackshoreElev': Config['PhysicalParameters']['BackshoreElev'],
-                    'MaxOutletElev': Config['PhysicalParameters']['MaxOutletElev'],
-                    'OT_coef': Config['PhysicalParameters']['OT_coef'],
-                    'OT_exp': Config['PhysicalParameters']['OT_exp'],
-                    'BeachTopElev': Config['PhysicalParameters']['BeachTopElev'],
-                    'SpitWidth': Config['PhysicalParameters']['SpitWidth'],
-                    'TargetBarHeight': Config['PhysicalParameters']['TargetBarHeight'],
-                    'TargetBarWidth': Config['PhysicalParameters']['TargetBarWidth'],
-                    'MinOutletWidth': Config['PhysicalParameters']['MinOutletWidth'],
-                    'OutletSedSpreadDist': Config['PhysicalParameters']['OutletSedSpreadDist'],
-                    'OutletBankEroFac': Config['PhysicalParameters']['OutletBankEroFac'],
-                    'BarrierPermeability': Config['PhysicalParameters']['BarrierPermeability']}
+    PhysicalPars = Config['PhysicalParameters']
     
     # Some additional calculated parameters
     GammaLST = ((PhysicalPars['RhoSed'] - PhysicalPars['RhoSea']) * 
