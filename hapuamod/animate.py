@@ -21,7 +21,8 @@ def animateMap(TimeIx, NcFile, ModelFig):
     """
     logging.info('Animating timestep no %i' % TimeIx)
     
-    (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
+    (SeaLevel, RivFlow, Hs_offshore, EDir_h, 
+     ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
      OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
      OutletEndWL, DummyXsDep, DummyXsVel, OutletChanIx, WavePower, EDir_h, 
      LST, CST, Closed, RiverElev, RiverWL, RiverVel, 
@@ -38,7 +39,8 @@ def animateTransect(TimeIx, NcFile, TransectFig):
     """
     logging.info('Animating timestep no %i' % TimeIx)
     
-    (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
+    (SeaLevel, RivFlow, Hs_offshore, EDir_h, 
+     ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
      OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
      OutletEndWL, DummyXsDep, DummyXsVel, OutletChanIx, WavePower, EDir_h, 
      LST, CST, Closed, RiverElev, RiverWL, RiverVel, 
@@ -53,7 +55,8 @@ def animateLongSec(TimeIx, NcFile, LongSecFig, PhysicalPars):
     """
     logging.info('Animating timestep no %i' % TimeIx)
     
-    (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
+    (SeaLevel, RivFlow, Hs_offshore, EDir_h, 
+     ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
      OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
      OutletEndWL, DummyXsDep, DummyXsVel, OutletChanIx, WavePower, EDir_h, 
      LST, CST, Closed, RiverElev, RiverWL, RiverVel, 
@@ -121,7 +124,8 @@ def main(ResultsFile, AnimationFile, StartTimestep=0, EndTimestep=None,
     logging.info('Generating animation for timesteps %i to %i' % (StartTimestep, EndTimestep))
     
     # read in first timestep
-    (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
+    (SeaLevel, RivFlow, Hs_offshore, EDir_h, 
+     ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
      OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
      OutletEndWL, DummyXsDep, DummyXsVel, OutletChanIx, WavePower, EDir_h, 
      LST, CST, Closed, RiverElev, RiverWL, RiverVel, 

@@ -35,6 +35,9 @@ def main(ModelConfigFile, Overwrite=False):
     #%% Generate initial conditions for river model - only necessary if not hotstarting
     RivFlow = interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']])).values
     SeaLevel = interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartTime']])).values
+    WavesAtT = interpolate_at(WaveTs, pd.DatetimeIndex([TimePars['StartTime']]))
+    EDir_h = WavesAtT.EDir_h[0]
+    Hs_offshore = WavesAtT.Hsig_Offshore[0]
     
     (ChanDx, ChanElev, ChanWidth, LagArea, LagLen, ChanDep, ChanVel, 
      OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
@@ -61,7 +64,7 @@ def main(ModelConfigFile, Overwrite=False):
                    Origin, ShoreNormDir, PhysicalPars,
                    Overwrite)
     out.writeCurrent(OutputOpts['OutFile'], TimePars['StartTime'], 
-                     SeaLevel[-1], RivFlow[-1],
+                     SeaLevel[-1], RivFlow[-1], Hs_offshore, EDir_h,
                      ShoreY, ShoreZ, LagoonWL, LagoonVel, np.zeros(ShoreX.size), 
                      OutletDep, OutletVel, np.zeros(ShoreX.size), 
                      np.zeros(ShoreX.size-1), np.zeros(ShoreX.size), np.zeros(ShoreX.size), 
@@ -177,7 +180,8 @@ def main(ModelConfigFile, Overwrite=False):
         
         # Save outputs
         if MorTime >= OutTime:
-            out.writeCurrent(OutputOpts['OutFile'], MorTime, SeaLevel[-1], RivFlow[-1],
+            out.writeCurrent(OutputOpts['OutFile'], MorTime, 
+                             SeaLevel[-1], RivFlow[-1], Hs_offshore, EDir_h, 
                              ShoreY, ShoreZ, LagoonWL, LagoonVel, LagoonBedload,
                              OutletDep, OutletVel, OutletBedload,
                              LST, CST_tot, OverwashProp,

@@ -131,6 +131,16 @@ def newOutFile(FileName, ModelName, StartTime,
     RiverFlowVar.units = 'm3/s'
     RiverFlowVar.long_name = 'River flow upstream of hapua'
     
+    WaveHeightVar = NcFile.createVariable('hs_offshore', np.float32, 
+                                          (TimeDim.name,))
+    WaveHeightVar.units = 'm'
+    WaveHeightVar.long_name = 'Offshore significant wave height'
+    
+    WaveDirVar = NcFile.createVariable('wave_dir', np.float32, 
+                                       (TimeDim.name,))
+    WaveDirVar.units = 'degrees'
+    WaveDirVar.long_name = 'Direction of wave energy at model input point (depth=WaveDataDepth)'
+    
     #%% create shore-transect data variables
     
     # Shoreline Y coordinates
@@ -321,7 +331,7 @@ def newOutFile(FileName, ModelName, StartTime,
     # Close netCDF file
     NcFile.close()
 
-def writeCurrent(FileName, CurrentTime, SeaLevel, RivFlow,
+def writeCurrent(FileName, CurrentTime, SeaLevel, RivFlow, Hs_offshore, EDir_h,
                  ShoreY, ShoreZ, LagoonWL, LagoonVel, LagoonBedload, 
                  OutletDep, OutletVel, OutletBedload, 
                  LST, CST, OverwashProp,
@@ -331,6 +341,7 @@ def writeCurrent(FileName, CurrentTime, SeaLevel, RivFlow,
     """ Write hapuamod outputs for current timestep to netCDF 
         
         writeCurrent(FileName, CurrentTime, SeaLevel, RivFlow,
+                     Hs_offshore, EDir_h,
                      ShoreY, ShoreZ, LagoonWL, LagoonVel, LagoonBedload, 
                      OutletDep, OutletVel, OutletBedload, 
                      LST, CST, OverwashProp,
@@ -353,6 +364,8 @@ def writeCurrent(FileName, CurrentTime, SeaLevel, RivFlow,
     # Append data to boundary condition variables
     NcFile.variables['sea_level'][TimeIx] = SeaLevel
     NcFile.variables['river_flow'][TimeIx] = RivFlow
+    NcFile.variables['hs_offshore'][TimeIx] = Hs_offshore
+    NcFile.variables['wave_dir'][TimeIx] = EDir_h
     
     # Append new data to shore transect variables
     NcFile.variables['shoreline_y'][TimeIx,:] = ShoreY[:,0]
@@ -399,7 +412,8 @@ def writeCurrent(FileName, CurrentTime, SeaLevel, RivFlow,
 def readTimestep(NcFile, TimeIx):
     """ Extract model results for a specific timestep from netcdf file
         
-        (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
+        (SeaLevel, RivFlow, Hs_offshore, EDir_h, 
+         ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
          OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
          OutletEndWL, OutletChanIx, WavePower, EDir_h, LST, CST, Closed, 
          RiverElev, RiverWL, RiverVel, ModelTime) = readTimestep(NcFile, TimeIx)
@@ -408,7 +422,8 @@ def readTimestep(NcFile, TimeIx):
         -------
         > NcFile = netCDF4.Dataset(FileName, mode='r', format='NETCDF4_CLASSIC') 
         
-        > (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
+        > (SeaLevel, RivFlow, Hs_offshore, EDir_h, 
+           ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
         >  OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
         >  OutletEndWL, OutletChanIx, WavePower, EDir_h, LST, CST, Closed, 
         >  RiverElev, RiverWL, RiverVel, ModelTime) = readTimestep(NcFile, TimeIx)
@@ -419,6 +434,9 @@ def readTimestep(NcFile, TimeIx):
     NTransects = NcFile.dimensions['transect_x'].size
     
     SeaLevel = NcFile.variables['sea_level'][TimeIx]
+    RivFlow = NcFile.variables['river_flow'][TimeIx]
+    Hs_offshore = NcFile.variables['hs_offshore'][TimeIx]
+    EDir_h = NcFile.variables['wave_dir'][TimeIx]
     
     ShoreX = NcFile.variables['transect_x'][:]
     
@@ -450,14 +468,8 @@ def readTimestep(NcFile, TimeIx):
     OutletEndElev = np.asarray(NcFile.variables['outlet_end_z'][TimeIx].squeeze())
     OutletEndVel = np.asarray(NcFile.variables['outlet_end_vel'][TimeIx].squeeze())
     OutletEndWL = np.asarray(NcFile.variables['outlet_end_wl'][TimeIx].squeeze())
-    if 'dummy_xs_dep' in NcFile.variables.keys():
-        DummyXsDep = np.asarray(NcFile.variables['dummy_xs_dep'][TimeIx].squeeze())
-    else:
-        DummyXsDep = np.nan
-    if 'dummy_xs_vel' in NcFile.variables.keys():
-        DummyXsVel = np.asarray(NcFile.variables['dummy_xs_vel'][TimeIx].squeeze())
-    else:
-        DummyXsVel = np.nan
+    DummyXsDep = np.asarray(NcFile.variables['dummy_xs_dep'][TimeIx].squeeze())
+    DummyXsVel = np.asarray(NcFile.variables['dummy_xs_vel'][TimeIx].squeeze())
     Closed = bool(NcFile.variables['outlet_closed'][TimeIx])
     
     WavePower=None
@@ -482,7 +494,8 @@ def readTimestep(NcFile, TimeIx):
         OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] <= ShoreX,
                                                          ShoreX <= OutletEndX[0]))[0])
     
-    return(SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
+    return(SeaLevel, RivFlow, Hs_offshore, EDir_h,
+           ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
            OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
            OutletEndWL, DummyXsDep, DummyXsVel, OutletChanIx, WavePower, EDir_h, LST, CST, Closed, 
            RiverElev, RiverWL, RiverVel, ModelTime)

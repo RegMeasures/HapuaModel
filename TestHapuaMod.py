@@ -117,7 +117,8 @@ plt.plot(ShoreX, (ShoreY[:,0]-OldShoreY[:,0]))
 out.newOutFile('test.nc', ModelName, TimePars['StartTime'], 
                ShoreX, NumericalPars['Dx'],  RiverElev, 
                Origin, ShoreNormDir, PhysicalPars, False)
-out.writeCurrent('test.nc', TimePars['StartTime'], SeaLevel[-1], RivFlow[-1],
+out.writeCurrent('test.nc', TimePars['StartTime'], SeaLevel[-1], RivFlow[-1], 
+                 Hs_offshore, EDir_h,
                  ShoreY, ShoreZ, LagoonWL, LagoonVel, np.zeros(ShoreX.size), 
                  OutletDep, OutletVel, np.zeros(ShoreX.size), 
                  np.zeros(ShoreX.size-1), np.zeros(ShoreX.size), np.zeros(ShoreX.size), 

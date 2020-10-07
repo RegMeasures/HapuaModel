@@ -37,10 +37,12 @@ def loadModel(ModelConfigFile):
     variables. Prior to running loadModel the onfig file should first be parsed
     using the readConfig function.
     
-    (FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, 
-     ShoreX, ShoreY, LagoonElev, BarrierElev, OutletElev, 
-     RiverElev, OutletEndX, OutletEndWidth, OutletEndElev, Closed,
-     TimePars, PhysicalPars, NumericalPars, OutputOpts) = loadModel(Config)
+    (ModelName, FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, 
+     ShoreX, ShoreY, ShoreZ, RiverElev, 
+     OutletEndX, OutletEndWidth, OutletEndElev, RiverWL, RiverVel, 
+     LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, 
+     OutletEndVel, Closed, TimePars, PhysicalPars, NumericalPars, 
+     OutputOpts) = loadModel(Config)
     
     Parameters:
         ModelConfigFile (string): Filename (and path if required) of a valid 
@@ -311,7 +313,8 @@ def loadModel(ModelConfigFile):
                      (DatetimeOfInterest.strftime("%b %d %Y %H:%M:%S"), 
                       ActualHotStartTime.strftime("%b %d %Y %H:%M:%S")))
         
-        (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
+        (SeaLevel, RivFlow, Hs_offshore, EDir_h, 
+         ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
          OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
          OutletEndWL, DummyXsDep, DummyXsVel, OutletChanIx, WavePower, EDir_h, 
          LST, CST, Closed, RiverElev, RiverWL, RiverVel, ModelTime) = \
