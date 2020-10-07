@@ -87,7 +87,7 @@ BarrierPermeability = float(min=0, default=0)
 ShorelineErosionRate = float(default=0)
 
 [NumericalParameters]
-AlongShoreDx = float(min=0)
+Dx = float(min=0)
 Beta = float(min=0)
 Theta = float(min=0, max=1, default=0.7)
 Psi = float(min=0, max=0.5, default=0.4)

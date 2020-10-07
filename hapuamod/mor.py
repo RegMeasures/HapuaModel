@@ -212,10 +212,10 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     
     #%% Check if outlet has extended too close to the edge of the domain
     if OutletEndX[1] < ShoreX[1]:
-        logging.info('Left (negative X) end of outlet channel too close to edge of domain - preventing further migration')
+        logging.warning('Left (negative X) end of outlet channel too close to edge of domain - preventing further migration')
         OutletEndX[1] = ShoreX[1]
     if OutletEndX[1] > ShoreX[-2]:
-        logging.info('Right (negative X) end of outlet channel too close to edge of domain - preventing further migration')
+        logging.warning('Right (negative X) end of outlet channel too close to edge of domain - preventing further migration')
         OutletEndX[1] = ShoreX[1]
     
     #%% Check if shoreline has eroded into cliff anywhere

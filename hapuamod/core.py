@@ -28,9 +28,11 @@ def main(ModelConfigFile, Overwrite=False):
     #%% Load the model
     (ModelName, FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, ShoreX, 
      ShoreY, ShoreZ, RiverElev, OutletEndX, OutletEndWidth, OutletEndElev, 
-     Closed, TimePars, PhysicalPars, NumericalPars, OutputOpts) = loadmod.loadModel(ModelConfigFile)
+     RiverWL, RiverVel, LagoonWL, LagoonVel, OutletDep, OutletVel, 
+     OutletEndDep, OutletEndVel, Closed, TimePars, PhysicalPars, 
+     NumericalPars, OutputOpts) = loadmod.loadModel(ModelConfigFile)
     
-    #%% Generate initial conditions for river model
+    #%% Generate initial conditions for river model - only necessary if not hotstarting
     RivFlow = interpolate_at(FlowTs, pd.DatetimeIndex([TimePars['StartTime']])).values
     SeaLevel = interpolate_at(SeaLevelTs, pd.DatetimeIndex([TimePars['StartTime']])).values
     
@@ -38,20 +40,20 @@ def main(ModelConfigFile, Overwrite=False):
      OnlineLagoon, OutletChanIx, ChanFlag, Closed) = \
         riv.assembleChannel(ShoreX, ShoreY, ShoreZ,
                             OutletEndX, OutletEndWidth, OutletEndElev, 
-                            Closed, RiverElev, 
-                            np.zeros(RiverElev.size), np.zeros(RiverElev.size),
-                            np.zeros(ShoreX.size), np.zeros(ShoreX.size), 
-                            np.zeros(ShoreX.size), np.zeros(ShoreX.size),
-                            np.zeros(2), np.zeros(2), NumericalPars['Dx'],
+                            Closed, RiverElev, RiverWL - RiverElev, RiverVel,
+                            LagoonWL, LagoonVel, OutletDep, OutletVel,
+                            OutletEndDep, OutletEndVel, NumericalPars['Dx'],
                             PhysicalPars)
-    
-    (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
-                                         PhysicalPars['RoughnessManning'], 
-                                         RivFlow, SeaLevel, NumericalPars)
-    
-    (LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, OutletEndVel) = \
-        riv.storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, 
-                            ChanFlag, ShoreZ[:,3], Closed)
+
+    if np.all(LagoonVel==0):
+        # If not hotstarting
+        (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
+                                             PhysicalPars['RoughnessManning'], 
+                                             RivFlow, SeaLevel, NumericalPars)
+        
+        (LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, OutletEndVel) = \
+            riv.storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, 
+                                ChanFlag, ShoreZ[:,3], Closed)
     
     #%% Create output file and write initial conditions
     out.newOutFile(OutputOpts['OutFile'], ModelName, TimePars['StartTime'], 

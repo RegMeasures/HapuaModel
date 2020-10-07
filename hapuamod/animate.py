@@ -23,8 +23,9 @@ def animateMap(TimeIx, NcFile, ModelFig):
     
     (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
      OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
-     OutletEndWL, OutletChanIx, WavePower, EDir_h, LST, CST, Closed, 
-     RiverElev, RiverWL, RiverVel, ModelTime) = out.readTimestep(NcFile, TimeIx)
+     OutletEndWL, DummyXsDep, DummyXsVel, OutletChanIx, WavePower, EDir_h, 
+     LST, CST, Closed, RiverElev, RiverWL, RiverVel, 
+     ModelTime) = out.readTimestep(NcFile, TimeIx)
     
     visualise.updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, OutletEndWidth, 
                               OutletChanIx, Closed=Closed, 
@@ -39,8 +40,9 @@ def animateTransect(TimeIx, NcFile, TransectFig):
     
     (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
      OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
-     OutletEndWL, OutletChanIx, WavePower, EDir_h, LST, CST, Closed, 
-     RiverElev, RiverWL, RiverVel, ModelTime) = out.readTimestep(NcFile, TimeIx)
+     OutletEndWL, DummyXsDep, DummyXsVel, OutletChanIx, WavePower, EDir_h, 
+     LST, CST, Closed, RiverElev, RiverWL, RiverVel, 
+     ModelTime) = out.readTimestep(NcFile, TimeIx)
     
     visualise.updateTransectFig(TransectFig, ShoreY, ShoreZ, 
                                 LagoonWL, OutletWL, SeaLevel,
@@ -53,8 +55,9 @@ def animateLongSec(TimeIx, NcFile, LongSecFig, PhysicalPars):
     
     (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
      OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
-     OutletEndWL, OutletChanIx, WavePower, EDir_h, LST, CST, Closed, 
-     RiverElev, RiverWL, RiverVel, ModelTime) = out.readTimestep(NcFile, TimeIx)
+     OutletEndWL, DummyXsDep, DummyXsVel, OutletChanIx, WavePower, EDir_h, 
+     LST, CST, Closed, RiverElev, RiverWL, RiverVel, 
+     ModelTime) = out.readTimestep(NcFile, TimeIx)
     
     Dx = ShoreX[1] - ShoreX[0]
     OutletDep = OutletWL - ShoreZ[:,1]
@@ -120,8 +123,9 @@ def main(ResultsFile, AnimationFile, StartTimestep=0, EndTimestep=None,
     # read in first timestep
     (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
      OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
-     OutletEndWL, OutletChanIx, WavePower, EDir_h, LST, CST, Closed, 
-     RiverElev, RiverWL, RiverVel, ModelTime) = out.readTimestep(NcFile, StartTimestep)
+     OutletEndWL, DummyXsDep, DummyXsVel, OutletChanIx, WavePower, EDir_h, 
+     LST, CST, Closed, RiverElev, RiverWL, RiverVel, 
+     ModelTime) = out.readTimestep(NcFile, StartTimestep)
     
     if not(TransectX is None):
         # Transect animation

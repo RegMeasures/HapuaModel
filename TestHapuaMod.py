@@ -7,8 +7,10 @@ from hapuamod import loadmod, visualise, coast, riv, core, mor, out
 #%% Test model load (particularly geometry processing)
 ModelConfigFile = 'inputs\HurunuiModel.cnf'
 (ModelName, FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, ShoreX, 
- ShoreY, ShoreZ, RiverElev, OutletEndX, OutletEndWidth, OutletEndElev, Closed,
- TimePars, PhysicalPars, NumericalPars, OutputOpts) = loadmod.loadModel(ModelConfigFile)
+ ShoreY, ShoreZ, RiverElev, OutletEndX, OutletEndWidth, OutletEndElev, 
+ RiverWL, RiverVel, LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, 
+ OutletEndVel, Closed, TimePars, PhysicalPars, NumericalPars, OutputOpts) = \
+    loadmod.loadModel(ModelConfigFile)
 
 plt.figure()
 visualise.mapView(ShoreX, ShoreY, Origin, ShoreNormDir)

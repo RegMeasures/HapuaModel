@@ -97,6 +97,24 @@ def loadModel(ModelConfigFile):
             downstream end of the outlet channel (m)
         OutletEndElev (0-dimensional np.ndarray(float64)): Bed level of the 
             downstream end of the outlet channel (m)
+        RiverWL (np.ndarray(float64)): Water level in the river upstream of 
+            the lagoon (m). Zeros unless hotstarting.
+        RiverVel (np.ndarray(float64)): Water velocity in the river upstream of 
+            the lagoon (m). Zeros unless hotstarting.
+        LagoonWL (np.ndarray(float64)): Water level elevation in the lagoon 
+            (m). Zeros unless hotstarting.
+        LagoonVel (np.ndarray(float64)): Water velocity in the lagoon (m/s). 
+            Zeros unless hotstarting.
+        OutletDep (np.ndarray(float64)): Water level elevation in the outlet 
+            channel (m). Zeros unless hotstarting.
+        OutletVel (np.ndarray(float64)): Water velocity in the outlet 
+            channel (m/s). Zeros unless hotstarting.
+        OutletEndDep (np.ndarray(float64)): Water depth at the downstream end 
+            of the outlet channel (m). Zeros unless hotstarting. Includes the 
+            dummy cross-section downstream of the outlet end.
+        OutletEndVel (np.ndarray(float64)): Water velocity at the downstream 
+            end of the outlet channel (m). Zeros unless hotstarting.  Includes 
+            the dummy cross-section downstream of the outlet end.
         Closed (boolean): True if the outlet is closed (always false unless 
             hotstarting)
         TimePars (dict): Time parameters including:
@@ -262,23 +280,13 @@ def loadModel(ModelConfigFile):
                                  PhysicalPars['BarRatSlope'] * PhysicalPars['SpitWidth'])
     
     #%% Read numerical parameters
-    Dx = Config['NumericalParameters']['AlongShoreDx']
-    NumericalPars = {'Dx': Dx,
-                     'Beta': Config['NumericalParameters']['Beta'],
-                     'Theta': Config['NumericalParameters']['Theta'],
-                     'Psi': Config['NumericalParameters']['Psi'],
-                     'ErrTol': Config['NumericalParameters']['ErrTol'],
-                     'MaxIt': Config['NumericalParameters']['MaxIt'],
-                     'WarnTol': Config['NumericalParameters']['WarnTol'],
-                     'MaxMorChange': Config['NumericalParameters']['MaxMorChange']}
+    NumericalPars = Config['NumericalParameters']
+    Dx = NumericalPars['Dx']
     
     #%% Read initial conditions
     if Config['HotStart']['InitialConditionsNetCDF'] is None:
         logging.info('Reading initial conditions')
-        IniCond = {'OutletWidth': Config['InitialConditions']['OutletWidth'],
-                   'OutletBed': Config['InitialConditions']['OutletBed'],
-                   'LagoonBed': Config['InitialConditions']['LagoonBed'],
-                   'BarrierElev': Config['InitialConditions']['BarrierElev']}
+        IniCond = Config['InitialConditions']
         
         #%% Initialise river variables
         RiverElev = np.flipud(np.arange(IniCond['LagoonBed'],
@@ -305,8 +313,9 @@ def loadModel(ModelConfigFile):
         
         (SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
          OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
-         OutletEndWL, OutletChanIx, WavePower, EDir_h, LST, CST, Closed, 
-         RiverElev, RiverWL, RiverVel, ModelTime) = out.readTimestep(NcFile, TimeIx)
+         OutletEndWL, DummyXsDep, DummyXsVel, OutletChanIx, WavePower, EDir_h, 
+         LST, CST, Closed, RiverElev, RiverWL, RiverVel, ModelTime) = \
+            out.readTimestep(NcFile, TimeIx)
         
         Origin = np.array([NcFile.ModelOriginX, NcFile.ModelOriginY])
         ShoreNormDir = np.deg2rad(NcFile.ModelOrientation)
@@ -547,6 +556,24 @@ def loadModel(ModelConfigFile):
         ShoreZ[:, 0] = np.full(ShoreX.size, IniCond['BarrierElev'])
         ShoreZ[OutletMask, 2] = np.full(np.sum(OutletMask), IniCond['BarrierElev'])
     
+    #%% Initialise hydraulics variables
+    
+    if Config['HotStart']['InitialConditionsNetCDF'] is not None:
+        # If hotstarting then required info has already been read in from the hotstart file
+        OutletDep = OutletWL - ShoreZ[:,1]
+        OutletEndDep = np.array([OutletEndWL - OutletEndElev, DummyXsDep])
+        OutletEndVel = np.array([OutletEndVel, DummyXsVel])
+    else:
+        # otherwise initialise as null
+        RiverWL = np.zeros(RiverElev.size)
+        RiverVel = np.zeros(RiverElev.size)
+        LagoonWL = np.zeros(ShoreX.size)
+        LagoonVel = np.zeros(ShoreX.size)
+        OutletDep = np.zeros(ShoreX.size)
+        OutletVel = np.zeros(ShoreX.size)
+        OutletEndDep = np.zeros(2)
+        OutletEndVel = np.zeros(2)
+    
     #%% Read the boundary condition timeseries
     to_datetime = lambda d: datetime.datetime.strptime(d, '%d/%m/%Y %H:%M')
     
@@ -663,5 +690,7 @@ def loadModel(ModelConfigFile):
     
     return (ModelName, FlowTs, WaveTs, SeaLevelTs, Origin, ShoreNormDir, 
             ShoreX, ShoreY, ShoreZ, RiverElev, 
-            OutletEndX, OutletEndWidth, OutletEndElev, Closed,
-            TimePars, PhysicalPars, NumericalPars, OutputOpts)
+            OutletEndX, OutletEndWidth, OutletEndElev, RiverWL, RiverVel, 
+            LagoonWL, LagoonVel, OutletDep, OutletVel, OutletEndDep, 
+            OutletEndVel, Closed, TimePars, PhysicalPars, NumericalPars, 
+            OutputOpts)

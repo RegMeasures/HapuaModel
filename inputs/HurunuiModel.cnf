@@ -115,7 +115,7 @@ ShorelineErosionRate = 0.0
 
 [NumericalParameters]
 # Alongshore discretisation resolution (transect spacing) [m]
-AlongShoreDx = 20
+Dx = 20
 # Momentum (Boussinesq) coefficient (generally in the range 1 to 1.05) 
 # Can be set to zero to ignore the convective acceleration term of the momentum
 # equation if desired!

@@ -300,6 +300,18 @@ def newOutFile(FileName, ModelName, StartTime,
     OutletEndBedloadVar.units = 'm3(bulk including voids)/s'
     OutletEndBedloadVar.long_name = 'bedlaod transport at outlet channel ends (+ve = outflowing i.e. towards sea)'
     
+    # Dummy XS water level
+    DummyXsWlVar = NcFile.createVariable('dummy_xs_dep', np.float32, 
+                                         TimeDim.name)
+    DummyXsWlVar.units = 'm'
+    DummyXsWlVar.long_name = 'Dummy XS water depth (downstream of outlet i.e. in sea)'
+    
+    # Dummy XS velocity
+    DummyXsVelVar = NcFile.createVariable('dummy_xs_vel', np.float32, 
+                                            TimeDim.name)
+    DummyXsVelVar.units = 'm/s'
+    DummyXsVelVar.long_name = 'Dummy XS velocity (downstream of outlet i.e. in sea, +ve = outflowing i.e. towards sea)'
+    
     # Closed/open status
     OutletClosedVar = NcFile.createVariable('outlet_closed', 'i1', 
                                             TimeDim.name)
@@ -378,6 +390,8 @@ def writeCurrent(FileName, CurrentTime, SeaLevel, RivFlow,
     NcFile.variables['outlet_end_z'][TimeIx] = OutletEndElev
     NcFile.variables['outlet_end_wl'][TimeIx] = OutletEndElev + OutletEndDep[0]
     NcFile.variables['outlet_end_vel'][TimeIx] = OutletEndVel[0]
+    NcFile.variables['dummy_xs_dep'][TimeIx] = OutletEndDep[1]
+    NcFile.variables['dummy_xs_vel'][TimeIx] = OutletEndVel[1]
     NcFile.variables['outlet_closed'][TimeIx] = Closed
     
     NcFile.close()
@@ -426,16 +440,24 @@ def readTimestep(NcFile, TimeIx):
     ShoreZ[:,2] = NcFile.variables['inner_barrier_crest_z'][TimeIx,:]
     ShoreZ[:,3] = NcFile.variables['lagoon_bed_z'][TimeIx,:]
     
-    LagoonWL = NcFile.variables['lagoon_wl'][TimeIx,:]
-    LagoonVel = NcFile.variables['lagoon_vel'][TimeIx,:]
-    OutletWL = NcFile.variables['outlet_wl'][TimeIx,:]
-    OutletVel = NcFile.variables['outlet_vel'][TimeIx,:]
+    LagoonWL = NcFile.variables['lagoon_wl'][TimeIx,:].squeeze()
+    LagoonVel = NcFile.variables['lagoon_vel'][TimeIx,:].squeeze()
+    OutletWL = NcFile.variables['outlet_wl'][TimeIx,:].squeeze()
+    OutletVel = NcFile.variables['outlet_vel'][TimeIx,:].squeeze()
     
     OutletEndX = NcFile.variables['outlet_end_x'][TimeIx,:].squeeze()
     OutletEndWidth = np.asarray(NcFile.variables['outlet_end_width'][TimeIx].squeeze())
     OutletEndElev = np.asarray(NcFile.variables['outlet_end_z'][TimeIx].squeeze())
     OutletEndVel = np.asarray(NcFile.variables['outlet_end_vel'][TimeIx].squeeze())
     OutletEndWL = np.asarray(NcFile.variables['outlet_end_wl'][TimeIx].squeeze())
+    if 'dummy_xs_dep' in NcFile.variables.keys():
+        DummyXsDep = np.asarray(NcFile.variables['dummy_xs_dep'][TimeIx].squeeze())
+    else:
+        DummyXsDep = np.nan
+    if 'dummy_xs_vel' in NcFile.variables.keys():
+        DummyXsVel = np.asarray(NcFile.variables['dummy_xs_vel'][TimeIx].squeeze())
+    else:
+        DummyXsVel = np.nan
     Closed = bool(NcFile.variables['outlet_closed'][TimeIx])
     
     WavePower=None
@@ -462,7 +484,7 @@ def readTimestep(NcFile, TimeIx):
     
     return(SeaLevel, ShoreX, ShoreY, ShoreZ, LagoonWL, LagoonVel, OutletWL, 
            OutletVel, OutletEndX, OutletEndWidth, OutletEndElev, OutletEndVel, 
-           OutletEndWL, OutletChanIx, WavePower, EDir_h, LST, CST, Closed, 
+           OutletEndWL, DummyXsDep, DummyXsVel, OutletChanIx, WavePower, EDir_h, LST, CST, Closed, 
            RiverElev, RiverWL, RiverVel, ModelTime)
     
 def closestTimeIx(NcFile, DatetimeOfInterest):
