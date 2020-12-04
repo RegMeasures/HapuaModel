@@ -137,7 +137,7 @@ BarrierPermeability = 0.001
 
 [NumericalParameters]
 # Alongshore discretisation resolution (transect spacing) [m]
-AlongShoreDx = 20
+Dx = 20
 # Momentum (Boussinesq) coefficient (generally in the range 1 to 1.05) 
 # Can be set to zero to ignore the convective acceleration term of the momentum
 # equation if desired!
@@ -158,6 +158,8 @@ MaxMorChange = 0.1
 [OutputOptions]
 # Interval to save data to netCDF file [s]
 OutInt = 10800
+# Interval to save timeseries outputs to netCDF file [s]
+TsOutInt = 900
 # Interval at which progress will be logged to console/logfile during simulation [s]
 LogInt = 3600
 # Interval to update plots (zero means no plotting will occur) [s]

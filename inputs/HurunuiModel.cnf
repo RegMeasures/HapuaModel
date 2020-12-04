@@ -136,6 +136,8 @@ MaxMorChange = 0.05
 [OutputOptions]
 # Interval to save data to netCDF file [s]
 OutInt = 3600
+# Interval to save timeseries outputs to netCDF file [s]
+TsOutInt = 900
 # Interval at which progress will be logged to console/logfile during simulation [s]
 LogInt = 3600
 # Interval to update plots (zero means no plotting will occur) [s]

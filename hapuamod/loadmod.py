@@ -677,8 +677,14 @@ def loadModel(ModelConfigFile):
         OutFile = os.path.splitext(ConfigFileName)[0] + '_outputs.nc'
     else:
         OutFile = Config['OutputOptions']['OutFile']
+    if Config['OutputOptions']['TsOutFile'] is None:
+        TsOutFile = os.path.splitext(ConfigFileName)[0] + '_TSoutputs.nc'
+    else:
+        TsOutFile = Config['OutputOptions']['TsOutFile']
     OutputOpts = {'OutFile': OutFile,
+                  'TsOutFile': TsOutFile,
                   'OutInt': pd.Timedelta(seconds=Config['OutputOptions']['OutInt']),
+                  'TsOutInt': pd.Timedelta(seconds=Config['OutputOptions']['TsOutInt']),
                   'LogInt': pd.Timedelta(seconds=Config['OutputOptions']['LogInt']),
                   'PlotInt': pd.Timedelta(seconds=Config['OutputOptions']['PlotInt'])}
           

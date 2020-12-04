@@ -58,7 +58,7 @@ def main(ModelConfigFile, Overwrite=False):
             riv.storeHydraulics(ChanDep, ChanVel, OnlineLagoon, OutletChanIx, 
                                 ChanFlag, ShoreZ[:,3], Closed)
     
-    #%% Create output file and write initial conditions
+    #%% Create output files and write initial conditions
     out.newOutFile(OutputOpts['OutFile'], ModelName, TimePars['StartTime'], 
                    ShoreX, NumericalPars['Dx'],  RiverElev, 
                    Origin, ShoreNormDir, PhysicalPars,
@@ -72,10 +72,12 @@ def main(ModelConfigFile, Overwrite=False):
                      OutletEndX, OutletEndElev, OutletEndWidth, 
                      OutletEndDep, OutletEndVel, np.zeros(2), Closed)
     
-    #%% Set up variables to hold output timeseries
-    OutputTs = pd.DataFrame(list(zip([RivFlow],[RivFlow],[SeaLevel])),
-                                     columns=['Qin','Qout','SeaLevel'],
-                                     index=pd.DatetimeIndex([TimePars['StartTime']]))
+    out.newTsOutFile(OutputOpts['TsOutFile'], ModelName, 
+                     TimePars['StartTime'], Overwrite)
+    out.writeTsOut(OutputOpts['TsOutFile'], TimePars['StartTime'], 
+                   SeaLevel[-1], RivFlow[-1], Hs_offshore, EDir_h, 
+                   np.nanmean(LagoonWL), ChanDep[-1]*ChanVel[-1]*ChanWidth[-1], 
+                   0, OutletEndX, Closed, TimePars['MorDtMin'])    
     
     #%% Prepare plotting
     LivePlot = OutputOpts['PlotInt'] > pd.Timedelta(0)
@@ -83,7 +85,10 @@ def main(ModelConfigFile, Overwrite=False):
         plt.ion()
         LongSecFig = visualise.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, 
                                            np.zeros(ChanElev.size-1))
-        BdyFig = visualise.bdyCndFig(OutputTs)
+        BdyPlotTs = pd.DataFrame(list(zip([RivFlow],[RivFlow],[SeaLevel])),
+                                 columns=['Qin','Qout','SeaLevel'],
+                                 index=pd.DatetimeIndex([TimePars['StartTime']]))
+        BdyFig = visualise.bdyCndFig(BdyPlotTs)
         ModelFig = visualise.modelView(ShoreX, ShoreY, OutletEndX, OutletEndWidth,
                                        OutletChanIx, PhysicalPars['RiverWidth'],
                                        PhysicalPars['SpitWidth'], ShoreZ=ShoreZ, 
@@ -94,6 +99,7 @@ def main(ModelConfigFile, Overwrite=False):
     #%% Main timestepping loop
     MorTime = TimePars['StartTime']
     OutTime = TimePars['StartTime'] + OutputOpts['OutInt']
+    TsOutTime = TimePars['StartTime'] + OutputOpts['TsOutInt']
     LogTime = TimePars['StartTime'] + OutputOpts['LogInt']
     PlotTime = TimePars['StartTime'] + OutputOpts['PlotInt']
     
@@ -188,12 +194,14 @@ def main(ModelConfigFile, Overwrite=False):
                              RiverElev, ChanDep[ChanFlag==0], ChanVel[ChanFlag==0], Bedload[ChanFlag[:-1]==0],
                              OutletEndX, OutletEndElev, OutletEndWidth, 
                              OutletEndDep, OutletEndVel, OutletEndBedload, Closed)
-            OutputTs = OutputTs.append(pd.DataFrame(list(zip([RivFlow[-1]],
-                                                             [ChanDep[-1]*ChanVel[-1]*ChanWidth[-1]],
-                                                             [SeaLevel[-1]])),
-                                                    columns=['Qin','Qout','SeaLevel'],
-                                                    index=pd.DatetimeIndex([MorTime])))
             OutTime += OutputOpts['OutInt']
+        
+        if MorTime >= TsOutTime:
+            out.writeTsOut(OutputOpts['TsOutFile'], MorTime, 
+                           SeaLevel[-1], RivFlow[-1], Hs_offshore, EDir_h, 
+                           np.nanmean(LagoonWL), ChanDep[-1]*ChanVel[-1]*ChanWidth[-1], 
+                           Bedload[0], OutletEndX, Closed, MorDt)
+            TsOutTime += OutputOpts['TsOutInt']
         
         # updates to user
         if MorTime >= LogTime:
@@ -205,7 +213,12 @@ def main(ModelConfigFile, Overwrite=False):
             if MorTime >= PlotTime:
                 visualise.updateLongSection(LongSecFig, ChanDx, ChanElev, 
                                             ChanWidth, ChanDep, ChanVel, Bedload)
-                visualise.updateBdyCndFig(BdyFig, OutputTs)
+                BdyPlotTs = BdyPlotTs.append(pd.DataFrame(list(zip([RivFlow[-1]],
+                                                                   [ChanDep[-1]*ChanVel[-1]*ChanWidth[-1]],
+                                                                   [SeaLevel[-1]])),
+                                                          columns=['Qin','Qout','SeaLevel'],
+                                                          index=pd.DatetimeIndex([MorTime])))
+                visualise.updateBdyCndFig(BdyFig, BdyPlotTs)
                 visualise.updateModelView(ModelFig, ShoreX, ShoreY, OutletEndX, 
                                           OutletEndWidth, OutletChanIx, 
                                           Closed=Closed, ShoreZ=ShoreZ, 

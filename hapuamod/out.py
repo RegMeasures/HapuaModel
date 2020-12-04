@@ -513,3 +513,140 @@ def closestTimeIx(NcFile, DatetimeOfInterest):
     ClosestTime = OutputTimes[TimeIx].to_pydatetime()[0]
     
     return (TimeIx, ClosestTime)
+
+def newTsOutFile(FileName, ModelName, StartTime, Overwrite=False):
+    """ Crete new output file for high frequency timeseries 
+        
+        newTsOutFile(FileName, ModelName, StartTime, Overwrite=False)
+    """
+    #%% setup
+    # check if file already exists
+    if os.path.isfile(FileName):
+        if not Overwrite:
+            Confirm = input('Confirm ok to overwrite "%s" (y/n):' % FileName)
+            Overwrite = Confirm in ['Y', 'y', 'Yes', 'yes', 'YES']
+        
+        if Overwrite:
+            os.remove(FileName)
+            logging.info('Overwriting output file "%s"' % FileName)
+        else:
+            raise Exception('Conflict with existing output file "%s"' % FileName)
+    else:
+        logging.info('Creating new output file "%s"' % FileName)
+    
+    # create new empty netcdf file and open it for writing
+    NcFile = netCDF4.Dataset(FileName, mode='w', format='NETCDF4_CLASSIC') 
+    
+    # create dimensions
+    TimeDim = NcFile.createDimension('time', None)
+    EndsDim = NcFile.createDimension('outlet_ends', 2)
+    
+    # create attributes
+    NcFile.ModelName = ModelName
+    NcFile.ModelStartTime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    # create coordinate variables
+    TimeVar = NcFile.createVariable(TimeDim.name, np.float64, (TimeDim.name,))
+    TimeVar.units = 'seconds since %s' % StartTime.strftime('%Y-%m-%d')
+    TimeVar.calendar = 'standard'
+    TimeVar.long_name = 'Model output times'
+    
+    #%% create boundary condition variables
+    
+    # sea level boundary condition
+    SeaLevelVar = NcFile.createVariable('sea_level', np.float32, 
+                                        (TimeDim.name,))
+    SeaLevelVar.units = 'm'
+    SeaLevelVar.long_name = 'Sea level'
+    
+    # river inflow boundary condition
+    RiverFlowVar = NcFile.createVariable('river_flow', np.float32, 
+                                         (TimeDim.name,))
+    RiverFlowVar.units = 'm3/s'
+    RiverFlowVar.long_name = 'River flow upstream of hapua'
+    
+    # offshore significant wave height boundary condition
+    WaveHeightVar = NcFile.createVariable('hs_offshore', np.float32, 
+                                          (TimeDim.name,))
+    WaveHeightVar.units = 'm'
+    WaveHeightVar.long_name = 'Offshore significant wave height'
+    
+    # wave direction boundary condition
+    WaveDirVar = NcFile.createVariable('wave_dir', np.float32, 
+                                       (TimeDim.name,))
+    WaveDirVar.units = 'degrees'
+    WaveDirVar.long_name = 'Direction of wave energy at model input point (depth=WaveDataDepth)'
+    
+    #%% create other timeseries variables
+    
+    # mean lagoon level
+    LagoonLevelVar = NcFile.createVariable('lagoon_level', np.float32, 
+                                           (TimeDim.name,))
+    LagoonLevelVar.units = 'm'
+    LagoonLevelVar.long_name = 'Mean lagoon water level'
+    
+    # lagoon outflow rate
+    LagoonOutflowVar = NcFile.createVariable('lagoon_outflow', np.float32, 
+                                             (TimeDim.name,))
+    LagoonOutflowVar.units = 'm3/s'
+    LagoonOutflowVar.long_name = 'Lagoon outflow to ocean (negative value = inflow from ocean to lagoon)'
+    
+    # sed inflow rate
+    SedInflowVar = NcFile.createVariable('sed_inflow', np.float32, 
+                                         (TimeDim.name,))
+    SedInflowVar.units = 'm3/s'
+    SedInflowVar.long_name = 'Bedload transport into upstream end of modelled river reach'
+    
+    # Outlet end positions
+    OutletEndXVar = NcFile.createVariable('outlet_end_x', np.float32, 
+                                          (TimeDim.name, EndsDim.name))
+    OutletEndXVar.units = 'm'
+    OutletEndXVar.long_name = 'Outlet end position'
+    
+    # Closed/open status
+    OutletClosedVar = NcFile.createVariable('outlet_closed', 'i1', 
+                                            TimeDim.name)
+    OutletClosedVar.units = ''
+    OutletClosedVar.long_name = 'Outlet status: true=closed, false=open'
+    
+    # Morphological timestep
+    MorDtVar = NcFile.createVariable('mordt', np.float32, 
+                                     (TimeDim.name,))
+    MorDtVar.units = 's'
+    MorDtVar.long_name = 'Morphological timestep'
+    
+    #%% Close netCDF file
+    NcFile.close()
+
+def writeTsOut(FileName, CurrentTime, SeaLevel, RivFlow, Hs_offshore, EDir_h,
+               MeanLagoonWl, LagOutflow, SedInflow, OutletEndX, Closed, MorDt):
+    """ Write hapuamod outputs to timeseries output netCDF file
+        
+        writeTsOut(FileName, CurrentTime, SeaLevel, RivFlow, 
+                   Hs_offshore, EDir_h, MeanLagoonWl, LagOutflow, 
+                   SedInflow, OutletEndX, Closed, MorDt)
+    """
+    
+    # Open netCDF file for appending
+    NcFile = netCDF4.Dataset(FileName, mode='a') 
+    
+    # Get index of new time row to add and add current time
+    TimeVar = NcFile.variables['time']
+    TimeIx = TimeVar.size
+    TimeVar[TimeIx] = netCDF4.date2num(CurrentTime, TimeVar.units)
+    
+    # Append data to boundary condition variables
+    NcFile.variables['sea_level'][TimeIx] = SeaLevel
+    NcFile.variables['river_flow'][TimeIx] = RivFlow
+    NcFile.variables['hs_offshore'][TimeIx] = Hs_offshore
+    NcFile.variables['wave_dir'][TimeIx] = EDir_h
+    
+    # Append new data to other high frequency outputs
+    NcFile.variables['lagoon_level'] = MeanLagoonWl
+    NcFile.variables['lagoon_outflow'] = LagOutflow             
+    NcFile.variables['sed_inflow'] = SedInflow
+    NcFile.variables['outlet_end_x'][TimeIx,:] = OutletEndX
+    NcFile.variables['outlet_closed'][TimeIx] = Closed
+    NcFile.variables['mordt'][TimeIx] = MorDt.seconds
+    
+    NcFile.close()
