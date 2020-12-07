@@ -38,13 +38,16 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     # Locations where an outlet channel exists in the barrier
     # Note: 
     #   - Not all "OutletPresent" are online/connected to sea...
-    #   - Some locations where "OutletPresent" have a zero widht outlet (i.e. 
+    #   - Some locations where "OutletPresent" have a zero width outlet (i.e. 
     #     just a discontinuity between front and back barrier height where
     #     there used to  be an outlet channel).
     OutletPresent = ~np.isnan(ShoreY[:,1])
     
     # Locations where lagoon width > 0
     LagoonPresent = ShoreY[:,3] > ShoreY[:,4]
+    
+    # Locations where lagoon width wide enough to pass flow
+    LagoonOpen = (ShoreY[:,3] - ShoreY[:,4]) > PhysicalPars['MinOutletWidth']
     
     # Lagoon/outlet water level (to check for breach)
     # Calculated before updating bed levels incase this results in temporarily unrealistic water levels
@@ -210,7 +213,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         OutletEndElev.flat[0] += OutletEndAggRate * MorDt.seconds
         OutletEndX[1] += OutletEndXMoveRate * MorDt.seconds
     
-    #%% Check if outlet has extended too close to the edge of the domain
+    #%% 1. Check if outlet has extended too close to the edge of the domain
     if OutletEndX[1] < ShoreX[1]:
         logging.warning('Left (negative X) end of outlet channel too close to edge of domain - preventing further migration')
         OutletEndX[1] = ShoreX[1]
@@ -218,7 +221,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         logging.warning('Right (negative X) end of outlet channel too close to edge of domain - preventing further migration')
         OutletEndX[1] = ShoreX[1]
     
-    #%% Check if shoreline has eroded into cliff anywhere
+    #%% 2. Check if shoreline has eroded into cliff anywhere
     CliffCollision = ShoreY[:,0] <= ShoreY[:,4]
     if np.any(CliffCollision):
         logging.info('Shoreline/cliff collision - retreating cliff at X = %s', ShoreX[CliffCollision])
@@ -230,7 +233,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         ShoreY[CliffCollision, 3] = ShoreY[CliffCollision, 4]
         ShoreY[CliffCollision, 0] += (CliffOverlapDist - CliffRetDist)
     
-    #%% Check if outlet channel (online or offline) has negative width due to overwash and adjust to prevent negative width channel
+    #%% 3. Check if outlet channel (online or offline) has negative width due to overwash and adjust to prevent negative width channel
     if np.any(ShoreY[OutletPresent,1] < ShoreY[OutletPresent,2]):
         logging.debug('Overwashing occuring into closed channel in barrier - redistributing overwash onto barrier top')
         # Find locations where the outlet channel width is negative after applying overwash
@@ -276,7 +279,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             # Update OutletPresent variable to reflect removed section of channel
             OutletPresent = ~np.isnan(ShoreY[:,1])
     
-    #%% Check if d/s end of outlet channel has elongated across a transect line and adjust as necessary...
+    #%% 4. Check if d/s end of outlet channel has elongated across a transect line and adjust as necessary...
     if not Closed:
         if OutletEndX[0] < OutletEndX[1]:
             # Outlet angles from L to R
@@ -324,7 +327,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     # (Several checks performed in specific order)
     # Note: have to be careful to leave at least 1 transect in outlet channel
     
-    # First check for collision between outlet channel and sea in upstream most transect of online outlet
+    # 5. First check for collision between outlet channel and sea in upstream most transect of online outlet
     # Truncation is not possible here so we adjust the outlet channel position to prevent it...
     if not Closed:
         if ShoreY[OutletChanIx[0],1] >= ShoreY[OutletChanIx[0],0]:
@@ -339,7 +342,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             #       edge of the outlet channel and the lagoon or cliff, but 
             #       this will be delt with later.
     
-    # Check for collision between outlet channel and lagoon causing truncation 
+    # 6. Check for collision between outlet channel and lagoon causing truncation 
     # of lagoonward end of outlet channel 
     # (Only check for truncation if outlet channel crosses >1 transect)
     if OutletChanIx.size > 1:
@@ -397,7 +400,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                 ShoreZ[LagExtension,1] = np.nan
                 ShoreZ[LagExtension,2] = np.nan
     
-    # Check for truncation of seaward end of outlet channel
+    # 7. Check for truncation of seaward end of outlet channel
     if OutletChanIx.size > 1:
         # (don't check first transect as trucation here would leave 0 transects)
         if np.any(ShoreY[OutletChanIx[1:],1] >= ShoreY[OutletChanIx[1:],0]):
@@ -414,8 +417,9 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                 OutletChanIx = np.flipud(np.where(np.logical_and(OutletEndX[1] <= ShoreX,
                                                                  ShoreX <= OutletEndX[0]))[0])
     
-    # Check for collision between outlet channel and lagoon at downstream end
-    # Truncation is not possible here so we adjust the outlet channel position to prevent it...
+    # 8. Check for collision between outlet channel and lagoon at downstream end
+    # Truncation is not possible here (as it would result in an outlet channel 
+    # with no transects) so we adjust the outlet channel position to prevent it...
     if not Closed:
         if ShoreY[OutletChanIx[-1],3] >= ShoreY[OutletChanIx[-1],2]:
             logging.info('Preventing lagoonward truncation at X = %.1fm as it would result in a length 0 outlet channel' % 
@@ -434,25 +438,11 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                 ShoreY[OutletChanIx[-1], 4] -= CliffRetDist
                 ShoreY[OutletChanIx[-1], [2,3]] += (CliffOverlapDist - CliffRetDist)
     
-    #%% Check for complete erosion of barrier between offline outlet channel and sea or lagoon.
-    # Adjust ShoreY where outlet banks intersects coast or lagoon
+    #%% Check for complete erosion of barrier between offline outlet channel and lagoon
     # This *should* only include offline/disconnected bits of outlet as online 
     # bits have already been dealt with...
-    ShoreIntersect = ~np.greater(ShoreY[:,0], ShoreY[:,1], where=~np.isnan(ShoreY[:,1]))
-    if np.any(ShoreIntersect):
-        for IntersectIx in np.where(ShoreIntersect)[0]:
-            logging.info('Outlet intersects shoreline at X = %.1fm - filling outlet with sediment from shoreface' % 
-                         ShoreX[IntersectIx])
-        ShoreY[ShoreIntersect, 0] -= ((ShoreY[ShoreIntersect, 1] - ShoreY[ShoreIntersect, 2]) 
-                                      * (ShoreZ[ShoreIntersect, 2] - ShoreZ[ShoreIntersect, 1]) 
-                                      / (ShoreZ[ShoreIntersect, 2] + PhysicalPars['ClosureDepth']))
-        # Remove outlet channel from transect now it has been dissolved into shoreline
-        ShoreY[ShoreIntersect, 1] = np.nan
-        ShoreY[ShoreIntersect, 2] = np.nan
-        ShoreZ[ShoreIntersect, 1] = np.nan
-        # Remove inner barrier now there's no outlet in the transect
-        ShoreZ[ShoreIntersect, 0] = ShoreZ[ShoreIntersect, 2]
-        ShoreZ[ShoreIntersect, 2] = np.nan
+    #
+    # Remove old outlet channel and preserve sediment mass balance
     
     LagoonIntersect = ~np.greater(ShoreY[:,2], ShoreY[:,3], where=~np.isnan(ShoreY[:,1]))
     if np.any(LagoonIntersect):
@@ -467,17 +457,96 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         ShoreY[LagoonIntersect, 1] = np.nan
         ShoreY[LagoonIntersect, 2] = np.nan
         ShoreZ[LagoonIntersect, 1] = np.nan
-        
-    #%% Breaching
     
-    # ID locations barrier completely eroded
+    #%% ID locations where existing or relic outlet channel is connected to lagoon
+    # Also update WaterLevel variable to include outlet channel water level 
+    # (rather than lagoon WL) for connected bits of outlet channel.
+    
+    WideEnoughChannel = np.full(ShoreX.shape, False)
+    WideEnoughChannel[OutletPresent] = (ShoreY[OutletPresent,1]-ShoreY[OutletPresent,2]) >= PhysicalPars['MinOutletWidth']
+    OutletUsIx = np.argmin(np.abs(ShoreX-OutletEndX[0]))
+    
+    if not Closed:
+        # Lagoon open - use online outlet to start search for connected channel
+        ConnectedChanMinMax = np.array([np.min(OutletChanIx), np.max(OutletChanIx)])
+        
+    elif not np.isnan(OutletEndX[0]):
+        # Lagoon closed but potentially still connected to relic outlet chanel
+        
+        # check if relic outlet channel has become disconnected
+        if not WideEnoughChannel[OutletUsIx]:
+            OutletEndX[0] = np.nan
+            ConnectedChanMinMax = [np.nan, np.nan]
+        elif not LagoonOpen[min(OutletUsIx,X0Ix):max(OutletUsIx,X0Ix)+1]:
+            OutletEndX[0] = np.nan
+            ConnectedChanMinMax = [np.nan, np.nan]
+        else:
+            # relic outlet channel still connected at upstream end
+            ConnectedChanMinMax = [OutletUsIx, OutletUsIx]
+    else:
+        # Lagoon closed and no connected relic channel
+        ConnectedChanMinMax = [np.nan, np.nan]
+        
+    # Find additional connected bits of relic outlet channel
+    if np.isnan(ConnectedChanMinMax[0]):
+        while WideEnoughChannel[ConnectedChanMinMax[0]-1]:
+            WaterLevel[ConnectedChanMinMax-1] = WaterLevel[ConnectedChanMinMax]
+            ConnectedChanMinMax[0] -= 1
+    
+    if np.isnan(ConnectedChanMinMax[1]):
+        while WideEnoughChannel[ConnectedChanMinMax[1]+1]:
+            WaterLevel[ConnectedChanMinMax+1] = WaterLevel[ConnectedChanMinMax]
+            ConnectedChanMinMax[0] += 1
+            
+    ConnectedChan = np.logical_and(np.arange(0,ShoreX.size) >= ConnectedChanMinMax[0],
+                                   np.arange(0,ShoreX.size) <= ConnectedChanMinMax[1])
+    
+    #%% Check for complete erosion of barrier between offline relic outlet channel and sea.
+    # This *should* only include offline/disconnected bits of outlet as online 
+    # bits have already been dealt with...
+    #
+    # In most cases complete erosion of the barrier between offline outlet 
+    # channel and sea just requires adjusting ShoreY to remove outlet channel 
+    # and preserve mass balance. However it can also trigger breaching if the 
+    # lagoon is cloased and the relic outlet channel is connected to the lagoon.
+    
     Breach = False
+    BreachIx = np.nan
+    
+    ShoreIntersect = ~np.greater(ShoreY[:,0], ShoreY[:,1], where=~np.isnan(ShoreY[:,1]))
+    if np.any(ShoreIntersect):
+        # If lagoon closed then check if channel at any eroded location(s) is connected to lagoon via relic channel
+        if Closed and np.any(ShoreIntersect[ConnectedChan]):
+            # if so trigger a breach
+            Breach = True
+            # at the eroded location closest to the upstream end of the relic outlet channel
+            PossBreachTsects = np.where(np.logical_and(ShoreIntersect, ConnectedChan))[0]
+            ChanLength = np.abs(ShoreX[PossBreachTsects] - OutletEndX[0])
+            BreachIx = PossBreachTsects[np.argmin(ChanLength)]
+            ShoreIntersect = ShoreIntersect[ShoreIntersect!=BreachIx]
+    
+        # Adjust ShoreY where outlet banks intersects coast or lagoon    
+        for IntersectIx in np.where(ShoreIntersect)[0]:
+            logging.info('Outlet intersects shoreline at X = %.1fm - filling outlet with sediment from shoreface' % 
+                         ShoreX[IntersectIx])
+        ShoreY[ShoreIntersect, 0] -= ((ShoreY[ShoreIntersect, 1] - ShoreY[ShoreIntersect, 2]) 
+                                      * (ShoreZ[ShoreIntersect, 2] - ShoreZ[ShoreIntersect, 1]) 
+                                      / (ShoreZ[ShoreIntersect, 2] + PhysicalPars['ClosureDepth']))
+        # Remove outlet channel from transect now it has been dissolved into shoreline
+        ShoreY[ShoreIntersect, 1] = np.nan
+        ShoreY[ShoreIntersect, 2] = np.nan
+        ShoreZ[ShoreIntersect, 1] = np.nan
+        # Remove inner barrier now there's no outlet in the transect
+        ShoreZ[ShoreIntersect, 0] = ShoreZ[ShoreIntersect, 2]
+        ShoreZ[ShoreIntersect, 2] = np.nan
+    
+    #%% ID locations where barrier completely eroded (and there is a lagoon)
+    # should only apply to locations where there is no channel in barrier
     EroTsects = np.where(np.logical_and(ShoreY[:,3]>=ShoreY[:,0], ShoreY[:,3]>ShoreY[:,4]))[0]
     
     if EroTsects.size > 0:
         # Check which eroded locations are hydraulically connected to river
         PossBreachTsects = []
-        LagoonOpen = (ShoreY[:,3] - ShoreY[:,4]) > PhysicalPars['MinOutletWidth']
         for TsectIx in EroTsects:
             logging.info('Barrier completely eroded at X = %.1fm' % ShoreX[TsectIx])
             if TsectIx > X0Ix:
@@ -490,7 +559,9 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                 PossBreachTsects.append(TsectIx)
         
         # Decide whether erosion causes breach
-        if len(PossBreachTsects) == 0:
+        if Breach:
+            logging.info('Complete barrier erosion does not cause breach as relic channel has already re-opened')
+        elif len(PossBreachTsects) == 0:
             logging.info('Not possible for breach to occur as eroded barrier is on disconnected part of lagoon')
         elif Closed:
             # If closed then any (connected) erosion of barrier causes breach
@@ -506,7 +577,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             logging.info('Preventing breach as eroded barrier is further from river than existing outlet')
         
         # ID which eroded transect is the breach (if any) and which should not breach (if any)
-        if Breach:
+        if Breach and np.isnan(BreachIx):
             BreachIx = PossBreachTsects[np.argmin(np.abs(ShoreX[PossBreachTsects]))]
             NotBreachIx = EroTsects[EroTsects != BreachIx]
         else:
@@ -520,58 +591,64 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
             ShoreY[NotBreachIx,0] += ShoreShiftDist
             ShoreY[NotBreachIx,3] -= (OverlapDist - ShoreShiftDist)
     
-    # Check for overtopping breach 
-    if not Breach and np.any(ShoreZ[:,0] < WaterLevel):
-        
+    #%% Check for overtopping breach 
+    
+    # Find the barrier height which has to be overtopped to cause a breach:
+    CrestHeight = ShoreZ[:,0] # default
+    CrestHeight[OutletPresent] = np.amax(ShoreZ[OutletPresent,[0,2]]) # transects with active or relic channels (could be diconnected)
+    CrestHeight[ConnectedChan] = ShoreZ[ConnectedChan,0] # transects with connected channels (active or relic)
+    
+    if not Breach and np.any(CrestHeight < WaterLevel):
         # Note: only allowed if an erosion breach has not already occured in the same timestep
         
-        SpillTsects = np.where(ShoreZ[:,0] < WaterLevel)[0]
+        SpillTsects = np.where(CrestHeight < WaterLevel)[0]
         # Check which overtopped locations are hydraulically connected to river
         PossBreachTsects = []
         LagoonOpen = (ShoreY[:,3] - ShoreY[:,4]) > PhysicalPars['MinOutletWidth']
         for TsectIx in SpillTsects:
             logging.info('Potential overtopping breach at X = %.1f' % ShoreX[TsectIx])
+            if ConnectedChan[TsectIx]:
+                # Potential breach on connected channel
+                PossBreachTsects.append(TsectIx)
             if TsectIx > X0Ix:
+                # Potential breach to right of river
                 if np.all(LagoonOpen[np.arange(X0Ix+1, TsectIx+1)]):
                     PossBreachTsects.append(TsectIx)
             elif TsectIx < X0Ix:
+                # Potential breach to left of river
                 if np.all(LagoonOpen[np.arange(TsectIx, X0Ix)]):
                     PossBreachTsects.append(TsectIx)
             else: # TsectIx == X0Ix
                 PossBreachTsects.append(TsectIx)
         
+        if len(PossBreachTsects) == 0 and not Closed:
+            # If lagoon open then assume overtopping can only cause breach if it 
+            # is closer to where river enters lagoon than existing outlet
+            CloserToRiv = np.abs(ShoreX) < np.min(np.abs(OutletEndX))
+            CloserToRiv[ConnectedChan] = np.abs(ShoreX[ConnectedChan] - OutletEndX[0]) < np.abs(OutletEndX[1]-OutletEndX[0])
+            PossBreachTsects = PossBreachTsects[CloserToRiv[PossBreachTsects]]
+        
         if len(PossBreachTsects) == 0:
-            logging.info('Not possible for breach to occur as spill is on disconnected part of lagoon')
-        elif Closed:
-            # If lagoon closed then assume any overtopping causes breach, 
-            # and that breach occurs where overtopping is deepest
+            logging.info('Not possible for breach to occur as spill is on disconnected part of lagoon or further from river than existing outlet')
+        else: 
+            # Overtopping breach occurs - we have to work out where incase 
+            # there is still multiple possible locations...
+            # -> Assume that breach occurs where overtopping is deepest
             BreachIx = PossBreachTsects[np.argmax(WaterLevel[PossBreachTsects] -
-                                                  ShoreZ[PossBreachTsects,0])]
+                                                  CrestHeight[PossBreachTsects])]
             Breach = True
-            logging.info('Spill breach of closed lagoon at X = %.1fm' % ShoreX[BreachIx])
-        else:
-            # If lagoon open then assume overtopping only causes breach if it 
-            # is closer to where river enters lagoon than existing outlet 
-            # (and not on the first transect of the outlet channel as this
-            # would leave a 0-transect outlet)
-            CloserToRiv = np.abs(ShoreX) < np.max(np.abs(OutletEndX))
-            CloserToRiv[OutletChanIx[0]] = False
-            if np.any(CloserToRiv[PossBreachTsects]):
-                BreachIx = PossBreachTsects[np.argmin(np.abs(ShoreX[PossBreachTsects]))]
-                Breach = True
-                logging.info('Spill breach of open lagoon at X = %.1fm' % ShoreX[BreachIx])
-    
-    # Create breach
-    if Breach:
-        if BreachIx in OutletChanIx:
-            # Outlet truncation breach
-            logging.info('Outlet truncation due to breach at X = %.1fm' % ShoreX[BreachIx])
-            if OutletEndX[0] < OutletEndX[1]:
-                # Outlet angles from L to R
-                OutletEndX[1] = ShoreX[BreachIx] - Dx/2
+            if Closed:
+                logging.info('Spill breach of closed lagoon at X = %.1fm' % ShoreX[BreachIx])
             else:
-                # Outlet angles from R to L 
-                OutletEndX[1] = ShoreX[BreachIx] + Dx/2
+                logging.info('Spill breach of open lagoon at X = %.1fm' % ShoreX[BreachIx])
+            
+    
+    #%% Create breach if one has been triggered
+    if Breach:
+        if BreachIx in ConnectedChan:
+            # Outlet truncation breach
+            logging.info('Breach on pre-existing outlet channel at X = %.1fm' % ShoreX[BreachIx])
+            OutletEndX[1] = ShoreX[BreachIx]
             # TODO: close sediment balance by putting breach eroded sed onto shore
         else:
             # Lagoon breach (i.e. new outlet channel)

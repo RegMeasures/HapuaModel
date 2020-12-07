@@ -514,7 +514,8 @@ def loadModel(ModelConfigFile):
         OutletToR = OutletCoords2[0,0] < OutletCoords2[-1,0]
         OutletMask = np.logical_not(np.isnan(ShoreY[:,1]))
         
-        # Set outlet end coordinates (neatly in-between transects to start with!)
+        # Set outlet end coordinates (upstream end inline with transect and
+        # downstream end neatly in-between transects!)
         OutletEndX = np.empty([2])
         if np.all(np.logical_not(OutletMask)):
             # Handle special case that outlet is straight out and didn't intersect any transects
