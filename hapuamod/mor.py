@@ -400,6 +400,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                 ShoreY[LagExtension,2] = np.nan
                 ShoreZ[LagExtension,1] = np.nan
                 ShoreZ[LagExtension,2] = np.nan
+                OutletPresent[LagExtension] = False
     
     # 7. Check for truncation of seaward end of outlet channel
     if OutletChanIx.size > 1:
@@ -538,6 +539,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         ShoreY[ShoreIntersect, 1] = np.nan
         ShoreY[ShoreIntersect, 2] = np.nan
         ShoreZ[ShoreIntersect, 1] = np.nan
+        OutletPresent[ShoreIntersect] = False
         # Remove inner barrier now there's no outlet in the transect
         ShoreZ[ShoreIntersect, 0] = ShoreZ[ShoreIntersect, 2]
         ShoreZ[ShoreIntersect, 2] = np.nan
