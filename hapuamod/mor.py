@@ -55,6 +55,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     WaterLevel[LagoonPresent] = LagoonWL[LagoonPresent]
     if not Closed:
         WaterLevel[OutletChanIx] = (OutletDep[OutletChanIx] + ShoreZ[OutletChanIx,1])
+    assert not np.any(np.isnan(WaterLevel)), 'NaN value(s) in WaterLevel at X = %s' % ShoreX[np.isnan(WaterLevel)]
     
     # Width of barrier crest (the part of the barrier backing the shoreface)
     CrestWidth = ShoreY[:,0] - ShoreY[:,3]
@@ -426,7 +427,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                          ShoreX[OutletChanIx[-1]])
             ShoreY[OutletChanIx[-1],3] = ShoreY[OutletChanIx[-1],2] - 0.0001
             
-            # if this pushes into cliff then assume cliff erodes into outlet channel...
+            # if this pushes into cliff then assume cliff erodes depositing sed into outlet channel...
             if ShoreY[OutletChanIx[-1],3] < ShoreY[OutletChanIx[-1],4]:
                 logging.info('Preventing lagoonward truncation means outlet channel pushed into cliff at X = %.1fm' % 
                              ShoreX[OutletChanIx[-1]])
@@ -488,18 +489,19 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         ConnectedChanMinMax = [np.nan, np.nan]
         
     # Find additional connected bits of relic outlet channel
-    if np.isnan(ConnectedChanMinMax[0]):
+    if not np.isnan(ConnectedChanMinMax[0]):
         while WideEnoughChannel[ConnectedChanMinMax[0]-1]:
-            WaterLevel[ConnectedChanMinMax-1] = WaterLevel[ConnectedChanMinMax]
+            WaterLevel[ConnectedChanMinMax-1] = WaterLevel[ConnectedChanMinMax[0]]
             ConnectedChanMinMax[0] -= 1
     
-    if np.isnan(ConnectedChanMinMax[1]):
+    if not np.isnan(ConnectedChanMinMax[1]):
         while WideEnoughChannel[ConnectedChanMinMax[1]+1]:
-            WaterLevel[ConnectedChanMinMax+1] = WaterLevel[ConnectedChanMinMax]
-            ConnectedChanMinMax[0] += 1
+            WaterLevel[ConnectedChanMinMax+1] = WaterLevel[ConnectedChanMinMax[1]]
+            ConnectedChanMinMax[1] += 1
             
     ConnectedChan = np.logical_and(np.arange(0,ShoreX.size) >= ConnectedChanMinMax[0],
                                    np.arange(0,ShoreX.size) <= ConnectedChanMinMax[1])
+    assert not np.any(np.isnan(WaterLevel)), 'NaN value(s) in WaterLevel at X = %s' % ShoreX[np.isnan(WaterLevel)]
     
     #%% Check for complete erosion of barrier between offline relic outlet channel and sea.
     # This *should* only include offline/disconnected bits of outlet as online 
@@ -595,8 +597,9 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     
     # Find the barrier height which has to be overtopped to cause a breach:
     CrestHeight = ShoreZ[:,0] # default
-    CrestHeight[OutletPresent] = np.amax(ShoreZ[OutletPresent,[0,2]]) # transects with active or relic channels (could be diconnected)
+    CrestHeight[OutletPresent] = np.amax(ShoreZ[OutletPresent,[0,2]], axis=1) # transects with active or relic channels (could be diconnected)
     CrestHeight[ConnectedChan] = ShoreZ[ConnectedChan,0] # transects with connected channels (active or relic)
+    assert not np.any(np.isnan(CrestHeight)), 'NaN value(s) in CrestHeight at X = %s' % ShoreX[np.isnan(CrestHeight)]
     
     if not Breach and np.any(CrestHeight < WaterLevel):
         # Note: only allowed if an erosion breach has not already occured in the same timestep
