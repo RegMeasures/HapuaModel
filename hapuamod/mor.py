@@ -597,7 +597,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     
     # Find the barrier height which has to be overtopped to cause a breach:
     CrestHeight = ShoreZ[:,0] # default
-    CrestHeight[OutletPresent] = np.amax(ShoreZ[OutletPresent,[0,2]], axis=1) # transects with active or relic channels (could be diconnected)
+    CrestHeight[OutletPresent] = np.amax(ShoreZ[OutletPresent,:][:,[0,2]], axis=1) # transects with active or relic channels (could be diconnected)
     CrestHeight[ConnectedChan] = ShoreZ[ConnectedChan,0] # transects with connected channels (active or relic)
     assert not np.any(np.isnan(CrestHeight)), 'NaN value(s) in CrestHeight at X = %s' % ShoreX[np.isnan(CrestHeight)]
     
