@@ -479,7 +479,7 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
         if not WideEnoughChannel[OutletUsIx]:
             OutletEndX[0] = np.nan
             ConnectedChanMinMax = [np.nan, np.nan]
-        elif not LagoonOpen[min(OutletUsIx,X0Ix):max(OutletUsIx,X0Ix)+1]:
+        elif not np.all(LagoonOpen[min(OutletUsIx,X0Ix):max(OutletUsIx,X0Ix)+1]):
             OutletEndX[0] = np.nan
             ConnectedChanMinMax = [np.nan, np.nan]
         else:
