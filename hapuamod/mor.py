@@ -492,12 +492,12 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
     # Find additional connected bits of relic outlet channel
     if not np.isnan(ConnectedChanMinMax[0]):
         while WideEnoughChannel[ConnectedChanMinMax[0]-1]:
-            WaterLevel[ConnectedChanMinMax-1] = WaterLevel[ConnectedChanMinMax[0]]
+            WaterLevel[ConnectedChanMinMax[0]-1] = WaterLevel[ConnectedChanMinMax[0]]
             ConnectedChanMinMax[0] -= 1
     
     if not np.isnan(ConnectedChanMinMax[1]):
         while WideEnoughChannel[ConnectedChanMinMax[1]+1]:
-            WaterLevel[ConnectedChanMinMax+1] = WaterLevel[ConnectedChanMinMax[1]]
+            WaterLevel[ConnectedChanMinMax[1]+1] = WaterLevel[ConnectedChanMinMax[1]]
             ConnectedChanMinMax[1] += 1
             
     ConnectedChan = np.logical_and(np.arange(0,ShoreX.size) >= ConnectedChanMinMax[0],
