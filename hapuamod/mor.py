@@ -625,15 +625,16 @@ def updateMorphology(ShoreX, ShoreY, ShoreZ,
                     PossBreachTsects.append(TsectIx)
             else: # TsectIx == X0Ix
                 PossBreachTsects.append(TsectIx)
+        PossBreachTsects = np.array(PossBreachTsects)
         
-        if len(PossBreachTsects) == 0 and not Closed:
+        if PossBreachTsects.size == 0 and not Closed:
             # If lagoon open then assume overtopping can only cause breach if it 
             # is closer to where river enters lagoon than existing outlet
             CloserToRiv = np.abs(ShoreX) < np.min(np.abs(OutletEndX))
             CloserToRiv[ConnectedChan] = np.abs(ShoreX[ConnectedChan] - OutletEndX[0]) < np.abs(OutletEndX[1]-OutletEndX[0])
             PossBreachTsects = PossBreachTsects[CloserToRiv[PossBreachTsects]]
         
-        if len(PossBreachTsects) == 0:
+        if PossBreachTsects.size == 0:
             logging.info('Not possible for breach to occur as spill is on disconnected part of lagoon or further from river than existing outlet')
         else: 
             # Overtopping breach occurs - we have to work out where incase 
