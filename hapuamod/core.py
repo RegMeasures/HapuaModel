@@ -175,6 +175,10 @@ def main(ModelConfigFile, Overwrite=False):
                                                MorDt, 
                                                PhysicalPars, TimePars, NumericalPars)
         
+        # Prevent model from running beyond specified end time
+        if MorDt > TimePars['EndTime'] - MorTime:
+            MorDt = TimePars['EndTime'] - MorTime
+        
         # increment time
         MorTime += MorDt
         

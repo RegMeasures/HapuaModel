@@ -652,7 +652,7 @@ def loadModel(ModelConfigFile):
         % Config['BoundaryConditions']['RiverFlow']
     KeepTimes = np.zeros(FlowTs.shape[0], dtype=bool)
     KeepTimes[:-1] = FlowTs.index[1:] > TimePars['StartTime']
-    KeepTimes[1:] = FlowTs.index[:-1]<TimePars['EndTime']
+    KeepTimes[1:] = FlowTs.index[:-1] < (TimePars['EndTime'] + TimePars['MorDtMax'])
     FlowTs = FlowTs[KeepTimes]
 
     assert (WaveTs.index[0] <= TimePars['StartTime'] 
@@ -661,7 +661,7 @@ def loadModel(ModelConfigFile):
         % Config['BoundaryConditions']['WaveConditions']
     KeepTimes = np.zeros(WaveTs.shape[0], dtype=bool)
     KeepTimes[:-1] = WaveTs.index[1:] > TimePars['StartTime']
-    KeepTimes[1:] = WaveTs.index[:-1]<TimePars['EndTime']
+    KeepTimes[1:] = WaveTs.index[:-1] < (TimePars['EndTime'] + TimePars['MorDtMax'])
     WaveTs = WaveTs[KeepTimes]
     
     assert (SeaLevelTs.index[0] <= TimePars['StartTime'] 
@@ -670,7 +670,7 @@ def loadModel(ModelConfigFile):
         % Config['BoundaryConditions']['SeaLevel']        
     KeepTimes = np.zeros(SeaLevelTs.shape[0], dtype=bool)
     KeepTimes[:-1] = SeaLevelTs.index[1:] > TimePars['StartTime']
-    KeepTimes[1:] = SeaLevelTs.index[:-1]<TimePars['EndTime']
+    KeepTimes[1:] = SeaLevelTs.index[:-1] < (TimePars['EndTime'] + TimePars['MorDtMax'])
     SeaLevelTs = SeaLevelTs[KeepTimes]
     
     #%% Read output options
