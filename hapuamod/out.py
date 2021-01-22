@@ -642,9 +642,9 @@ def writeTsOut(FileName, CurrentTime, SeaLevel, RivFlow, Hs_offshore, EDir_h,
     NcFile.variables['wave_dir'][TimeIx] = EDir_h
     
     # Append new data to other high frequency outputs
-    NcFile.variables['lagoon_level'] = MeanLagoonWl
-    NcFile.variables['lagoon_outflow'] = LagOutflow             
-    NcFile.variables['sed_inflow'] = SedInflow
+    NcFile.variables['lagoon_level'][TimeIx] = MeanLagoonWl
+    NcFile.variables['lagoon_outflow'][TimeIx] = LagOutflow             
+    NcFile.variables['sed_inflow'][TimeIx] = SedInflow
     NcFile.variables['outlet_end_x'][TimeIx,:] = OutletEndX
     NcFile.variables['outlet_closed'][TimeIx] = Closed
     NcFile.variables['mordt'][TimeIx] = MorDt.seconds
