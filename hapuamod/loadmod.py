@@ -230,7 +230,7 @@ def loadModel(ModelConfigFile):
                                 ModelConfigFile)
     
     # Get the absolute file path to the config spec file 'configspec.cnf'
-    ConfigSpecFile = pkg_resources.resource_filename(__name__, 'configspec.cnf')
+    ConfigSpecFile = pkg_resources.resource_filename(__name__, 'templates\configspec.cnf')
     
     # Read the model config file
     logging.info('Loading "%s"' % ModelConfigFile)

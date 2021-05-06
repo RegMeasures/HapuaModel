@@ -594,7 +594,7 @@ def newTsOutFile(FileName, ModelName, StartTime, Overwrite=False):
     # sed inflow rate
     SedInflowVar = NcFile.createVariable('sed_inflow', np.float32, 
                                          (TimeDim.name,))
-    SedInflowVar.units = 'm3/s'
+    SedInflowVar.units = 'm3/s (bulk including voids)'
     SedInflowVar.long_name = 'Bedload transport into upstream end of modelled river reach'
     
     # Outlet end positions
