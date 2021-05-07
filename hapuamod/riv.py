@@ -176,8 +176,7 @@ def solveFullPreissmann(z, B, LagArea, LagLen, Closed, h, V,
         
         # For momentum equation
         C2 = (V_old[:-1]*A_old[:-1] + V_old[1:]*A_old[1:]
-              -2*Beta*(dtdx)*Theta1 * (V_old[1:]*np.abs(V_old[1:])*A_old[1:]
-                                       - V_old[:-1]*np.abs(V_old[:-1])*A_old[:-1])
+              - Beta*(dtdx)*Theta1 * (V_old[1:] + V_old[:-1]) * (V_old[1:]*A_old[1:] - V_old[:-1]*A_old[:-1])
               - g*(dtdx)*Theta1 * (A_old[1:] + A_old[:-1]) * (h_old[1:]-h_old[:-1])
               + g*dt*Theta1 * (A_old[1:]*(S_0 - Sf_old[1:]) 
                                + A_old[:-1]*(S_0 - Sf_old[:-1])))
@@ -198,8 +197,7 @@ def solveFullPreissmann(z, B, LagArea, LagLen, Closed, h, V,
             
             # Error in momentum equation
             Err[np.arange(2,2*N-1,2)] = (V[:-1]*A[:-1] + V[1:]*A[1:]
-                                         + 2*Beta*dtdx*Theta * (V[1:]*np.abs(V[1:])*A[1:]
-                                                                   - V[:-1]*np.abs(V[:-1])*A[:-1])
+                                         + Beta*dtdx*Theta * (V[1:] + V[:-1]) * (V[1:]*A[1:] - V[:-1]*A[:-1])
                                          + g*(dtdx)*Theta * (A[1:] + A[:-1]) * (h[1:]-h[:-1])
                                          - g_dt_Theta * (A[1:]*(S_0-Sf[1:]) + A[:-1]*(S_0-Sf[:-1]))
                                          - C2)
@@ -237,21 +235,21 @@ def solveFullPreissmann(z, B, LagArea, LagLen, Closed, h, V,
             # Momentum equation derivatives
             # d/dh[0]
             a_banded[4,np.arange(0,2*(N)-2,2)] = (V[:-1]*B[:-1] 
-                                                  - 2*Beta*dtdx*Theta*V[:-1]**2*B[:-1]
+                                                  - Beta*dtdx*Theta*(V[1:] + V[:-1])*V[:-1]*B[:-1]
                                                   + g*Theta*dtdx*(-2*A[:-1] + B[:-1]*h[1:] - A[1:])
                                                   - g_dt_Theta*B[:-1]*(S_0+(1/3)*Sf[:-1]))
             # d/dV[0]
             a_banded[3,np.arange(1,2*(N)-2,2)] = (A[:-1] 
-                                                  - 4*Beta*dtdx*Theta*V[:-1]*A[:-1] 
+                                                  - Beta*dtdx*Theta*(A[1:]*V[1:] - A[:-1]*V[1:] - 2*A[:-1]*V[:-1]) 
                                                   + 2*g_dt_Theta*A[:-1]*Sf[:-1]/V[:-1])
             # d/dh[1]
             a_banded[2,np.arange(2,2*(N),2)]   = (V[1:]*B[1:] 
-                                                  + 2*Beta*dtdx*Theta*V[1:]**2*B[1:]
+                                                  + Beta*dtdx*Theta*(V[1:] + V[:-1])*V[1:]*B[1:]
                                                   + g*Theta*dtdx*(2*A[1:] - B[1:]*h[:-1] + A[:-1])
                                                   - g_dt_Theta*B[1:]*(S_0+(1/3)*Sf[1:]))
             # d/dV[1]
             a_banded[1,np.arange(3,2*(N),2)]   = (A[1:] 
-                                                  + 4*Beta*dtdx*Theta*V[1:]*A[1:] 
+                                                  + Beta*dtdx*Theta*(2*A[1:]*V[1:] - A[:-1]*V[:-1] + A[1:]*V[:-1]) 
                                                   + 2*g_dt_Theta*A[1:]*Sf[1:]/V[1:])
             
             # Ds Bdy condition derivatives
