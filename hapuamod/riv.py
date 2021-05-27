@@ -237,7 +237,7 @@ def solveFullPreissmann(z, B, LagArea, LagLen, Closed, h, V,
             # Momentum equation derivatives
             # d/dh[0]
             a_banded[4,np.arange(0,2*(N)-2,2)] = (V[:-1]*B[:-1] 
-                                                  - 2*Beta*dtdx*Theta*V[:-1]**2*B[:-1]
+                                                  - 2*Beta*dtdx*Theta*abs(V[:-1])*V[:-1]*B[:-1]
                                                   + g*Theta*dtdx*(-2*A[:-1] + B[:-1]*h[1:] - A[1:])
                                                   - g_dt_Theta*B[:-1]*(S_0+(1/3)*Sf[:-1]))
             # d/dV[0]
@@ -246,7 +246,7 @@ def solveFullPreissmann(z, B, LagArea, LagLen, Closed, h, V,
                                                   + 2*g_dt_Theta*A[:-1]*Sf[:-1]/V[:-1])
             # d/dh[1]
             a_banded[2,np.arange(2,2*(N),2)]   = (V[1:]*B[1:] 
-                                                  + 2*Beta*dtdx*Theta*V[1:]**2*B[1:]
+                                                  + 2*Beta*dtdx*Theta*abs(V[1:])*V[1:]*B[1:]
                                                   + g*Theta*dtdx*(2*A[1:] - B[1:]*h[:-1] + A[:-1])
                                                   - g_dt_Theta*B[1:]*(S_0+(1/3)*Sf[1:]))
             # d/dV[1]
