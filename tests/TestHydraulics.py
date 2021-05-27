@@ -43,16 +43,18 @@ ChanDx2 = np.concatenate([[ChanDx[1]], (ChanDx[:-1]+ChanDx[1:])/2, [ChanDx[-1]]]
 ChanElev = np.linspace(0.003*np.sum(ChanDx) - 2, -2, ChanDx.size+1)
 ChanWidth = np.full(ChanDx.size+1, 70.0)
 LagArea = np.full(ChanDx.size+1, 0.0)
+LagLen = np.full(ChanElev.size, 0.0)
 Dist = np.insert(np.cumsum(ChanDx),0,0)
 Closed = False
 
-Roughness = 0.03
 PhysicalPars = {'RiverSlope': 0.003,
                 'Gravity': 9.81,
                 'GrainSize': 0.032,
                 'VoidRatio': 0.4,
                 'RhoRiv': 1000.0,
-                'RhoSed': 2650.0}
+                'RhoSed': 2650.0,
+                'RoughnessManning': 0.03,
+                'BarrierPermeability': 0.001}
 NumericalPars = {'Beta':1.1,
                  'Theta':0.7,
                  'FrRelax1':0.75,
@@ -69,17 +71,17 @@ DsWl_Ts = np.full(100, DsWL)
 
 # Steady solution
 (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
-                                     Roughness, Qin, DsWL, NumericalPars)
+                                     PhysicalPars['RoughnessManning'], Qin, DsWL, NumericalPars)
 SteadyDep = ChanDep.copy()
 SteadyVel = ChanVel.copy()
 
-SteadyTime = timeit.timeit(stmt='riv.solveSteady(ChanDx, ChanElev, ChanWidth, Roughness, Qin, DsWL,NumericalPars)', 
+SteadyTime = timeit.timeit(stmt='riv.solveSteady(ChanDx, ChanElev, ChanWidth, PhysicalPars["RoughnessManning"], Qin, DsWL, NumericalPars)', 
                            globals=globals(), number=20)
 logging.info('Steady solution took %f s' % SteadyTime)
 
 try:
     # Unsteady solution
-    UnsteadyTime = timeit.timeit(stmt='riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, ChanDep, ChanVel, ChanDx, HydDt, Roughness, Q_Ts, DsWl_Ts, NumericalPars)', 
+    UnsteadyTime = timeit.timeit(stmt='riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, Closed, ChanDep, ChanVel, ChanDx, HydDt, Q_Ts, DsWl_Ts, NumericalPars, PhysicalPars)', 
                                  globals=globals(), number=10)
     logging.info('Unsteady solution of %i timesteps took %f s' % (Q_Ts.size, UnsteadyTime))
     
@@ -87,12 +89,12 @@ try:
     DepErr = ChanDep - SteadyDep
     VelErr = ChanVel - SteadyVel
     LongSecFig = vis.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel)
-    LongSecFig[0].suptitle('Test 1: Steady flow')
-    LongSecFig[1].plot(Dist, ChanElev + SteadyDep, 'm--', label='Steady WL')
-    LongSecFig[4].plot(Dist, SteadyVel, 'm--', label='Steady vel')
-    LongSecFig[5].plot(Dist, abs(SteadyVel)/np.sqrt(9.81*SteadyDep), 'm--', label='Steady Fr')
-    LongSecFig[0].savefig('Test01_LongSection.png')
-    plt.close(LongSecFig[0])
+    LongSecFig['RivFig'].suptitle('Test 1: Steady flow')
+    LongSecFig['ElevAx'].plot(Dist, ChanElev + SteadyDep, 'm--', label='Steady WL')
+    LongSecFig['VelAx'].plot(Dist, SteadyVel, 'm--', label='Steady vel')
+    LongSecFig['FrAx'].plot(Dist, abs(SteadyVel)/np.sqrt(9.81*SteadyDep), 'm--', label='Steady Fr')
+    LongSecFig['RivFig'].savefig('Test01_LongSection.png')
+    plt.close(LongSecFig['RivFig'])
     logging.info('<img src="Test01_LongSection.png">')
     logging.info('Maximum difference between steady and unsteady solutions is: Depth %f m and velocity %f m/s' % (np.max(np.abs(DepErr)), np.max(np.abs(VelErr))))
 except:
@@ -110,7 +112,7 @@ DsWl_Ts = np.full(Q_Ts.size, DsWL)
 
 try:
     # Unsteady solution
-    UnsteadyTime = timeit.timeit(stmt='riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, ChanDep, ChanVel, ChanDx, HydDt, Roughness, Q_Ts, DsWl_Ts, NumericalPars)', 
+    UnsteadyTime = timeit.timeit(stmt='riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, Closed, ChanDep, ChanVel, ChanDx, HydDt, Q_Ts, DsWl_Ts, NumericalPars, PhysicalPars)', 
                                  globals=globals(), number=10)
     logging.info('Unsteady solution of %i timesteps took %f s' % (Q_Ts.size, UnsteadyTime))
     
@@ -118,12 +120,12 @@ try:
     DepErr = ChanDep - SteadyDep
     VelErr = ChanVel - SteadyVel
     LongSecFig = vis.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel)
-    LongSecFig[1].plot(Dist, ChanElev + SteadyDep, 'm--', label='Steady WL')
-    LongSecFig[4].plot(Dist, SteadyVel, 'm--', label='Steady vel')
-    LongSecFig[5].plot(Dist, (abs(SteadyVel)/np.sqrt(9.81*SteadyDep)), 'm--', label='Steady Fr')
-    LongSecFig[0].suptitle('Test 2: Unsteady flow reverting to steady')
-    LongSecFig[0].savefig('Test02_LongSection.png')
-    plt.close(LongSecFig[0])
+    LongSecFig['ElevAx'].plot(Dist, ChanElev + SteadyDep, 'm--', label='Steady WL')
+    LongSecFig['VelAx'].plot(Dist, SteadyVel, 'm--', label='Steady vel')
+    LongSecFig['FrAx'].plot(Dist, (abs(SteadyVel)/np.sqrt(9.81*SteadyDep)), 'm--', label='Steady Fr')
+    LongSecFig['RivFig'].suptitle('Test 2: Unsteady flow reverting to steady')
+    LongSecFig['RivFig'].savefig('Test02_LongSection.png')
+    plt.close(LongSecFig['RivFig'])
     logging.info('<img src="Test02_LongSection.png">')
     logging.info('Maximum difference between steady and unsteady solutions is: Depth %f m and velocity %f m/s' % (np.max(np.abs(DepErr)), np.max(np.abs(VelErr))))
 except:
@@ -156,9 +158,9 @@ try:
     StepSize = 20 
     for ii in range(0, DsWl_Ts.size, StepSize):
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, ChanDep, ChanVel, ChanDx, 
-                                HydDt, Roughness, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
-                                NumericalPars)
+        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, Closed, ChanDep, ChanVel, ChanDx, 
+                                HydDt, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
+                                NumericalPars, PhysicalPars)
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2)
         VolIn = (ChanDep[0]*ChanVel[0]*ChanWidth[0] + OutputTs3['Qin'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
         VolOut = (ChanDep[-1]*ChanVel[-1]*ChanWidth[-1] + OutputTs3['Qout'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
@@ -211,9 +213,9 @@ try:
     StepSize = 20 
     for ii in range(0, DsWl_Ts.size, StepSize):
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, ChanDep, ChanVel, ChanDx, 
-                                HydDt, Roughness, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
-                                NumericalPars)
+        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, Closed, ChanDep, ChanVel, ChanDx, 
+                                HydDt, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
+                                NumericalPars, PhysicalPars)
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
         VolIn = (ChanDep[0]*ChanVel[0]*ChanWidth[0] + OutputTs4['Qin'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
         VolOut = (ChanDep[-1]*ChanVel[-1]*ChanWidth[-1] + OutputTs4['Qout'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
@@ -267,9 +269,9 @@ try:
     StepSize = 20 
     for ii in range(0, DsWl_Ts.size, StepSize):
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, ChanDep, ChanVel, ChanDx, 
-                                HydDt, Roughness, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
-                                NumericalPars)
+        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, Closed, ChanDep, ChanVel, ChanDx, 
+                                HydDt, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
+                                NumericalPars, PhysicalPars)
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
         VolIn = (ChanDep[0]*ChanVel[0]*ChanWidth[0] + OutputTs5['Qin'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
         VolOut = (ChanDep[-1]*ChanVel[-1]*ChanWidth[-1] + OutputTs5['Qout'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
@@ -322,13 +324,13 @@ OutputTs6 = pd.DataFrame(list(zip([Qin],[Qin],[DsWL],[VolumeInModel],[VolErr],[V
 try:
     # Unsteady solution with lagoon storage
     LongSecFig = vis.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel)
-    LongSecFig[0].suptitle('Test 6: Flow profile through constriction')
+    LongSecFig['RivFig'].suptitle('Test 6: Flow profile through constriction')
     StepSize = 5 
     for ii in range(0, DsWl_Ts.size, StepSize):
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, ChanDep, ChanVel, ChanDx, 
-                                HydDt, Roughness, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
-                                NumericalPars)
+        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, Closed, ChanDep, ChanVel, ChanDx, 
+                                HydDt, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
+                                NumericalPars, PhysicalPars)
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
         VolIn = (ChanDep[0]*ChanVel[0]*ChanWidth[0] + OutputTs6['Qin'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
         VolOut = (ChanDep[-1]*ChanVel[-1]*ChanWidth[-1] + OutputTs6['Qout'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
@@ -358,15 +360,15 @@ logging.info('Cumulative volumetric error over simulation = %f m3 (%f%% of total
               OutputTs6['CumVolErr'].iloc[-1] / (np.sum(OutputTs6['Qin'])*StepSize*HydDt.seconds)))
 
 (SteadyDep6, SteadyVel6) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
-                                           Roughness, Qin, DsWL,
+                                           PhysicalPars['RoughnessManning'], Qin, DsWL,
                                            NumericalPars)
 DepErr = ChanDep - SteadyDep6
 VelErr = ChanVel - SteadyVel6
-LongSecFig[1].plot(Dist, ChanElev + SteadyDep6, 'm--', label='Steady WL')
-LongSecFig[4].plot(Dist, SteadyVel6, 'm--', label='Steady vel')
-LongSecFig[5].plot(Dist, (abs(SteadyVel6)/np.sqrt(9.81*SteadyDep6)), 'm--', label='Steady Fr')
-LongSecFig[0].savefig('Test06_LongSection.png')
-plt.close(LongSecFig[0])
+LongSecFig['ElevAx'].plot(Dist, ChanElev + SteadyDep6, 'm--', label='Steady WL')
+LongSecFig['VelAx'].plot(Dist, SteadyVel6, 'm--', label='Steady vel')
+LongSecFig['FrAx'].plot(Dist, (abs(SteadyVel6)/np.sqrt(9.81*SteadyDep6)), 'm--', label='Steady Fr')
+LongSecFig['RivFig'].savefig('Test06_LongSection.png')
+plt.close(LongSecFig['RivFig'])
 logging.info('<img src="Test06_LongSection.png">')
 logging.info('Maximum difference between steady and unsteady solutions is: Depth %f m and velocity %f m/s' % (np.max(np.abs(DepErr)), np.max(np.abs(VelErr))))
 
@@ -394,13 +396,13 @@ OutputTs7 = pd.DataFrame(list(zip([Qin],[Qin],[DsWL],[VolumeInModel],[VolErr],[V
 try:
     # Unsteady solution with lagoon storage
     LongSecFig = vis.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel)
-    LongSecFig[0].suptitle('Test 7: Trans-critical flow through constriction')
+    LongSecFig['RivFig'].suptitle('Test 7: Trans-critical flow through constriction')
     StepSize = 5 
     for ii in range(0, DsWl_Ts.size, StepSize):
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, ChanDep, ChanVel, ChanDx, 
-                                HydDt, Roughness, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
-                                NumericalPars)
+        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, Closed, ChanDep, ChanVel, ChanDx, 
+                                HydDt, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
+                                NumericalPars, PhysicalPars)
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
         VolIn = (ChanDep[0]*ChanVel[0]*ChanWidth[0] + OutputTs7['Qin'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
         VolOut = (ChanDep[-1]*ChanVel[-1]*ChanWidth[-1] + OutputTs7['Qout'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
@@ -430,15 +432,15 @@ logging.info('Cumulative volumetric error over simulation = %f m3 (%f%% of total
               OutputTs7['CumVolErr'].iloc[-1] / (np.sum(OutputTs7['Qin'])*StepSize*HydDt.seconds)))
 
 (SteadyDep7, SteadyVel7) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
-                                           Roughness, Qin, DsWL,
+                                           PhysicalPars['RoughnessManning'], Qin, DsWL,
                                            NumericalPars)
 DepErr = ChanDep - SteadyDep7
 VelErr = ChanVel - SteadyVel7
-LongSecFig[1].plot(Dist, ChanElev + SteadyDep7, 'm--', label='Steady WL')
-LongSecFig[4].plot(Dist, SteadyVel7, 'm--', label='Steady vel')
-LongSecFig[5].plot(Dist, abs(SteadyVel7)/np.sqrt(9.81*SteadyDep7), 'm--', label='Steady Fr')
-LongSecFig[0].savefig('Test07_LongSection.png')
-plt.close(LongSecFig[0])
+LongSecFig['ElevAx'].plot(Dist, ChanElev + SteadyDep7, 'm--', label='Steady WL')
+LongSecFig['VelAx'].plot(Dist, SteadyVel7, 'm--', label='Steady vel')
+LongSecFig['FrAx'].plot(Dist, abs(SteadyVel7)/np.sqrt(9.81*SteadyDep7), 'm--', label='Steady Fr')
+LongSecFig['RivFig'].savefig('Test07_LongSection.png')
+plt.close(LongSecFig['RivFig'])
 logging.info('<img src="Test07_LongSection.png">')
 logging.info('Maximum difference between steady and unsteady solutions is: Depth %f m and velocity %f m/s' % (np.max(np.abs(DepErr)), np.max(np.abs(VelErr))))
 
@@ -467,13 +469,13 @@ OutputTs8 = pd.DataFrame(list(zip([Qin],[Qin],[DsWL],[VolumeInModel],[VolErr],[V
 try:
     # Unsteady solution with lagoon storage
     LongSecFig = vis.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel)
-    LongSecFig[0].suptitle('Test 8: Dynamic supercritical flow')
+    LongSecFig['RivFig'].suptitle('Test 8: Dynamic supercritical flow')
     StepSize = 5 
     for ii in range(0, DsWl_Ts.size, StepSize):
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, ChanDep, ChanVel, ChanDx, 
-                                HydDt, Roughness, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
-                                NumericalPars)
+        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, Closed, ChanDep, ChanVel, ChanDx, 
+                                HydDt, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
+                                NumericalPars, PhysicalPars)
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
         VolIn = (ChanDep[0]*ChanVel[0]*ChanWidth[0] + OutputTs8['Qin'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
         VolOut = (ChanDep[-1]*ChanVel[-1]*ChanWidth[-1] + OutputTs8['Qout'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
@@ -497,8 +499,8 @@ BdyFig[0].suptitle('Test 8: Dynamic supercritical flow')
 BdyFig[0].savefig('Test08_TimeSeries.png')
 plt.close(BdyFig[0])
 logging.info('<img src="Test08_TimeSeries.png">')
-LongSecFig[0].savefig('Test08_LongSection.png')
-plt.close(LongSecFig[0])
+LongSecFig['RivFig'].savefig('Test08_LongSection.png')
+plt.close(LongSecFig['RivFig'])
 logging.info('<img src="Test08_LongSection.png">')
 logging.info('Maximum mass balance error = %f%% (of inflow)' % np.max(np.abs(OutputTs8.VolErrPerc)))
 logging.info('Cumulative volumetric error over simulation = %f m3 (%f%% of total inflow)' % 
@@ -537,19 +539,19 @@ OutputTs8 = pd.DataFrame(list(zip([Qin],[Qin],[DsWL],[VolumeInModel],[VolErr],[V
 
 try:
     (ChanDep, ChanVel) = riv.solveSteady(ChanDx, ChanElev, ChanWidth, 
-                                         Roughness, 10, DsWL, NumericalPars)
+                                         PhysicalPars['RoughnessManning'], 10, DsWL, NumericalPars)
     logging.info('Steady solution at 10m3/s successfull - use for initial conditions')
     
     # Unsteady solution with lagoon storage
     LongSecFig = vis.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel)
-    LongSecFig[0].suptitle('Test 9: Shallow overflow (i.e. breach commencing)')
+    LongSecFig['RivFig'].suptitle('Test 9: Shallow overflow (i.e. breach commencing)')
     StepSize = 5 
     for ii in range(0, DsWl_Ts.size, StepSize):
 
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, ChanDep, ChanVel, ChanDx, 
-                                HydDt, Roughness, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
-                                NumericalPars)
+        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, Closed, ChanDep, ChanVel, ChanDx, 
+                                HydDt, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
+                                NumericalPars, PhysicalPars)
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
         VolIn = (ChanDep[0]*ChanVel[0]*ChanWidth[0] + OutputTs8['Qin'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
         VolOut = (ChanDep[-1]*ChanVel[-1]*ChanWidth[-1] + OutputTs8['Qout'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
@@ -573,8 +575,8 @@ BdyFig[0].suptitle('Test 9: Shallow overflow (i.e. breach commencing)')
 BdyFig[0].savefig('Test09_TimeSeries.png')
 plt.close(BdyFig[0])
 logging.info('<img src="Test09_TimeSeries.png">')
-LongSecFig[0].savefig('Test09_LongSection.png')
-plt.close(LongSecFig[0])
+LongSecFig['RivFig'].savefig('Test09_LongSection.png')
+plt.close(LongSecFig['RivFig'])
 logging.info('<img src="Test09_LongSection.png">')
 logging.info('Maximum mass balance error = %f%% (of inflow)' % np.max(np.abs(OutputTs8.VolErrPerc)))
 logging.info('Cumulative volumetric error over simulation = %f m3 (%f%% of total inflow)' % 
@@ -608,13 +610,13 @@ OutputTs4 = pd.DataFrame(list(zip([Qin],[Qin],[DsWL],[VolumeInModel],[VolErr],[V
 try:
     # Unsteady solution with lagoon storage and closed outlet
     LongSecFig = vis.longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel)
-    LongSecFig[0].suptitle('Test 10: Closed outlet')
+    LongSecFig['RivFig'].suptitle('Test 10: Closed outlet')
     StepSize = 20 
     for ii in range(0, DsWl_Ts.size, StepSize):
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, Closed, ChanDep, ChanVel, ChanDx, 
-                                HydDt, Roughness, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
-                                NumericalPars)
+        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, Closed, ChanDep, ChanVel, ChanDx, 
+                                HydDt, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
+                                NumericalPars, PhysicalPars)
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
         VolIn = (ChanDep[0]*ChanVel[0]*ChanWidth[0] + OutputTs4['Qin'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
         VolOut = (ChanDep[-1]*ChanVel[-1]*ChanWidth[-1] + OutputTs4['Qout'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
@@ -638,8 +640,8 @@ BdyFig[0].suptitle('Test 10: Closed outlet')
 BdyFig[0].savefig('Test10_TimeSeries.png')
 plt.close(BdyFig[0])
 logging.info('<img src="Test10_TimeSeries.png">')
-LongSecFig[0].savefig('Test10_LongSection.png')
-plt.close(LongSecFig[0])
+LongSecFig['RivFig'].savefig('Test10_LongSection.png')
+plt.close(LongSecFig['RivFig'])
 logging.info('<img src="Test10_LongSection.png">')
 logging.info('Maximum mass balance error = %f%% (of inflow)' % np.max(np.abs(OutputTs4.VolErrPerc)))
 logging.info('Cumulative volumetric error over simulation = %f m3 (%f%% of total inflow)' % 
@@ -649,7 +651,7 @@ logging.info('Cumulative volumetric error over simulation = %f m3 (%f%% of total
 #%% If needed
 dx = ChanDx
 dt = HydDt
-n = Roughness
+n = PhysicalPars['RoughnessManning']
 z = ChanElev
 B = ChanWidth
 h = ChanDep

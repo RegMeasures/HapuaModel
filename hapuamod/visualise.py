@@ -482,8 +482,22 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None,
         Bedload (optional)
     
     Returns:
-        LongSecFig = (RivFig, BedLine, WaterLine, EnergyLine, WidthLine, 
-                      VelLine, FrLine, QsLine)
+        LongSecFig = Dict of handles to various parts of figure:
+            RivFig
+            ElevAx
+            WidthAx
+            FlowAx
+            VelAx
+            FrAx
+            QsAx
+            BedLine
+            WaterLine
+            EnergyLine
+            WidthLine
+            FlowLine
+            VelLine
+            FrLine
+            QsLine
     """
     g = 9.81
     Dist = np.insert(np.cumsum(ChanDx),0,0)
