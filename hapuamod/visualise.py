@@ -551,7 +551,7 @@ def longSection(ChanDx, ChanElev, ChanWidth, ChanDep, ChanVel, Bedload=None,
     VelLine, = VelAx.plot(Dist, ChanVel, 'r-')
     VelAx.set_ylabel('Velocity [m/s]', color='red')
     VelAx.tick_params(axis='y', colors='red')
-    VelAx.set_ylim([0,3])
+    VelAx.set_ylim([0,max(3,np.max(ChanVel))])
     VelAx.grid(axis='x', which='both', linestyle=':')
     
     FrLine, = FrAx.plot(Dist, Fr, 'g-')
@@ -611,10 +611,11 @@ def updateLongSection(LongSecFig, ChanDx, ChanElev, ChanWidth, ChanDep,
     if not PlotTime is None:
         LongSecFig['RivFig'].suptitle(PlotTime.strftime('%d/%m/%y %H:%M'))
     
-    # Update flow axis scaling
+    # Update flow and velocity axis scaling
     Qmin = min(0.,np.nanmin(Q))
     Qmax = np.nanmax(Q)
     LongSecFig['FlowAx'].set_ylim(Qmin, Qmax + 0.1*(Qmax-Qmin))
+    LongSecFig['VelAx'].set_ylim([0,max(3,np.max(ChanVel))])
     
     # Update bedload axis scaling
     if not Bedload is None:

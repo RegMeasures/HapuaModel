@@ -1,0 +1,70 @@
+import numpy as np
+import hapuamod.visualise as vis
+
+# Lake test with variable bed elevation, width and dx
+g = 9.81
+dt = 0.1
+dx_mid = np.full(19, 20.0)  - np.random.rand(19) * 10
+z = np.random.rand(20)
+B = np.full(20, 10.0) + np.random.rand(20) * 5
+h = np.full(20, 2.0) - z
+V_mid = np.full(19, 0)
+
+Vplot = np.pad((V_mid[:-1]+V_mid[1:])/2, pad_width=1, mode='edge')
+LongSecFig = vis.longSection(dx_mid, z, B, h, Vplot)
+
+for i in range(100):
+    (h, V_mid) = solveFullExplicitStaggered(h, V_mid, z, B, dx_mid, dt, g)
+    Vplot = np.pad((V_mid[:-1]+V_mid[1:])/2, pad_width=1, mode='edge')
+    vis.updateLongSection(LongSecFig, dx_mid, z, B, h, Vplot)
+
+
+
+# Dam break test in uniform channel
+# Section 4.1 in paper
+g = 9.81
+dt = 0.026
+dx_mid = np.full(399, 0.5)
+dx = np.concatenate(([dx_mid[0]], (dx_mid[:-1] + dx_mid[1:]) / 2, [dx_mid[-1]]))
+z = np.full(400, 0.0)
+B = np.full(400, 1.0)
+h = np.where(np.arange(400)<200, 10, 1)
+V_mid = np.full(399, 0)
+
+Vplot = np.pad((V_mid[:-1]+V_mid[1:])/2, pad_width=1, mode='edge')
+LongSecFig = vis.longSection(dx_mid, z, B, h, Vplot)
+
+for i in range(200):
+    (h, V_mid) = solveFullExplicitStaggered(h, V_mid, z, B, dx_mid, dt, g)
+    Vplot = np.pad((V_mid[:-1]+V_mid[1:])/2, pad_width=1, mode='edge')
+    vis.updateLongSection(LongSecFig, dx_mid, z, B, h, Vplot)
+
+
+# Flow over a bump
+g = 9.81
+dt = 0.02
+dx_mid = np.full(99, 0.1)
+z = np.full(100, 0.0)
+z[45:55] = 0.2
+B = np.full(100, 1.0)
+h = 1.0 - z
+V = 1/h
+V_mid = (V[:-1]+V[1:])/2
+
+h_wBdys = np.pad(h, pad_width=1, mode='edge')
+V_mid_wBdys = np.pad(V_mid, pad_width=1, mode='edge')
+h_mid = np.where(V_mid_wBdys >= 0, h_wBdys[:-1], h_wBdys[1:])
+q_mid = h_mid * V_mid_wBdys
+q_bar = (q_mid[:-1] + q_mid[:1]) / 2
+Vplot = np.where(q_bar >= 0, V_mid_wBdys[:-1], V_mid_wBdys[1:])
+LongSecFig = vis.longSection(dx_mid, z, B, h, Vplot)
+
+for i in range(100):
+    (h, V_mid) = solveFullExplicitStaggered(h, V_mid, z, B, dx_mid, dt, g)
+    h_wBdys = np.pad(h, pad_width=1, mode='edge')
+    V_mid_wBdys = np.pad(V_mid, pad_width=1, mode='edge')
+    h_mid = np.where(V_mid_wBdys >= 0, h_wBdys[:-1], h_wBdys[1:])
+    q_mid = h_mid * V_mid_wBdys
+    q_bar = (q_mid[:-1] + q_mid[:1]) / 2
+    Vplot = np.where(q_bar >= 0, V_mid_wBdys[:-1], V_mid_wBdys[1:])
+    vis.updateLongSection(LongSecFig, dx_mid, z, B, h, Vplot)
