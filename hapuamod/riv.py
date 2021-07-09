@@ -70,6 +70,136 @@ def solveSteady(ChanDx, ChanElev, ChanWidth, Roughness, Qin, DsWL,
     
     return ChanDep, ChanVel
 
+def solveFullExplicitChar(z, B, LagArea, LagLen, Closed, h, V, 
+                          dx, dt, Q_Ts, DsWl_Ts, PhysicalPars):
+    g = PhysicalPars['Gravity']
+    n = PhysicalPars['RoughnessManning']
+    dt = dt.seconds          # timestep for hydraulics [s]
+    
+    S_0 = np.pad((z[:-2]-z[2:])/(dx[:-1]+dx[1:]), pad_width=1, mode='edge')  # bed slope at each cross-section
+    
+    DsWl = z[-1] + h[-1] # initial downstream WL
+    C = np.sqrt(g*h)     # celerity
+    
+    import hapuamod.visualise as vis
+    LongSecFig = vis.longSection(dx, z, B, h, V)
+    
+    # Main timestepping loop
+    for StepNo in range(Q_Ts.shape[0]):
+        V_old = V.copy()
+        C_old = C.copy()
+        h_old = h.copy()
+        
+        Q = Q_Ts[StepNo]
+        DsWl = DsWl_Ts[StepNo]
+        
+        Sf = V*np.abs(V) * (n**2) / ((C**2/g)**(4/3)) # friction slope at each XS [m/m]
+        
+        DeltaX_L = dt*(V+C)
+        DeltaX_R = -dt*(V-C)
+        
+        V_L = V[1:] - (DeltaX_L[1:] / dx) * (V[1:] - V[:-1])
+        V_R = V[:-1] - (DeltaX_R[1:] / dx) * (V[:-1] - V[1:])
+        
+        C_L = C[1:] - (DeltaX_L[1:] / dx) * (C[1:] - C[:-1])
+        C_R = C[:-1] - (DeltaX_R[1:] / dx) * (C[:-1] - C[1:])
+        
+        # Solve for model interior
+        V[1:-1] = (V_L[:-1] + V_R[1:]) / 2 + (C_L[:-1] - C_R[1:]) + dt*g*(S_0[1:-1]-Sf[1:-1])
+        C[1:-1] = (V_L[:-1] + V_R[1:]) / 4 + (C_L[:-1] + C_R[1:]) / 2
+        
+        # Add downstream bdy conditions
+        C[-1] = np.sqrt((DsWl-z[-1])*g)
+        V[-1] = V_L[-1] + 2*(C_L[-1] - C[-1] + dt*g*(S_0[-1]-Sf[-1]))
+        
+        # Add upstream boundary conditions (involves solving a polynomial)
+        C_Roots = np.roots([2, V_R[0] - 2*C_R[0] + dt*g*(S_0[0]-Sf[0]), 0, Q*g/B[0]])
+        C[0] = C_Roots.real[abs(C_Roots.imag)<1e-5][0]
+        V[0] = Q*g / (B[0] * C[0]**2)
+        
+        h = C**2 / g
+        vis.updateLongSection(LongSecFig, dx, z, B, h, V)
+
+def solveFullExplicit(z, B, LagArea, LagLen, Closed, h, V, 
+                      dx, dt, Q_Ts, DsWl_Ts, PhysicalPars):
+    """ Solve full S-V eqns for a rectangular channel using explicit scheme.
+        
+        solveFullExplicit(z, B, LagArea, ChanFlag, Closed, h, V, dx, dt, 
+                          Q_Ts, DsWl_Ts, NumericalPars, PhysicalPars))
+        
+        Parameters:
+            z (np.ndarray(float64)): Bed elevation at each node (m)
+            B (np.ndarray(float64)): Channel width at each node (m)
+            LagArea(np.ndarray(float64)): Offline area connected to each node (m2)
+            LagLen(np.ndarray(float64)): Length of lagoon connected to each 
+                node - used for barrier seepage calculation (m)
+            Closed (boolean): Flag indicating zero flow downstream boundary
+                condition.
+            h (np.ndarray(float64)): Depth at each node at the last timestep (m)
+            V (np.ndarray(float64)): Mean velocity at each node at the last 
+                timestep (m)
+            dx (np.ndarray(float64)): Length of each reach between nodes (m)
+                note the dx array should be one shorter than for z, B, etc
+            dt (pd.timedelta): timestep
+            
+            Qin (np.ndarray(float64)): List (as np.array) of inflows at 
+                upstream end of channel corresponding to each timestep. 
+                Function will loop over each inflow in turn (m^3/s)
+            DsWl (np.ndarray(float64)): List (as np.array) of downstream 
+                boundary water levels at upstream end of channel corresponding 
+                to each timestep. Function will loop over each inflow in turn 
+                (m^3/s)
+            PhysicalPars (dict): Physical parameters including:
+                Gravity (float): gravity [m/s2]
+                RoughnessManning (float): mannings 'n' roughness
+                Barrier Permeability (float): permeability of the gravel 
+                    barrier in m3/s, per m length of barrier, per m head 
+                    difference accross barrier [m/s].
+        
+        Modifies in place:
+            h
+            V
+        
+    """
+    
+    # TODO: Handle closed condition
+    # TODO: Handle barrier permeability
+    # TODO: Handle effective width / offline storage
+    
+    g = PhysicalPars['Gravity']
+    n = PhysicalPars['RoughnessManning']
+    dt = dt.seconds          # timestep for hydraulics [s]
+    # P = PhysicalPars['BarrierPermeability']
+    
+    dtdx = dt/dx
+    
+    S_0 = (z[:-1]-z[1:])/dx  # bed slope in each reach between XS [m/m]
+    
+    DsWl = z[-1] + h[-1] # initial downstream WL
+    import hapuamod.visualise as vis
+    LongSecFig = vis.longSection(dx, z, B, h, V)
+    
+    # Main timestepping loop
+    for StepNo in range(Q_Ts.shape[0]):
+        Q = Q_Ts[StepNo]
+        DsWl = DsWl_Ts[StepNo]
+        Sf = V*np.abs(V) * (n**2) / (h**(4/3)) # friction slope at each XS [m/m]
+        
+        V_old = V
+        h_old = h
+        
+        h[-1] = DsWl - z[-1]
+        h[:-1] = h_old[:-1] - dtdx  * (h_old[1:] * V_old[1:] * (B[1:]/B[:-1])  - h_old[:-1] * V_old[:-1])
+        V[0] = Q / (B[0] * h[0])
+        V[1:] = (V_old[1:] 
+                 - dtdx/2 * (V_old[1:] - V_old[:-1]) 
+                 - g*dtdx * (h_old[1:] - h_old[:-1])
+                 + g*dt * (S_0 - Sf[1:]))
+        
+        
+        
+        vis.updateLongSection(LongSecFig, dx, z, B, h, V)
+
 def solveFullPreissmann(z, B, LagArea, LagLen, Closed, h, V, 
                         dx, dt, Q_Ts, DsWl_Ts, NumericalPars, PhysicalPars):
     """ Solve full S-V eqns for a rectangular channel using preissmann scheme.

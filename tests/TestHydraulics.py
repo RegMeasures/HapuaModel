@@ -62,9 +62,9 @@ NumericalPars = {'Beta':1.1,
                  'ErrTol':0.0001,
                  'MaxIt':20,
                  'WarnTol':0.1}
-HydDt = pd.Timedelta(seconds=5)
+HydDt = pd.Timedelta(seconds=1)
 
-Qin = 70
+Qin = 70.0
 Q_Ts = np.full(100, Qin)
 DsWL = 0.0
 DsWl_Ts = np.full(100, DsWL)
@@ -81,8 +81,12 @@ logging.info('Steady solution took %f s' % SteadyTime)
 
 try:
     # Unsteady solution
-    UnsteadyTime = timeit.timeit(stmt='riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, Closed, ChanDep, ChanVel, ChanDx, HydDt, Q_Ts, DsWl_Ts, NumericalPars, PhysicalPars)', 
+    V_mid = (SteadyVel[:-1] + SteadyVel[1:]) / 2
+    UnsteadyTime = timeit.timeit(stmt='solveFullExplicitStaggered(ChanDep, V_mid, ChanElev, ChanWidth, LagArea, ChanDx, HydDt.seconds, DsWl_Ts, Q_Ts, PhysicalPars)', 
                                  globals=globals(), number=10)
+    (ChanDep, V_mid) = solveFullExplicitStaggered(ChanDep, V_mid, ChanElev, ChanWidth, LagArea, 
+                                                  ChanDx, HydDt.seconds, DsWl_Ts, Q_Ts, PhysicalPars)
+    ChanVel = np.pad((V_mid[:-1]+V_mid[1:])/2, pad_width=1, mode='edge')
     logging.info('Unsteady solution of %i timesteps took %f s' % (Q_Ts.size, UnsteadyTime))
     
     # Reporting
@@ -105,15 +109,18 @@ logging.info('<hr>')
 logging.info('<h1>Test 2: Unsteady flow reverting to steady</h1>')
 
 # Setup
-Q_Ts = np.concatenate([np.linspace(Qin, Qin*2, 50),
-                       np.linspace(Qin*2, Qin, 50),
+Q_Ts = np.concatenate([np.linspace(Qin, Qin*2, 250),
+                       np.linspace(Qin*2, Qin, 250),
                        np.full(150, Qin)])
 DsWl_Ts = np.full(Q_Ts.size, DsWL)
 
 try:
-    # Unsteady solution
-    UnsteadyTime = timeit.timeit(stmt='riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, Closed, ChanDep, ChanVel, ChanDx, HydDt, Q_Ts, DsWl_Ts, NumericalPars, PhysicalPars)', 
+    V_mid = (SteadyVel[:-1] + SteadyVel[1:]) / 2
+    UnsteadyTime = timeit.timeit(stmt='solveFullExplicitStaggered(ChanDep, V_mid, ChanElev, ChanWidth, LagArea, ChanDx, HydDt.seconds, DsWl_Ts, Q_Ts, PhysicalPars)', 
                                  globals=globals(), number=10)
+    (ChanDep, V_mid) = solveFullExplicitStaggered(ChanDep, V_mid, ChanElev, ChanWidth, LagArea, 
+                                                  ChanDx, HydDt.seconds, DsWl_Ts, Q_Ts, PhysicalPars)
+    ChanVel = np.pad((V_mid[:-1]+V_mid[1:])/2, pad_width=1, mode='edge')
     logging.info('Unsteady solution of %i timesteps took %f s' % (Q_Ts.size, UnsteadyTime))
     
     # Reporting
@@ -136,8 +143,8 @@ logging.info('<hr>')
 logging.info('<h1>Test 3: unsteady d/s boundary</h1>')
 
 # Setup
-DsWl_Ts = np.concatenate([np.linspace(DsWL, DsWL-1, 500),
-                          np.linspace(DsWL-1, DsWL+1, 1000)])
+DsWl_Ts = np.concatenate([np.linspace(DsWL, DsWL-1, 2500),
+                          np.linspace(DsWL-1, DsWL+1, 5000)])
 Q_Ts = np.full(DsWl_Ts.size, Qin)
 ChanDep = SteadyDep.copy()
 ChanVel = SteadyVel.copy()
@@ -158,9 +165,10 @@ try:
     StepSize = 20 
     for ii in range(0, DsWl_Ts.size, StepSize):
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, Closed, ChanDep, ChanVel, ChanDx, 
-                                HydDt, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
-                                NumericalPars, PhysicalPars)
+        V_mid = (SteadyVel[:-1] + SteadyVel[1:]) / 2
+        (ChanDep, V_mid) = solveFullExplicitStaggered(ChanDep, V_mid, ChanElev, ChanWidth, LagArea, ChanDx, 
+                                                      HydDt.seconds, DsWl_Ts[TimesToRun], Q_Ts[TimesToRun], PhysicalPars)
+        ChanVel = np.pad((V_mid[:-1]+V_mid[1:])/2, pad_width=1, mode='edge')
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2)
         VolIn = (ChanDep[0]*ChanVel[0]*ChanWidth[0] + OutputTs3['Qin'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
         VolOut = (ChanDep[-1]*ChanVel[-1]*ChanWidth[-1] + OutputTs3['Qout'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
@@ -213,9 +221,10 @@ try:
     StepSize = 20 
     for ii in range(0, DsWl_Ts.size, StepSize):
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, Closed, ChanDep, ChanVel, ChanDx, 
-                                HydDt, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
-                                NumericalPars, PhysicalPars)
+        V_mid = (SteadyVel[:-1] + SteadyVel[1:]) / 2
+        (ChanDep, V_mid) = solveFullExplicitStaggered(ChanDep, V_mid, ChanElev, ChanWidth, LagArea, ChanDx, 
+                                                      HydDt.seconds, DsWl_Ts[TimesToRun], Q_Ts[TimesToRun], PhysicalPars)
+        ChanVel = np.pad((V_mid[:-1]+V_mid[1:])/2, pad_width=1, mode='edge')
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
         VolIn = (ChanDep[0]*ChanVel[0]*ChanWidth[0] + OutputTs4['Qin'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
         VolOut = (ChanDep[-1]*ChanVel[-1]*ChanWidth[-1] + OutputTs4['Qout'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
@@ -269,9 +278,10 @@ try:
     StepSize = 20 
     for ii in range(0, DsWl_Ts.size, StepSize):
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, Closed, ChanDep, ChanVel, ChanDx, 
-                                HydDt, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
-                                NumericalPars, PhysicalPars)
+        V_mid = (SteadyVel[:-1] + SteadyVel[1:]) / 2
+        (ChanDep, V_mid) = solveFullExplicitStaggered(ChanDep, V_mid, ChanElev, ChanWidth, LagArea, ChanDx, 
+                                                      HydDt.seconds, DsWl_Ts[TimesToRun], Q_Ts[TimesToRun], PhysicalPars)
+        ChanVel = np.pad((V_mid[:-1]+V_mid[1:])/2, pad_width=1, mode='edge')
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
         VolIn = (ChanDep[0]*ChanVel[0]*ChanWidth[0] + OutputTs5['Qin'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
         VolOut = (ChanDep[-1]*ChanVel[-1]*ChanWidth[-1] + OutputTs5['Qout'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
@@ -307,8 +317,8 @@ logging.info('<h1>Test 6: Flow profile through constriction</h1>')
 # Setup
 ChanWidth[-30:-26] = 55
 LagArea[:] = 0
-Q_Ts = np.full(300, Qin)
-DsWl_Ts = np.full(300, DsWL)
+Q_Ts = np.full(1500, Qin)
+DsWl_Ts = np.full(1500, DsWL)
 ChanDep = SteadyDep.copy()
 ChanVel = SteadyVel.copy()
 
@@ -328,9 +338,10 @@ try:
     StepSize = 5 
     for ii in range(0, DsWl_Ts.size, StepSize):
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, Closed, ChanDep, ChanVel, ChanDx, 
-                                HydDt, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
-                                NumericalPars, PhysicalPars)
+        V_mid = (SteadyVel[:-1] + SteadyVel[1:]) / 2
+        (ChanDep, V_mid) = solveFullExplicitStaggered(ChanDep, V_mid, ChanElev, ChanWidth, LagArea, ChanDx, 
+                                                      HydDt.seconds, DsWl_Ts[TimesToRun], Q_Ts[TimesToRun], PhysicalPars)
+        ChanVel = np.pad((V_mid[:-1]+V_mid[1:])/2, pad_width=1, mode='edge')
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
         VolIn = (ChanDep[0]*ChanVel[0]*ChanWidth[0] + OutputTs6['Qin'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
         VolOut = (ChanDep[-1]*ChanVel[-1]*ChanWidth[-1] + OutputTs6['Qout'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
@@ -379,8 +390,8 @@ logging.info('<h1>Test 7: trans-critical flow</h1>')
 # Setup
 ChanWidth[-11:-9] = 25
 LagArea[:] = 0
-Q_Ts = np.full(300, Qin)
-DsWl_Ts = np.full(300, DsWL)
+Q_Ts = np.full(1500, Qin)
+DsWl_Ts = np.full(1500, DsWL)
 ChanDep = SteadyDep.copy()
 ChanVel = SteadyVel.copy()
 
@@ -400,9 +411,10 @@ try:
     StepSize = 5 
     for ii in range(0, DsWl_Ts.size, StepSize):
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, Closed, ChanDep, ChanVel, ChanDx, 
-                                HydDt, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
-                                NumericalPars, PhysicalPars)
+        V_mid = (SteadyVel[:-1] + SteadyVel[1:]) / 2
+        (ChanDep, V_mid) = solveFullExplicitStaggered(ChanDep, V_mid, ChanElev, ChanWidth, LagArea, ChanDx, 
+                                                      HydDt.seconds, DsWl_Ts[TimesToRun], Q_Ts[TimesToRun], PhysicalPars)
+        ChanVel = np.pad((V_mid[:-1]+V_mid[1:])/2, pad_width=1, mode='edge')
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
         VolIn = (ChanDep[0]*ChanVel[0]*ChanWidth[0] + OutputTs7['Qin'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
         VolOut = (ChanDep[-1]*ChanVel[-1]*ChanWidth[-1] + OutputTs7['Qout'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
@@ -451,8 +463,8 @@ logging.info('<h1>Test 8: Dynamic supercritical flow</h1>')
 # Setup
 ChanWidth[-11:-9] = 20
 LagArea[:] = 0
-DsWl_Ts = np.concatenate([np.full(100, DsWL),
-                          np.linspace(DsWL, DsWL-1, 200)])
+DsWl_Ts = np.concatenate([np.full(500, DsWL),
+                          np.linspace(DsWL, DsWL-1, 1000)])
 Q_Ts = np.full(DsWl_Ts.size, Qin)
 ChanDep = SteadyDep.copy()
 ChanVel = SteadyVel.copy()
@@ -473,9 +485,10 @@ try:
     StepSize = 5 
     for ii in range(0, DsWl_Ts.size, StepSize):
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, Closed, ChanDep, ChanVel, ChanDx, 
-                                HydDt, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
-                                NumericalPars, PhysicalPars)
+        V_mid = (SteadyVel[:-1] + SteadyVel[1:]) / 2
+        (ChanDep, V_mid) = solveFullExplicitStaggered(ChanDep, V_mid, ChanElev, ChanWidth, LagArea, ChanDx, 
+                                                      HydDt.seconds, DsWl_Ts[TimesToRun], Q_Ts[TimesToRun], PhysicalPars)
+        ChanVel = np.pad((V_mid[:-1]+V_mid[1:])/2, pad_width=1, mode='edge')
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
         VolIn = (ChanDep[0]*ChanVel[0]*ChanWidth[0] + OutputTs8['Qin'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
         VolOut = (ChanDep[-1]*ChanVel[-1]*ChanWidth[-1] + OutputTs8['Qout'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
@@ -516,7 +529,7 @@ ChanWidth[:] = 70
 LagArea[:] = 0
 ChanElev[48] = 3.0
 ChanElev[49] = 1.5
-DsWl_Ts = np.full(300, DsWL)
+DsWl_Ts = np.full(1500, DsWL)
 Q_Ts = np.full(DsWl_Ts.size, Qin)
 ChanDep = 3.1-ChanElev
 ChanDep[-1] = SteadyDep[-1]
@@ -549,9 +562,10 @@ try:
     for ii in range(0, DsWl_Ts.size, StepSize):
 
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, Closed, ChanDep, ChanVel, ChanDx, 
-                                HydDt, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
-                                NumericalPars, PhysicalPars)
+        V_mid = (SteadyVel[:-1] + SteadyVel[1:]) / 2
+        (ChanDep, V_mid) = solveFullExplicitStaggered(ChanDep, V_mid, ChanElev, ChanWidth, LagArea, ChanDx, 
+                                                      HydDt.seconds, DsWl_Ts[TimesToRun], Q_Ts[TimesToRun], PhysicalPars)
+        ChanVel = np.pad((V_mid[:-1]+V_mid[1:])/2, pad_width=1, mode='edge')
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
         VolIn = (ChanDep[0]*ChanVel[0]*ChanWidth[0] + OutputTs8['Qin'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
         VolOut = (ChanDep[-1]*ChanVel[-1]*ChanWidth[-1] + OutputTs8['Qout'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
@@ -614,9 +628,10 @@ try:
     StepSize = 20 
     for ii in range(0, DsWl_Ts.size, StepSize):
         TimesToRun = np.arange(ii, min(ii+StepSize, DsWl_Ts.size))
-        riv.solveFullPreissmann(ChanElev, ChanWidth, LagArea, LagLen, Closed, ChanDep, ChanVel, ChanDx, 
-                                HydDt, Q_Ts[TimesToRun], DsWl_Ts[TimesToRun], 
-                                NumericalPars, PhysicalPars)
+        V_mid = (SteadyVel[:-1] + SteadyVel[1:]) / 2
+        (ChanDep, V_mid) = solveFullExplicitStaggered(ChanDep, V_mid, ChanElev, ChanWidth, LagArea, ChanDx, 
+                                                      HydDt.seconds, DsWl_Ts[TimesToRun], Q_Ts[TimesToRun], PhysicalPars)
+        ChanVel = np.pad((V_mid[:-1]+V_mid[1:])/2, pad_width=1, mode='edge')
         VolumeInModel = np.sum(ChanWidth * ChanDep * ChanDx2 + LagArea * ChanDep)
         VolIn = (ChanDep[0]*ChanVel[0]*ChanWidth[0] + OutputTs4['Qin'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
         VolOut = (ChanDep[-1]*ChanVel[-1]*ChanWidth[-1] + OutputTs4['Qout'].iloc[-1]) * HydDt.seconds * TimesToRun.size / 2
